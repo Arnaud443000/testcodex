@@ -29,6 +29,7 @@ interface TradeFormState {
   executionQuality: string;
   starRating: string;
   postMortem: string;
+  screenshot: string;
 }
 
 const emptyForm: TradeFormState = {
@@ -53,6 +54,7 @@ const emptyForm: TradeFormState = {
   executionQuality: '3',
   starRating: '3',
   postMortem: '',
+  screenshot: '',
 };
 
 function parseNumber(value: string): number | null {
@@ -108,6 +110,7 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
       postMortem: form.postMortem,
       executionQuality: parseNumber(form.executionQuality) ?? 3,
       starRating: parseNumber(form.starRating) ?? 3,
+      screenshot: form.screenshot || undefined,
       closed: true,
     };
 
@@ -361,6 +364,29 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
               onChange={(e) => set('postMortem', e.target.value)}
             />
           </Field>
+        </div>
+        <div className="sm:col-span-2">
+          <Field label="Screenshot (optionnel)">
+            <input
+              type="file"
+              accept="image/*"
+              className="text-sm text-cream/70 file:mr-3 file:rounded-full file:border-0 file:bg-surface file:px-3 file:py-1.5 file:text-cream file:hover:bg-white/10"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => set('screenshot', reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
+          </Field>
+          {form.screenshot && (
+            <img
+              src={form.screenshot}
+              alt="Aperçu du screenshot"
+              className="mt-3 max-h-40 rounded-xl border border-white/10"
+            />
+          )}
         </div>
       </FormSection>
 
