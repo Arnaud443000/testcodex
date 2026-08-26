@@ -1,7 +1,7 @@
 # Charte graphique — TradeLens
 
-Version 1.0 — 26/08/2026
-Statut : dérivée de la planche de marque et de la maquette de dashboard fournies. Les valeurs de couleur ci-dessous sont estimées par lecture visuelle de ces captures — à recaler sur les fichiers sources (Figma, exports SVG/PNG) dès qu'ils sont disponibles, avant intégration finale (cf. points ouverts, section 8).
+Version 1.1 — 26/08/2026
+Statut : dérivée de la planche de marque et de la maquette de dashboard fournies. Le **nom (TradeLens), le logo et la typographie restent non arrêtés** à ce stade — traiter les sections 1.2 et 3.1 comme des pistes de travail, pas des décisions. Ce qui est en revanche exploité comme base solide : la **palette de couleurs** (section 2) et les **patrons de composants** observés sur la maquette (boutons, cards, tableaux, graphiques — sections 4 à 7), qui restent valables même si le nom/logo/typo changent. Les valeurs de couleur elles-mêmes sont estimées par lecture visuelle des captures — à recaler sur les fichiers sources (Figma, exports SVG/PNG) dès qu'ils sont disponibles (cf. points ouverts, section 8).
 
 Ce document complète `docs/cahier-des-charges.md` : il ne redéfinit aucune fonctionnalité, il habille celles déjà spécifiées. Chaque composant renvoie, quand c'est pertinent, à la fonctionnalité du cahier des charges qu'il habille.
 
@@ -10,20 +10,20 @@ Ce document complète `docs/cahier-des-charges.md` : il ne redéfinit aucune fon
 ## 1. Identité de marque
 
 ### 1.1 Nom et signature
-- **Nom** : TradeLens.
+- **Nom** : TradeLens (nom de travail — non définitivement arrêté).
 - **Signature** : « Clarté. Discipline. Performance. » — trois mots séparés par des points, capitales, espacement de lettres large. Reprend directement le principe directeur du produit (cf. cahier des charges, 1.2).
 - **Écriture du nom** : un seul mot, casse mixte interne (« TradeLens », pas d'espace, pas de point médian).
+- **Lockup** : la signature se lit **juste après le nom**, sur la même ligne de composition (« TradeLens — Clarté. Discipline. Performance. »), et non empilée dessous comme un sous-titre séparé — c'est la seule règle de position actée à ce stade.
 
 ### 1.2 Logo
-- **Anatomie** : deux anneaux concentriques excentrés, en dégradé bleu → violet, avec un halo lumineux doux — évoque une lentille/objectif (cohérent avec « Lens ») et un cadran de performance.
-- **Déclinaisons fournies** :
-  - **Logo principal** : anneaux + nom + signature, sur fond quasi-noir. Usage : écrans de connexion, en-têtes de document, présentations.
-  - **Icône compacte** : anneaux seuls dans un carré à coins arrondis, fond quasi-noir. Usage : favicon, avatar d'application dans une barre d'outils, notifications.
-  - **Icône d'application** : anneaux seuls, fond en dégradé bleu-violet pleine surface. Usage : icône d'app mobile/desktop, store listing.
-- **Espace de protection** : conserver tout autour du logo un espace libre au moins égal au rayon de l'anneau extérieur — aucun texte ni élément d'interface ne doit entrer dans cette zone.
-- **Taille minimale** : 24 px de hauteur pour l'icône compacte (en dessous, les deux anneaux ne se distinguent plus) ; 20 px de hauteur pour le seul anneau extérieur si un rendu ultra-compact est nécessaire (ex. favicon 16 px : simplifier à une forme pleine).
-- **Interdits** : ne pas recolorer le dégradé en dehors de la palette (section 2), ne pas aplatir en une seule couleur unie sauf version « mono » dédiée à produire, ne pas étirer de façon non uniforme, ne pas placer sur un fond clair sans variante adaptée.
-- **Point ouvert** : le mode clair (exigence non-fonctionnelle du cahier des charges, section 6) nécessite une variante du logo lisible sur fond clair — le rendu actuel (halo lumineux sur fond sombre) ne se transpose pas tel quel. À produire : une version « fond clair » où le dégradé est assombri ou cerné d'un contour pour garder le contraste (cf. section 8).
+> **Statut : non arrêté.** Le mark ci-dessous (anneaux concentriques) est une exploration reçue avec la maquette de dashboard, pas une décision de logo définitive. Cette section documente cette piste pour mémoire ; elle sera réécrite dès qu'un logo est choisi. Ne pas le considérer comme livrable en l'état.
+- **Anatomie de la piste explorée** : deux anneaux concentriques excentrés, en dégradé bleu → violet, avec un halo lumineux doux — évoque une lentille/objectif (cohérent avec « Lens ») et un cadran de performance.
+- **Déclinaisons fournies avec cette piste** :
+  - **Logo principal** : anneaux + nom + signature, sur fond quasi-noir.
+  - **Icône compacte** : anneaux seuls dans un carré à coins arrondis, fond quasi-noir.
+  - **Icône d'application** : anneaux seuls, fond en dégradé bleu-violet pleine surface.
+- **Ce qui reste vrai quel que soit le logo retenu** : le dégradé bleu → violet (section 2.1) restera vraisemblablement l'accent de marque même si le mark change, puisqu'il porte déjà les boutons et l'état actif de la navigation — un nouveau logo devra rester compatible avec cette teinte, ou la palette sera revue en même temps.
+- **Point ouvert** : tant que le logo n'est pas choisi, ne pas produire d'espace de protection, de tailles minimales ni de variante fond clair définitifs — ce travail est prématuré (cf. section 8).
 
 ### 1.3 Ton et principes
 - **Sobre, jamais criard** : la donnée financière porte déjà sa propre charge émotionnelle (gains/pertes) ; l'interface ne doit pas en rajouter par des couleurs saturées hors du rôle sémantique gain/perte.
@@ -99,10 +99,12 @@ Toute paire texte/fond doit atteindre au minimum le ratio WCAG AA (4.5:1 pour le
 ## 3. Typographie
 
 ### 3.1 Police
-- **Police de référence** : SF Pro Display (Apple), telle que spécifiée sur la planche de marque, graisses Light à Bold.
-- **Pile web** : SF Pro Display n'étant pas distribuable comme police web hors écosystème Apple, utiliser la pile de secours suivante pour un rendu fidèle sur toutes les plateformes :
+> **Statut : non arrêté.** SF Pro Display figurait sur la planche de marque reçue, mais le choix typographique définitif dépend du nom et du logo qui restent eux-mêmes à trancher (section 1) — ne pas considérer ce choix comme figé. Cette section documente la piste reçue et une pile de secours cohérente, à réviser dès que la typographie est actée.
+- **Police explorée** : SF Pro Display (Apple), graisses Light à Bold, telle que montrée sur la planche de marque.
+- **Pile web de repli, si cette piste est confirmée** :
   `font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;`
-  Sur macOS/iOS, cette pile résout nativement vers San Francisco (identique à la maquette). Sur les autres plateformes, **Inter** sert de police de repli — géométrie et graisses très proches, disponible via Google Fonts.
+  Sur macOS/iOS, cette pile résout nativement vers San Francisco. Sur les autres plateformes, **Inter** sert de repli — géométrie et graisses très proches, disponible via Google Fonts.
+- **Si le nom ou le logo changent de direction**, revoir ce choix en cohérence : une piste plus « donnée financière » (une police à chiffres tabulaires marqués) ou plus « éditoriale » (une empattée pour les titres) resterait compatible avec le reste de cette charte (couleurs, grille, composants), tant que l'échelle de la section 3.2 et la règle des chiffres tabulaires (3.3) sont conservées.
 
 ### 3.2 Échelle typographique
 | Style | Taille | Graisse | Usage |
@@ -222,8 +224,10 @@ Cet agencement précis constitue le **dashboard par défaut** (cahier des charge
 
 ## 8. Points ouverts
 
-- **Variante de logo pour fond clair** à produire — le rendu actuel (halo lumineux) suppose un fond sombre (cf. 1.2).
+- **Nom** : TradeLens est un nom de travail, non arrêté (cf. 1.1).
+- **Logo** : non arrêté — le mark à anneaux n'est qu'une exploration reçue avec la maquette, pas une décision (cf. 1.2). Ne pas produire de règles d'usage définitives (espace de protection, tailles minimales, variante fond clair) avant ce choix.
+- **Typographie** : non arrêtée — SF Pro Display documente la piste reçue, à revoir une fois le nom/logo tranchés (cf. 3.1).
 - **Valeurs hexadécimales** de la section 2.1 estimées visuellement — à recaler sur les fichiers sources (Figma, exports) dès qu'ils sont transmis.
-- **Police de repli web** : Inter proposé par défaut pour les plateformes non-Apple — à valider, ou remplacer par une police plus proche de SF Pro Display si une alternative licenciée est disponible.
+- **Police de repli web** : Inter proposé par défaut pour les plateformes non-Apple si SF Pro Display est confirmé — sinon à redéfinir avec le choix final.
 - **Deux teintes catégorielles additionnelles** (6.7) à définir précisément pour compléter la palette de répartition à 6 séries.
 - **Mode clair** : direction proposée en section 2.4, à valider visuellement une fois un premier écran assemblé (le contraste de l'accent bleu-violet sur fond clair doit être revérifié en conditions réelles).
