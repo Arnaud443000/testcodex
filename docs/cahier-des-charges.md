@@ -81,7 +81,13 @@ Regroupement logique de trades partageant un même système de règles testé (e
 ### 2.8 Objectif (`Objectif`)
 Cible mensuelle définie par l'utilisateur sur une métrique donnée (PnL, win rate, score de discipline...), comparée au réalisé (3.7.2).
 
-### 2.9 Schéma relationnel simplifié
+### 2.9 Widget (`Widget`)
+Brique unitaire d'affichage représentant une donnée ou une visualisation déjà définie ailleurs dans ce document (un indicateur de la section 3.3, un graphique comportemental de la section 3.4, un insight de la section 3.5, le calendrier 3.7.1, la liste des trades récents...). Un widget ne calcule rien de nouveau : il **réutilise** une métrique ou une vue existante et l'affiche dans un format compact (carte chiffrée, graphique, tableau, jauge). Chaque occurrence d'un widget sur un dashboard (`WidgetInstance`) porte sa position, sa taille et ses réglages internes propres (cf. 3.8.8), indépendants du filtre global de la page.
+
+### 2.10 Dashboard (`Dashboard`)
+Configuration nommée d'une page d'accueil : une liste de `WidgetInstance` positionnées sur une grille, un nom, un statut (dashboard par défaut ou non), et un rattachement optionnel à un `Compte` (dashboard spécifique à un compte) ou global (vue multi-comptes). Un utilisateur peut posséder plusieurs `Dashboard` et basculer de l'un à l'autre (cf. module 3.8).
+
+### 2.11 Schéma relationnel simplifié
 ```
 Compte 1───N Trade N───N Tag (setup / timeframe / session / condition de marché)
 Compte 1───N Dépôt/Retrait
@@ -93,6 +99,8 @@ Compte 1───N TradeManqué
 Compte 1───N EntréeJournal (par jour)
 Compte 1───N Objectif (par mois)
 Règle  1───N SeuilAlerte (0 ou 1 le plus souvent)
+Compte 0,1───N Dashboard (dashboard rattaché à un compte, ou global si vide)
+Dashboard 1───N WidgetInstance N───1 Widget (type de widget, référence une métrique/vue des modules 3.3 à 3.7)
 ```
 
 Toutes les fonctionnalités décrites ci-après **lisent ou écrivent** dans ce socle commun. Chaque section 3.x précise explicitement ses dépendances vers les autres modules.
@@ -476,6 +484,60 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 
 ---
 
+### 3.8 Module — Dashboard personnalisable
+
+Ce module ne définit **aucune nouvelle métrique**. Il donne à l'utilisateur le contrôle total sur l'agencement des données déjà spécifiées dans les modules 3.3 à 3.7, à la manière d'un dashboard de plateforme de trading (type Binance) : ajouter/retirer des panneaux, les disposer librement, pré-charger des configurations selon ce qu'on veut suivre, et sauvegarder plusieurs dashboards pour les retrouver facilement. Chaque widget est un pointeur vers une fonctionnalité existante ; ce module se contente de les rendre modulaires.
+
+#### 3.8.1 Widgets modulaires (ajout/retrait de panneaux)
+- **Description** : chaque élément du dashboard (courbe d'équité, carte KPI, calendrier, tableau des trades récents, jauge de session...) existe comme un `Widget` indépendant que l'utilisateur peut ajouter ou retirer de sa page d'accueil.
+- **Données** : `Widget`, `WidgetInstance` (cf. 2.9).
+- **Règles de gestion** : retirer un widget de la vue active ne le supprime pas de l'application — il reste disponible dans la bibliothèque (3.8.3) pour être réajouté plus tard.
+- **Dépendances** : chaque widget référence une fonctionnalité existante d'un autre module (cf. 3.8.3) ; ce module ne duplique aucune donnée.
+
+#### 3.8.2 Disposition libre (glisser-déposer, redimensionnement)
+- **Description** : les widgets actifs sont positionnés sur une grille modulaire ; l'utilisateur peut les déplacer par glisser-déposer et redimensionner leur emprise (largeur/hauteur en unités de grille).
+- **Règles de gestion** : la grille se réorganise automatiquement pour éviter les chevauchements ; un widget agrandi adapte son contenu (ex. un graphique plus large affiche plus de points).
+- **Dépendances** : 3.8.1.
+
+#### 3.8.3 Bibliothèque de widgets disponibles
+- **Description** : catalogue de tous les widgets proposés, organisés par thème, pour composer un dashboard. Reprend les visualisations déjà spécifiées ailleurs dans ce document, par exemple :
+  - **Performance** : PnL net (3.3.1), courbe d'équité (3.3.7), profit factor et R:R réel (3.3.2/3.3.4), max drawdown (3.3.6).
+  - **Répartition** : performance par stratégie (3.3.16), long vs short (3.3.10), exposition par catégorie d'actif (3.7.9).
+  - **Temporel** : calendrier / heatmap P&L (3.7.1/3.3.11), performance par session (3.3.9), performance par heure (3.3.9).
+  - **Suivi** : liste des trades récents, objectifs mensuels et leur progression (3.7.2).
+  - **Comportemental** : score de discipline (3.4.1), streak en cours (3.4.3).
+  - **Insights** : mises en avant automatiques (3.5.1 à 3.5.3).
+- **Règles de gestion** : un widget de la bibliothèque affiche un aperçu avant ajout ; la bibliothèque s'enrichit automatiquement de toute nouvelle métrique ajoutée aux modules 3.3 à 3.5 dans une version future, sans développement spécifique à ce module.
+- **Dépendances** : transversal à 3.3, 3.4, 3.5, 3.7.
+
+#### 3.8.4 Dashboards préconfigurés (presets)
+- **Description** : l'application propose des configurations prêtes à l'emploi orientées vers un usage donné (ex. « Vue Performance globale », « Vue Risque & Discipline », « Vue Session du jour »), composées d'une sélection cohérente de widgets.
+- **Règles de gestion** : un preset peut être appliqué tel quel, ou dupliqué puis modifié (cf. 3.8.5) sans altérer le preset d'origine.
+- **Dépendances** : 3.8.1, 3.8.3.
+
+#### 3.8.5 Sauvegarde de dashboards personnalisés multiples
+- **Description** : l'utilisateur peut créer, nommer et sauvegarder plusieurs `Dashboard`, puis basculer rapidement de l'un à l'autre (ex. sélecteur ou onglets en haut de page) pour retrouver facilement une disposition donnée.
+- **Règles de gestion** : chaque dashboard sauvegardé conserve sa propre disposition de widgets et ses réglages (3.8.8) ; il peut être dupliqué, renommé ou supprimé indépendamment des autres.
+- **Dépendances** : 2.10.
+
+#### 3.8.6 Dashboard par défaut
+- **Description** : l'utilisateur désigne le dashboard affiché automatiquement à la connexion.
+- **Dépendances** : 3.8.5.
+
+#### 3.8.7 Duplication, export et partage de configuration
+- **Description** : un dashboard sauvegardé peut être dupliqué comme point de départ d'un nouveau, exporté sous forme de fichier de configuration, puis réimporté sur un autre appareil ou partagé avec un autre utilisateur.
+- **Dépendances** : 3.8.5.
+
+#### 3.8.8 Réglages internes par widget
+- **Description** : indépendamment du filtre de période global (3.7.8), chaque widget peut avoir ses propres réglages : période spécifique, compte filtré, métrique affichée parmi plusieurs disponibles pour ce type de widget.
+- **Dépendances** : 3.7.8, 3.7.5.
+
+#### 3.8.9 Dashboard rattaché à un compte ou vue multi-comptes
+- **Description** : un dashboard peut être spécifique à un `Compte` (2.1) — utile pour séparer, par exemple, le suivi d'un compte prop firm de celui d'un compte personnel — ou construit en vue consolidée multi-comptes.
+- **Dépendances** : 3.7.5, 3.7.6.
+
+---
+
 ## 4. Cohérence transversale — comment les modules s'articulent
 
 Cette section explicite les grands **fils de données** qui traversent plusieurs modules, afin qu'aucune fonctionnalité ne soit développée comme un silo isolé.
@@ -487,6 +549,7 @@ Cette section explicite les grands **fils de données** qui traversent plusieurs
 5. **Le fil "segmentation"** : `Tags` (setup, timeframe, session, condition de marché — 3.1.5, 3.1.6) → `Performance par segment` (3.3.9) → `Mise en avant du meilleur setup/session` (3.5.2) → `Comparaison de stratégies` (3.3.16).
 6. **Le fil "capital"** : `Dépôts/retraits` (3.7.10) séparés → `Courbe d'équité pure` (3.3.7) ; `Capital courant` (2.1) → `Risque en %` (3.3.12) → `Taille de position vs croissance du compte` (3.3.21).
 7. **Le fil "règles personnelles"** (objet pivot, cf. 3.6.9) : une règle définie une fois (2.4) est simultanément : cochée sur chaque trade (saisie), source du "rule adherence" (analyse comportementale), et source d'un seuil d'alerte en temps réel quand elle est quantifiable — évitant de dupliquer la définition d'une même contrainte à trois endroits différents de l'application.
+8. **Le fil "dashboard"** : chaque `Widget` (2.9) n'est qu'un pointeur vers une métrique ou une vue déjà définie dans les modules 3.3 à 3.7 → aucune donnée n'est recalculée pour l'affichage, ce qui garantit que le dashboard personnalisable (3.8) reste toujours synchronisé avec les statistiques "officielles" produites par les autres modules, quelle que soit la disposition choisie par l'utilisateur.
 
 **Conséquence pour le développement** : les modules 3.1 (saisie) et 2 (modèle de données) doivent être conçus en premier et de façon extensible, car toutes les statistiques, l'analyse comportementale et les alertes n'existent que par lecture de ces données. Un champ mal conçu à la saisie (ex. un tag "setup" en texte libre non normalisé) dégrade la fiabilité de plusieurs modules en aval simultanément.
 
@@ -517,6 +580,7 @@ Le document source indiquait explicitement qu'un tri serait fait pour la V1. Pro
 - Toutes les alertes à seuils temps réel (3.6.1 à 3.6.8)
 - Objectifs mensuels (3.7.2)
 - Mode replay (3.7.4)
+- Dashboard modulaire complet : widgets ajoutables/retirables, disposition libre par glisser-déposer, bibliothèque de widgets, presets préconfigurés, sauvegarde et bascule entre plusieurs dashboards nommés, dashboard par défaut, réglages internes par widget (3.8.1 à 3.8.6, 3.8.8)
 
 ### V3 — Approfondissement et intelligence
 - Insights/IA (alertes de tendance, suggestions personnalisées — 3.5.1 à 3.5.3)
@@ -525,6 +589,7 @@ Le document source indiquait explicitement qu'un tri serait fait pour la V1. Pro
 - Comparaison entre comptes/brokers (3.7.6)
 - Carte de trade partageable (3.7.7)
 - Benchmark risque max par trade (3.4.11)
+- Duplication/export/partage de configuration de dashboard, dashboard rattaché à un compte ou vue multi-comptes (3.8.7, 3.8.9)
 
 ---
 
@@ -565,6 +630,13 @@ Cette section conserve les pistes déjà évoquées, pour mémoire, dans l'atten
 - Jauges circulaires pour les scores (ex. score de discipline, 3.4.1).
 - Mode sombre/clair au choix (cf. exigence non-fonctionnelle, section 6).
 - Références visuelles à consulter : captures d'inspiration du 25/08 (Trade OS, TradeJournal, Tradelog).
+
+**Mise à jour du 26/08/2026 — premiers éléments de marque reçus :**
+- Nom de marque proposé : **TradeLens**, signature « Clarté. Discipline. Performance. ».
+- Logo : anneaux concentriques en dégradé bleu-violet sur fond sombre, décliné en icône compacte et icône d'application.
+- Palette pressentie : fond quasi-noir/bleu nuit, accent principal bleu-violet pour les actions primaires, neutre clair chaud pour les actions secondaires, vert sauge pour les gains, corail/rouge pour les pertes.
+- Typographie pressentie : SF Pro Display (graisses Light à Bold).
+- Une maquette de dashboard a été fournie (cards KPI, courbe de PnL net, calendrier mensuel miniature, performance par stratégie en donut, jauge « Trading Sessions », performance horaire en barres, panneau « Performance Insights », tableau des trades récents) : elle a directement servi de référence pour construire la bibliothèque de widgets du module 3.8.3, mais sa mise en forme graphique définitive (grille exacte, tokens de couleur, composants) reste à formaliser dans le document de charte graphique séparé.
 
 ---
 
