@@ -1,7 +1,7 @@
 # Cahier des charges fonctionnel — Journal de Trading
 
 Version 1.0 — 26/08/2026
-Statut : périmètre fonctionnel uniquement. L'identité visuelle (charte graphique, composants UI définitifs) fait l'objet d'un document séparé, à produire dans une phase ultérieure. Les pistes de design déjà évoquées sont conservées en annexe (section 10) pour ne rien perdre.
+Statut : périmètre fonctionnel uniquement. L'identité visuelle (charte graphique, composants UI définitifs) fait l'objet d'un document séparé, à produire dans une phase ultérieure. Les pistes de design déjà évoquées sont conservées en annexe (section 8) pour ne rien perdre.
 
 ---
 
@@ -28,7 +28,7 @@ Ce principe structure une grande partie des fonctionnalités (checklist pré-tra
 
 ### 1.4 Portée du présent document
 Ce cahier des charges couvre exclusivement le **fonctionnel** : ce que l'application doit faire, quelles données elle manipule, comment les fonctionnalités s'articulent entre elles. Il ne traite pas :
-- de l'identité visuelle définitive (charte graphique, maquettes) — cf. section 10 pour les pistes déjà collectées,
+- de l'identité visuelle définitive (charte graphique, maquettes) — cf. section 8 pour les pistes déjà collectées,
 - de l'architecture technique (choix de stack, base de données, hébergement),
 - du modèle économique (gratuit/payant, freemium).
 
@@ -47,12 +47,12 @@ Avant de détailler chaque fonctionnalité, il est nécessaire de définir les *
 | Devise | Devise de référence du compte |
 | Capital initial | Montant de départ |
 | Capital courant | Calculé = capital initial + dépôts − retraits + PnL cumulé |
-| Historique dépôts/retraits | Liste horodatée, **exclue du calcul de performance pure** (cf. 5.7.10) |
+| Historique dépôts/retraits | Liste horodatée, **exclue du calcul de performance pure** (cf. 3.7.10) |
 
-Un utilisateur peut posséder plusieurs comptes (cf. 5.7.5). Chaque trade est rattaché à un compte unique.
+Un utilisateur peut posséder plusieurs comptes (cf. 3.7.5). Chaque trade est rattaché à un compte unique.
 
 ### 2.2 Trade (`Trade`)
-Objet central de l'application. Regroupe l'ensemble des champs listés en section 5.1, plus les valeurs calculées (PnL, R-multiple, statut gagnant/perdant/breakeven). Un trade est toujours rattaché à :
+Objet central de l'application. Regroupe l'ensemble des champs listés en section 3.1, plus les valeurs calculées (PnL, R-multiple, statut gagnant/perdant/breakeven). Un trade est toujours rattaché à :
 - un **Compte**,
 - un ou plusieurs **Tags** (setup, timeframe, session, condition de marché),
 - une **Stratégie** (optionnel, cf. 2.7),
@@ -60,26 +60,26 @@ Objet central de l'application. Regroupe l'ensemble des champs listés en sectio
 - un ensemble de **Règles personnelles** cochées respectées/non respectées.
 
 ### 2.3 Trade non pris (`TradeManqué`)
-Setup identifié mais non exécuté. Ne génère ni PnL ni R-multiple, mais alimente l'analyse de la confiance (cf. 5.2.5) et est mis en regard des trades réellement pris pour objectiver un manque de confiance récurrent.
+Setup identifié mais non exécuté. Ne génère ni PnL ni R-multiple, mais alimente l'analyse de la confiance (cf. 3.2.5) et est mis en regard des trades réellement pris pour objectiver un manque de confiance récurrent.
 
 ### 2.4 Règle personnelle (`Règle`)
 Énoncé court, éditable par l'utilisateur (ex : "Jamais trader après 15h", "Max 3 trades/jour"). Chaque règle peut être :
-- **cochée a posteriori sur chaque trade** (respectée / non respectée) → alimente le "rule adherence" (5.4.6) et la comparaison hors-plan vs dans le plan (5.4.4),
-- **reliée à un seuil d'alerte** correspondant (5.6.7) pour un contrôle en temps réel plutôt qu'a posteriori.
+- **cochée a posteriori sur chaque trade** (respectée / non respectée) → alimente le "rule adherence" (3.4.6) et la comparaison hors-plan vs dans le plan (3.4.4),
+- **reliée à un seuil d'alerte** correspondant (3.6.7) pour un contrôle en temps réel plutôt qu'a posteriori.
 
-C'est l'objet qui fait le pont entre le **journal qualitatif** (section 5.2), l'**analyse comportementale** (section 5.4) et les **alertes temps réel** (section 5.6).
+C'est l'objet qui fait le pont entre le **journal qualitatif** (section 3.2), l'**analyse comportementale** (section 3.4) et les **alertes temps réel** (section 3.6).
 
 ### 2.5 Checklist pré-trade (`ChecklistTemplate`)
-Modèle de checklist défini une fois par l'utilisateur (ex : "Setup validé", "Stop défini", "Pas dans une série de pertes récente"). À chaque trade, une copie de la checklist est cochée point par point. Le taux de complétion nourrit la note de qualité d'exécution (5.2.9).
+Modèle de checklist défini une fois par l'utilisateur (ex : "Setup validé", "Stop défini", "Pas dans une série de pertes récente"). À chaque trade, une copie de la checklist est cochée point par point. Le taux de complétion nourrit la note de qualité d'exécution (3.2.9).
 
 ### 2.6 Journal quotidien (`EntréeJournal`)
-Une entrée par jour de trading, indépendante des trades individuels : réponses aux questions de réflexion guidée, humeur générale du jour, facteurs externes déclarés (sommeil, fatigue, heure tardive...). Sert de base à la corrélation facteurs externes / qualité des trades (5.4.9).
+Une entrée par jour de trading, indépendante des trades individuels : réponses aux questions de réflexion guidée, humeur générale du jour, facteurs externes déclarés (sommeil, fatigue, heure tardive...). Sert de base à la corrélation facteurs externes / qualité des trades (3.4.9).
 
 ### 2.7 Stratégie (`Stratégie`)
-Regroupement logique de trades partageant un même système de règles testé (ex : "Breakout NY session", "Mean reversion range asiatique"). Permet la comparaison de plusieurs stratégies en parallèle (5.3.16) et la distinction système vs discrétionnaire (5.3.17).
+Regroupement logique de trades partageant un même système de règles testé (ex : "Breakout NY session", "Mean reversion range asiatique"). Permet la comparaison de plusieurs stratégies en parallèle (3.3.16) et la distinction système vs discrétionnaire (3.3.17).
 
 ### 2.8 Objectif (`Objectif`)
-Cible mensuelle définie par l'utilisateur sur une métrique donnée (PnL, win rate, score de discipline...), comparée au réalisé (5.7.2).
+Cible mensuelle définie par l'utilisateur sur une métrique donnée (PnL, win rate, score de discipline...), comparée au réalisé (3.7.2).
 
 ### 2.9 Schéma relationnel simplifié
 ```
@@ -95,7 +95,7 @@ Compte 1───N Objectif (par mois)
 Règle  1───N SeuilAlerte (0 ou 1 le plus souvent)
 ```
 
-Toutes les fonctionnalités décrites ci-après **lisent ou écrivent** dans ce socle commun. Chaque section 5.x précise explicitement ses dépendances vers les autres modules.
+Toutes les fonctionnalités décrites ci-après **lisent ou écrivent** dans ce socle commun. Chaque section 3.x précise explicitement ses dépendances vers les autres modules.
 
 ---
 
@@ -199,7 +199,7 @@ Ce module capture le **process**, en complément du résultat chiffré du module
 #### 3.2.5 Journal des trades manqués
 - **Description** : consignation des setups vus mais non tradés, avec la raison (peur, doute...).
 - **Données** : objet `TradeManqué` (cf. 2.3) : `actif`, `dateHeure`, `raisonNonPrise`, `notes`.
-- **Règles de gestion** : ne génère pas de PnL réel ; peut optionnellement estimer un "PnL fictif" si le setup avait été pris, pour objectiver le coût de l'inaction — à considérer en V2 (cf. section 7).
+- **Règles de gestion** : ne génère pas de PnL réel ; peut optionnellement estimer un "PnL fictif" si le setup avait été pris, pour objectiver le coût de l'inaction — à considérer en V2 (cf. section 5).
 - **Dépendances** : 3.4.5 (repérage d'un manque de confiance récurrent par setup/session).
 
 #### 3.2.6 Journal quotidien avec question de réflexion guidée
@@ -228,7 +228,7 @@ Ce module capture le **process**, en complément du résultat chiffré du module
 
 ### 3.3 Module — Statistiques et PnL
 
-Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de performance. Toutes les métriques ci-dessous sont calculées, jamais saisies manuellement, afin de garantir leur cohérence entre elles (cf. glossaire, section 9, pour les formules exactes).
+Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de performance. Toutes les métriques ci-dessous sont calculées, jamais saisies manuellement, afin de garantir leur cohérence entre elles (cf. glossaire, section 7, pour les formules exactes).
 
 #### 3.3.1 PnL brut/net, en valeur et en pourcentage
 - **Description** : gain/perte par trade et cumulé, avant et après frais, en valeur absolue et en % du capital engagé.
@@ -241,7 +241,7 @@ Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de p
 
 #### 3.3.3 Expectancy (espérance mathématique par trade, en R)
 - **Description** : gain moyen attendu par trade, exprimé en multiple du risque initial (R).
-- **Formule** : voir glossaire (section 9).
+- **Formule** : voir glossaire (section 7).
 - **Dépendances** : nécessite que chaque trade ait un risque initial défini (via le SL prévu, 3.1.2) pour calculer le R-multiple (3.3.7).
 
 #### 3.3.4 Profit factor
@@ -533,9 +533,9 @@ Le document source indiquait explicitement qu'un tri serait fait pour la V1. Pro
 - **Confidentialité des données** : les données de trading sont sensibles (PnL, capital) ; chiffrement au repos et en transit recommandé, accès protégé par authentification.
 - **Sauvegarde et export** : possibilité d'exporter l'intégralité des données à tout moment (au-delà du seul export fiscal 3.7.3), pour éviter tout verrouillage des données de l'utilisateur.
 - **Performance** : les écrans de statistiques (section 3.3) doivent rester réactifs même avec un historique de plusieurs milliers de trades.
-- **Mode sombre/clair** : les deux thèmes doivent être supportés (détail visuel traité en annexe, section 10).
+- **Mode sombre/clair** : les deux thèmes doivent être supportés (détail visuel traité en annexe, section 8).
 - **Accessibilité multi-support** : usage envisagé sur ordinateur en priorité, avec consultation mobile a minima pour la saisie rapide (3.1.7) et les alertes (3.6).
-- **Fiabilité des calculs** : toute métrique affichée (section 9) doit être recalculée depuis les données sources, jamais mise en cache de façon incohérente entre deux vues.
+- **Fiabilité des calculs** : toute métrique affichée (cf. glossaire, section 7) doit être recalculée depuis les données sources, jamais mise en cache de façon incohérente entre deux vues.
 
 ---
 
