@@ -1,0 +1,380 @@
+import { useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import type { Trade, TradeSide } from '../types/trade';
+import { tradesStore } from '../lib/tradesStore';
+import { computePnl } from '../lib/pnl';
+import { EMOTIONS, MARKET_CONDITIONS, SESSIONS } from '../lib/tradeOptions';
+import { Field, inputClass } from './Field';
+import { FormSection } from './FormSection';
+
+interface TradeFormState {
+  asset: string;
+  side: TradeSide;
+  date: string;
+  session: string;
+  timeframe: string;
+  entryPrice: string;
+  exitPrice: string;
+  size: string;
+  stopLoss: string;
+  takeProfit: string;
+  fees: string;
+  setup: string;
+  marketCondition: string;
+  thesis: string;
+  confidenceLevel: string;
+  emotionBefore: string;
+  emotionAfter: string;
+  followedPlan: boolean;
+  executionQuality: string;
+  starRating: string;
+  postMortem: string;
+}
+
+const emptyForm: TradeFormState = {
+  asset: '',
+  side: 'long',
+  date: '',
+  session: SESSIONS[0],
+  timeframe: '',
+  entryPrice: '',
+  exitPrice: '',
+  size: '',
+  stopLoss: '',
+  takeProfit: '',
+  fees: '',
+  setup: '',
+  marketCondition: MARKET_CONDITIONS[0],
+  thesis: '',
+  confidenceLevel: '5',
+  emotionBefore: EMOTIONS[0],
+  emotionAfter: EMOTIONS[0],
+  followedPlan: true,
+  executionQuality: '3',
+  starRating: '3',
+  postMortem: '',
+};
+
+function parseNumber(value: string): number | null {
+  if (value.trim() === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
+  const [form, setForm] = useState<TradeFormState>(emptyForm);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+
+  function set<K extends keyof TradeFormState>(key: K, value: TradeFormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSavedMessage(null);
+  }
+
+  const pnl = useMemo(
+    () =>
+      computePnl(
+        form.side,
+        parseNumber(form.entryPrice),
+        parseNumber(form.exitPrice),
+        parseNumber(form.size),
+        parseNumber(form.fees) ?? 0,
+      ),
+    [form.side, form.entryPrice, form.exitPrice, form.size, form.fees],
+  );
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+
+    const trade: Trade = {
+      id: crypto.randomUUID(),
+      asset: form.asset,
+      side: form.side,
+      entryPrice: parseNumber(form.entryPrice) ?? 0,
+      exitPrice: parseNumber(form.exitPrice) ?? 0,
+      size: parseNumber(form.size) ?? 0,
+      stopLoss: parseNumber(form.stopLoss) ?? 0,
+      takeProfit: parseNumber(form.takeProfit) ?? 0,
+      fees: parseNumber(form.fees) ?? 0,
+      date: form.date,
+      session: form.session,
+      setup: form.setup,
+      timeframe: form.timeframe,
+      marketCondition: form.marketCondition,
+      confidenceLevel: parseNumber(form.confidenceLevel) ?? 5,
+      emotionBefore: form.emotionBefore,
+      emotionAfter: form.emotionAfter,
+      followedPlan: form.followedPlan,
+      thesis: form.thesis,
+      postMortem: form.postMortem,
+      executionQuality: parseNumber(form.executionQuality) ?? 3,
+      starRating: parseNumber(form.starRating) ?? 3,
+      closed: true,
+    };
+
+    tradesStore.create(trade);
+    setForm(emptyForm);
+    setSavedMessage(`Trade sur ${trade.asset || 'l’actif'} enregistré.`);
+    onSaved?.(trade);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <FormSection title="1. Infos de base">
+        <Field label="Actif">
+          <input
+            className={inputClass}
+            value={form.asset}
+            onChange={(e) => set('asset', e.target.value)}
+            placeholder="EURUSD, BTC, AAPL..."
+            required
+          />
+        </Field>
+        <Field label="Sens">
+          <select
+            className={inputClass}
+            value={form.side}
+            onChange={(e) => set('side', e.target.value as TradeSide)}
+          >
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </select>
+        </Field>
+        <Field label="Date">
+          <input
+            type="date"
+            className={inputClass}
+            value={form.date}
+            onChange={(e) => set('date', e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Session">
+          <select
+            className={inputClass}
+            value={form.session}
+            onChange={(e) => set('session', e.target.value)}
+          >
+            {SESSIONS.map((session) => (
+              <option key={session} value={session}>
+                {session}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Timeframe">
+          <input
+            className={inputClass}
+            value={form.timeframe}
+            onChange={(e) => set('timeframe', e.target.value)}
+            placeholder="M15, H1, D1..."
+          />
+        </Field>
+      </FormSection>
+
+      <FormSection title="2. Prix et taille">
+        <Field label="Prix d'entrée">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.entryPrice}
+            onChange={(e) => set('entryPrice', e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Prix de sortie">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.exitPrice}
+            onChange={(e) => set('exitPrice', e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Taille">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.size}
+            onChange={(e) => set('size', e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Frais">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.fees}
+            onChange={(e) => set('fees', e.target.value)}
+          />
+        </Field>
+        <Field label="Stop loss">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.stopLoss}
+            onChange={(e) => set('stopLoss', e.target.value)}
+          />
+        </Field>
+        <Field label="Take profit">
+          <input
+            type="number"
+            step="any"
+            className={inputClass}
+            value={form.takeProfit}
+            onChange={(e) => set('takeProfit', e.target.value)}
+          />
+        </Field>
+
+        <div className="sm:col-span-2 flex items-center gap-2 rounded-xl bg-background/60 px-4 py-3">
+          <span className="text-sm text-cream/70">PnL</span>
+          {pnl === null ? (
+            <span className="text-sm text-cream/40">
+              Renseigne entrée, sortie et taille
+            </span>
+          ) : (
+            <span
+              className={`text-lg font-semibold tabular-nums ${
+                pnl >= 0 ? 'text-success' : 'text-danger'
+              }`}
+            >
+              {pnl >= 0 ? '+' : ''}
+              {pnl.toFixed(2)}
+            </span>
+          )}
+        </div>
+      </FormSection>
+
+      <FormSection title="3. Contexte">
+        <Field label="Setup">
+          <input
+            className={inputClass}
+            value={form.setup}
+            onChange={(e) => set('setup', e.target.value)}
+            placeholder="Breakout, pullback..."
+          />
+        </Field>
+        <Field label="Condition de marché">
+          <select
+            className={inputClass}
+            value={form.marketCondition}
+            onChange={(e) => set('marketCondition', e.target.value)}
+          >
+            {MARKET_CONDITIONS.map((condition) => (
+              <option key={condition} value={condition}>
+                {condition}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FormSection>
+
+      <FormSection title='4. Le "pourquoi"'>
+        <div className="sm:col-span-2">
+          <Field label="Thèse d'entrée">
+            <textarea
+              className={inputClass}
+              rows={3}
+              value={form.thesis}
+              onChange={(e) => set('thesis', e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Confiance avant résultat (1-10)">
+          <input
+            type="number"
+            min={1}
+            max={10}
+            className={inputClass}
+            value={form.confidenceLevel}
+            onChange={(e) => set('confidenceLevel', e.target.value)}
+          />
+        </Field>
+        <Field label="Émotion avant">
+          <select
+            className={inputClass}
+            value={form.emotionBefore}
+            onChange={(e) => set('emotionBefore', e.target.value)}
+          >
+            {EMOTIONS.map((emotion) => (
+              <option key={emotion} value={emotion}>
+                {emotion}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Émotion après">
+          <select
+            className={inputClass}
+            value={form.emotionAfter}
+            onChange={(e) => set('emotionAfter', e.target.value)}
+          >
+            {EMOTIONS.map((emotion) => (
+              <option key={emotion} value={emotion}>
+                {emotion}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-cream/80">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/20 bg-surface accent-accent"
+            checked={form.followedPlan}
+            onChange={(e) => set('followedPlan', e.target.checked)}
+          />
+          Plan respecté
+        </label>
+      </FormSection>
+
+      <FormSection title="5. Après coup">
+        <Field label="Note d'exécution (1-5)">
+          <input
+            type="number"
+            min={1}
+            max={5}
+            className={inputClass}
+            value={form.executionQuality}
+            onChange={(e) => set('executionQuality', e.target.value)}
+          />
+        </Field>
+        <Field label="Notation étoiles (1-5)">
+          <input
+            type="number"
+            min={1}
+            max={5}
+            className={inputClass}
+            value={form.starRating}
+            onChange={(e) => set('starRating', e.target.value)}
+          />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Post-mortem">
+            <textarea
+              className={inputClass}
+              rows={3}
+              value={form.postMortem}
+              onChange={(e) => set('postMortem', e.target.value)}
+            />
+          </Field>
+        </div>
+      </FormSection>
+
+      <div className="flex items-center gap-4">
+        <button
+          type="submit"
+          className="rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-cream shadow-lg shadow-primary/30 transition hover:brightness-110"
+        >
+          Enregistrer le trade
+        </button>
+        {savedMessage && (
+          <span className="text-sm text-success">{savedMessage}</span>
+        )}
+      </div>
+    </form>
+  );
+}
