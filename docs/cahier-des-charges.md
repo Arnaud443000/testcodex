@@ -1,7 +1,7 @@
-# Cahier des charges fonctionnel — Journal de Trading
+# Pulse — Cahier des charges fonctionnel — Journal de Trading
 
-Version 1.0 — 26/08/2026
-Statut : périmètre fonctionnel uniquement. L'identité visuelle (charte graphique, composants UI définitifs) fait l'objet d'un document séparé, à produire dans une phase ultérieure. Les pistes de design déjà évoquées sont conservées en annexe (section 8) pour ne rien perdre.
+Version 1.1 — 26/08/2026
+Statut : périmètre fonctionnel uniquement. Le nom définitif de l'application est **Pulse** (cf. section 8, mise à jour du 26/08/2026). L'identité visuelle complète (logo, palette, typographie, composants UI) est formalisée dans le document séparé `docs/charte-graphique.md`. Les pistes de design historiques restent conservées en annexe (section 8) pour ne rien perdre.
 
 ---
 
@@ -637,6 +637,13 @@ Cette section conserve les pistes déjà évoquées, pour mémoire, dans l'atten
 - Palette pressentie : fond quasi-noir/bleu nuit, accent principal bleu-violet pour les actions primaires, neutre clair chaud pour les actions secondaires, vert sauge pour les gains, corail/rouge pour les pertes.
 - Typographie pressentie : SF Pro Display (graisses Light à Bold).
 - Une maquette de dashboard a été fournie (cards KPI, courbe de PnL net, calendrier mensuel miniature, performance par stratégie en donut, jauge « Trading Sessions », performance horaire en barres, panneau « Performance Insights », tableau des trades récents) : elle a directement servi de référence pour construire la bibliothèque de widgets du module 3.8.3, mais sa mise en forme graphique définitive (grille exacte, tokens de couleur, composants) reste à formaliser dans le document de charte graphique séparé.
+
+**Mise à jour du 26/08/2026 (bis) — nom et identité visuelle arrêtés :**
+- Nom définitif de l'application : **Pulse** (remplace le nom de travail « TradeLens » ci-dessus). Signature inchangée : « Clarté. Discipline. Performance. ».
+- Logo retenu : icône façon égaliseur audio — barres verticales de hauteurs variables disposées en losange autour d'un vide circulaire central, dégradé bleu-violet lumineux sur fond sombre. Déclinaisons livrées : logo principal, icône seule, icône d'application, favicon.
+- Palette de couleurs définitive (hex) : fond `#0B0E27`, cards/surfaces `#1E2347`, bleu `#4A5FD9`, violet `#8B7FE8`, crème `#F0EDE4`, vert/gain `#6FA88A`, rouge corail/perte `#D96659`.
+- Typographie confirmée : SF Pro Display (Light à Bold), repli web Inter.
+- Détail complet (composants, tokens, grille, application au dashboard de référence) désormais formalisé dans `docs/charte-graphique.md`, à jour sur cette identité.
 
 ---
 
