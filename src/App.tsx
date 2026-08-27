@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
 import { TradesPage } from './pages/TradesPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 
-type View = 'dashboard' | 'trades';
+type View = 'dashboard' | 'trades' | 'analytics';
 
 const NAV_ITEMS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'trades', label: 'Trades' },
+  { key: 'analytics', label: 'Analytics' },
 ];
+
+const PAGES: Record<View, () => React.JSX.Element> = {
+  dashboard: DashboardPage,
+  trades: TradesPage,
+  analytics: AnalyticsPage,
+};
 
 function App() {
   const [view, setView] = useState<View>('dashboard');
+  const Page = PAGES[view];
 
   return (
     <div>
@@ -32,7 +41,7 @@ function App() {
           ))}
         </div>
       </nav>
-      {view === 'dashboard' ? <DashboardPage /> : <TradesPage />}
+      <Page />
     </div>
   );
 }

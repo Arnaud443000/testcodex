@@ -214,7 +214,13 @@ export function TradesPage() {
           title="Détail du trade"
           onClose={() => setSelectedTrade(null)}
         >
-          <TradeDetail trade={selectedTrade} />
+          <TradeDetail
+            trade={selectedTrade}
+            onUpdated={(updated) => {
+              setSelectedTrade(updated);
+              refreshTrades();
+            }}
+          />
         </Modal>
       )}
     </div>

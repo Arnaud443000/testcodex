@@ -88,7 +88,7 @@ const EMPTY_STATS: DashboardStats = {
 };
 
 /** R-multiple, or null if no stop loss distance is defined for this trade. */
-function rMultiple(trade: Trade): number | null {
+export function rMultiple(trade: Trade): number | null {
   const risk = Math.abs(trade.entryPrice - trade.stopLoss);
   if (!trade.stopLoss || risk === 0) return null;
   const direction = trade.side === 'long' ? 1 : -1;
