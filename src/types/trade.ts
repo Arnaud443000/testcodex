@@ -1,6 +1,17 @@
 export type TradeSide = 'long' | 'short';
 export type TradeType = 'system' | 'discretionary';
 
+export const MISTAKE_TYPES = [
+  'Sortie prématurée',
+  'Overtrading',
+  'Mauvaise gestion du risque',
+  'Pas de plan',
+  'Revenge trade',
+  'Autre',
+] as const;
+
+export type MistakeType = (typeof MISTAKE_TYPES)[number];
+
 export interface Trade {
   id: string;
   asset: string;
@@ -31,4 +42,5 @@ export interface Trade {
   exitTime?: string;
   /** Price observed after exit, filled in later to measure opportunity cost (3.3.18). */
   priceAfterExit?: number;
+  mistakeTypes?: MistakeType[];
 }

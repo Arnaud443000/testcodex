@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Trade, TradeSide, TradeType } from '../types/trade';
+import type { MistakeType, Trade, TradeSide, TradeType } from '../types/trade';
+import { MISTAKE_TYPES } from '../types/trade';
 import { tradesStore } from '../lib/tradesStore';
 import { computePnl } from '../lib/pnl';
 import { EMOTIONS, MARKET_CONDITIONS, SESSIONS } from '../lib/tradeOptions';
@@ -33,6 +34,7 @@ interface TradeFormState {
   starRating: string;
   postMortem: string;
   screenshot: string;
+  mistakeTypes: MistakeType[];
 }
 
 const emptyForm: TradeFormState = {
@@ -61,6 +63,7 @@ const emptyForm: TradeFormState = {
   starRating: '3',
   postMortem: '',
   screenshot: '',
+  mistakeTypes: [],
 };
 
 function parseNumber(value: string): number | null {
@@ -119,6 +122,7 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
       screenshot: form.screenshot || undefined,
       closed: true,
       tradeType: form.tradeType || undefined,
+      mistakeTypes: form.mistakeTypes.length > 0 ? form.mistakeTypes : undefined,
       entryTime: form.entryTime || undefined,
       exitTime: form.exitTime || undefined,
     };
@@ -400,6 +404,36 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
               onChange={(e) => set('postMortem', e.target.value)}
             />
           </Field>
+        </div>
+        <div className="sm:col-span-2 flex flex-col gap-2">
+          <span className="text-sm text-cream/70">Types d'erreur</span>
+          <div className="flex flex-wrap gap-2">
+            {MISTAKE_TYPES.map((mistake) => {
+              const selected = form.mistakeTypes.includes(mistake);
+              return (
+                <button
+                  key={mistake}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() =>
+                    set(
+                      'mistakeTypes',
+                      selected
+                        ? form.mistakeTypes.filter((m) => m !== mistake)
+                        : [...form.mistakeTypes, mistake],
+                    )
+                  }
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    selected
+                      ? 'bg-gradient-to-r from-primary to-accent text-cream'
+                      : 'bg-surface text-cream/60 hover:text-cream'
+                  }`}
+                >
+                  {mistake}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="sm:col-span-2">
           <Field label="Screenshot (optionnel)">

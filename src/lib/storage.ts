@@ -20,6 +20,40 @@ function writeCollection<T>(key: string, items: T[]): void {
   localStorage.setItem(key, JSON.stringify(items));
 }
 
+export interface DocumentStore<T> {
+  get(): T;
+  save(patch: Partial<T>): T;
+}
+
+/**
+ * Single-document counterpart to Repository<T>, for settings-like state that
+ * is one object rather than a collection. Unknown/missing keys fall back to
+ * `defaults`, so adding a field later never breaks an existing saved value.
+ */
+export function createLocalStorageDocument<T extends object>(
+  key: string,
+  defaults: T,
+): DocumentStore<T> {
+  function read(): T {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { ...defaults };
+    try {
+      return { ...defaults, ...(JSON.parse(raw) as Partial<T>) };
+    } catch {
+      return { ...defaults };
+    }
+  }
+
+  return {
+    get: read,
+    save(patch) {
+      const updated = { ...read(), ...patch };
+      localStorage.setItem(key, JSON.stringify(updated));
+      return updated;
+    },
+  };
+}
+
 /**
  * localStorage-backed implementation of Repository<T>. Swapping this factory
  * for a remote-API-backed one later keeps every caller (which only depends

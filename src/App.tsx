@@ -2,19 +2,25 @@ import { useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
 import { TradesPage } from './pages/TradesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { BehaviorPage } from './pages/BehaviorPage';
+import { SettingsPage } from './pages/SettingsPage';
 
-type View = 'dashboard' | 'trades' | 'analytics';
+type View = 'dashboard' | 'trades' | 'analytics' | 'behavior' | 'settings';
 
 const NAV_ITEMS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'trades', label: 'Trades' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'behavior', label: 'Comportement' },
+  { key: 'settings', label: 'Réglages' },
 ];
 
 const PAGES: Record<View, () => React.JSX.Element> = {
   dashboard: DashboardPage,
   trades: TradesPage,
   analytics: AnalyticsPage,
+  behavior: BehaviorPage,
+  settings: SettingsPage,
 };
 
 function App() {
