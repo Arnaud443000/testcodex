@@ -14,6 +14,7 @@ export type MistakeType = (typeof MISTAKE_TYPES)[number];
 
 export interface Trade {
   id: string;
+  accountId: string;
   asset: string;
   side: TradeSide;
   entryPrice: number;

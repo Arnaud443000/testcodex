@@ -4,6 +4,7 @@ import type { PersonalRule } from '../types/settings';
 import { settingsStore } from '../lib/settingsStore';
 import { Field, inputClass } from '../components/Field';
 import { FormSection } from '../components/FormSection';
+import { AccountsManager } from '../components/AccountsManager';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState(() => settingsStore.get());
@@ -44,6 +45,8 @@ export function SettingsPage() {
           Ces valeurs alimentent le score de discipline et les alertes de séance.
         </p>
       </header>
+
+      <AccountsManager />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <FormSection title="Risque">

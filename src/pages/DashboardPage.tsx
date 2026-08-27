@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { tradesStore } from '../lib/tradesStore';
+import { useAccountTrades } from '../lib/accountContext';
 import { computeStats, periodRanges, tradesInRange, type Period } from '../lib/stats';
 import { formatCurrency, formatPercent, formatRatio } from '../lib/format';
 import { PeriodSelector } from '../components/PeriodSelector';
@@ -12,7 +12,7 @@ import { settingsStore } from '../lib/settingsStore';
 
 export function DashboardPage() {
   const [period, setPeriod] = useState<Period>('1M');
-  const trades = useMemo(() => tradesStore.getAll(), []);
+  const trades = useAccountTrades();
   const alerts = useMemo(() => computeActiveAlerts(trades, settingsStore.get()), [trades]);
 
   const { current, previous } = useMemo(() => {
