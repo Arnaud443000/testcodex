@@ -15,6 +15,30 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        modalIn: {
+          '0%': { opacity: '0', transform: 'scale(0.97) translateY(4px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fadeIn 200ms ease-out',
+        'fade-in-up': 'fadeInUp 220ms ease-out',
+        'modal-in': 'modalIn 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-down': 'slideDown 160ms ease-out',
+      },
     },
   },
   plugins: [],
