@@ -4,12 +4,14 @@ import type { MistakeType, Trade, TradeSide, TradeType } from '../types/trade';
 import { MISTAKE_TYPES } from '../types/trade';
 import { tradesStore } from '../lib/tradesStore';
 import { settingsStore } from '../lib/settingsStore';
+import { useAccounts } from '../lib/accountContext';
 import { computePnl } from '../lib/pnl';
 import { EMOTIONS, MARKET_CONDITIONS, SESSIONS } from '../lib/tradeOptions';
 import { Field, inputClass } from './Field';
 import { FormSection } from './FormSection';
 
 interface TradeFormState {
+  accountId: string;
   asset: string;
   side: TradeSide;
   date: string;
@@ -39,7 +41,7 @@ interface TradeFormState {
   ruleCompliance: Record<string, boolean>;
 }
 
-const emptyForm: TradeFormState = {
+const emptyForm: Omit<TradeFormState, 'accountId'> = {
   asset: '',
   side: 'long',
   date: '',
@@ -77,7 +79,12 @@ function parseNumber(value: string): number | null {
 
 export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
   const rules = useMemo(() => settingsStore.get().rules, []);
-  const [form, setForm] = useState<TradeFormState>(emptyForm);
+  const { accounts, selectedAccountId } = useAccounts();
+  const defaultAccountId = selectedAccountId ?? accounts[0]?.id ?? '';
+  const [form, setForm] = useState<TradeFormState>({
+    ...emptyForm,
+    accountId: defaultAccountId,
+  });
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
 
@@ -114,6 +121,7 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
 
     const trade: Trade = {
       id: crypto.randomUUID(),
+      accountId: form.accountId,
       asset: form.asset,
       side: form.side,
       entryPrice: parseNumber(form.entryPrice) ?? 0,
@@ -150,7 +158,7 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
     };
 
     tradesStore.create(trade);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, accountId: form.accountId });
     setSavedMessage(`Trade sur ${trade.asset || 'l’actif'} enregistré.`);
     onSaved?.(trade);
   }
@@ -158,6 +166,20 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <FormSection title="1. Infos de base">
+        <Field label="Compte">
+          <select
+            className={inputClass}
+            value={form.accountId}
+            onChange={(e) => set('accountId', e.target.value)}
+            required
+          >
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Actif">
           <input
             className={inputClass}

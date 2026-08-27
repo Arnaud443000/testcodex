@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Trade } from '../types/trade';
-import { tradesStore } from '../lib/tradesStore';
+import { useAccountTrades } from '../lib/accountContext';
 import { settingsStore } from '../lib/settingsStore';
 import {
   computeDisciplineScore,
@@ -51,7 +51,7 @@ function GroupCompare({ a, b }: { a: GroupPerf; b: GroupPerf }) {
 }
 
 export function BehaviorPage() {
-  const trades = useMemo(() => tradesStore.getAll(), []);
+  const trades = useAccountTrades();
   const settings = useMemo(() => settingsStore.get(), []);
   const [mistakeDrilldown, setMistakeDrilldown] = useState<{
     label: string;

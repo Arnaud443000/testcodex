@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { tradesStore } from '../lib/tradesStore';
+import { useAccountTrades } from '../lib/accountContext';
 import {
   durationByOutcome,
   longVsShort,
@@ -91,7 +91,7 @@ function formatMinutes(minutes: number | null): string {
 }
 
 export function AnalyticsPage() {
-  const trades = useMemo(() => tradesStore.getAll(), []);
+  const trades = useAccountTrades();
 
   const bySetup = useMemo(() => performanceBySetup(trades), [trades]);
   const byAsset = useMemo(() => performanceByAsset(trades), [trades]);

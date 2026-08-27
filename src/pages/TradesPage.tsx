@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Trade } from '../types/trade';
 import type { MissedTrade } from '../types/missedTrade';
 import { tradesStore } from '../lib/tradesStore';
 import { missedTradesStore } from '../lib/missedTradesStore';
+import { useAccounts } from '../lib/accountContext';
 import { computeTradePnl } from '../lib/pnl';
 import { downloadCsv, tradesToCsv } from '../lib/csv';
 import { inputClass } from '../components/Field';
@@ -14,7 +15,8 @@ import { MissedTradesList } from '../components/MissedTradesList';
 type SortDirection = 'asc' | 'desc';
 
 export function TradesPage() {
-  const [trades, setTrades] = useState<Trade[]>(() => tradesStore.getAll());
+  const { selectedAccountId } = useAccounts();
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [missedTrades, setMissedTrades] = useState<MissedTrade[]>(() =>
     missedTradesStore.getAll(),
   );
@@ -29,8 +31,11 @@ export function TradesPage() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
 
   function refreshTrades() {
-    setTrades(tradesStore.getAll());
+    const all = tradesStore.getAll();
+    setTrades(selectedAccountId === null ? all : all.filter((t) => t.accountId === selectedAccountId));
   }
+
+  useEffect(refreshTrades, [selectedAccountId]);
 
   function refreshMissedTrades() {
     setMissedTrades(missedTradesStore.getAll());
