@@ -6,10 +6,14 @@ import { PeriodSelector } from '../components/PeriodSelector';
 import { StatCard } from '../components/StatCard';
 import { EquityCurveChart } from '../components/EquityCurveChart';
 import { WinLossDonut } from '../components/WinLossDonut';
+import { AlertsPanel } from '../components/AlertsPanel';
+import { computeActiveAlerts } from '../lib/alerts';
+import { settingsStore } from '../lib/settingsStore';
 
 export function DashboardPage() {
   const [period, setPeriod] = useState<Period>('1M');
   const trades = useMemo(() => tradesStore.getAll(), []);
+  const alerts = useMemo(() => computeActiveAlerts(trades, settingsStore.get()), [trades]);
 
   const { current, previous } = useMemo(() => {
     const now = new Date();
@@ -63,6 +67,8 @@ export function DashboardPage() {
         <h1 className="text-2xl font-semibold text-cream">Pulse — Dashboard</h1>
         <PeriodSelector value={period} onChange={setPeriod} />
       </header>
+
+      <AlertsPanel result={alerts} />
 
       {current.tradeCount === 0 ? (
         <p className="rounded-2xl border border-white/10 bg-surface/40 px-4 py-10 text-center text-sm text-cream/50">

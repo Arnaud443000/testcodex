@@ -43,4 +43,6 @@ export interface Trade {
   /** Price observed after exit, filled in later to measure opportunity cost (3.3.18). */
   priceAfterExit?: number;
   mistakeTypes?: MistakeType[];
+  /** Personal rule id -> respected, as ticked on the pre-trade checklist (2.4). */
+  ruleCompliance?: Record<string, boolean>;
 }

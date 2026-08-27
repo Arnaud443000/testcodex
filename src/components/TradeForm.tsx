@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import type { MistakeType, Trade, TradeSide, TradeType } from '../types/trade';
 import { MISTAKE_TYPES } from '../types/trade';
 import { tradesStore } from '../lib/tradesStore';
+import { settingsStore } from '../lib/settingsStore';
 import { computePnl } from '../lib/pnl';
 import { EMOTIONS, MARKET_CONDITIONS, SESSIONS } from '../lib/tradeOptions';
 import { Field, inputClass } from './Field';
@@ -35,6 +36,7 @@ interface TradeFormState {
   postMortem: string;
   screenshot: string;
   mistakeTypes: MistakeType[];
+  ruleCompliance: Record<string, boolean>;
 }
 
 const emptyForm: TradeFormState = {
@@ -64,6 +66,7 @@ const emptyForm: TradeFormState = {
   postMortem: '',
   screenshot: '',
   mistakeTypes: [],
+  ruleCompliance: {},
 };
 
 function parseNumber(value: string): number | null {
@@ -73,13 +76,18 @@ function parseNumber(value: string): number | null {
 }
 
 export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
+  const rules = useMemo(() => settingsStore.get().rules, []);
   const [form, setForm] = useState<TradeFormState>(emptyForm);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState(false);
 
   function set<K extends keyof TradeFormState>(key: K, value: TradeFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setSavedMessage(null);
+    setPendingConfirm(false);
   }
+
+  const brokenRules = rules.filter((rule) => !form.ruleCompliance[rule.id]);
 
   const pnl = useMemo(
     () =>
@@ -95,6 +103,14 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+
+    // A trade breaking your own rules is exactly what this journal exists to
+    // record, so saving is never blocked outright — but it takes a second,
+    // deliberate click, so a rule can't be skipped absent-mindedly.
+    if (brokenRules.length > 0 && !pendingConfirm) {
+      setPendingConfirm(true);
+      return;
+    }
 
     const trade: Trade = {
       id: crypto.randomUUID(),
@@ -125,6 +141,12 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
       mistakeTypes: form.mistakeTypes.length > 0 ? form.mistakeTypes : undefined,
       entryTime: form.entryTime || undefined,
       exitTime: form.exitTime || undefined,
+      ruleCompliance:
+        rules.length > 0
+          ? Object.fromEntries(
+              rules.map((rule) => [rule.id, Boolean(form.ruleCompliance[rule.id])]),
+            )
+          : undefined,
     };
 
     tradesStore.create(trade);
@@ -460,12 +482,56 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
         </div>
       </FormSection>
 
+      {rules.length > 0 && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-surface/40 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-cream/80">
+            Checklist — mes règles
+          </h2>
+          <div className="flex flex-col gap-2">
+            {rules.map((rule) => (
+              <label
+                key={rule.id}
+                className="flex items-center gap-2 text-sm text-cream/80"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-white/20 bg-surface accent-accent"
+                  checked={Boolean(form.ruleCompliance[rule.id])}
+                  onChange={(e) =>
+                    set('ruleCompliance', {
+                      ...form.ruleCompliance,
+                      [rule.id]: e.target.checked,
+                    })
+                  }
+                />
+                {rule.label}
+              </label>
+            ))}
+          </div>
+          {brokenRules.length > 0 && (
+            <p className="text-xs text-cream/50">
+              {brokenRules.length} règle{brokenRules.length > 1 ? 's' : ''} non cochée
+              {brokenRules.length > 1 ? 's' : ''} — le trade reste enregistrable, mais il sera
+              marqué comme tel.
+            </p>
+          )}
+        </section>
+      )}
+
       <div className="flex items-center gap-4">
         <button
           type="submit"
-          className="rounded-full bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-cream shadow-lg shadow-primary/30 transition hover:brightness-110"
+          className={`rounded-full px-6 py-3 text-sm font-semibold shadow-lg transition hover:brightness-110 ${
+            pendingConfirm
+              ? 'bg-danger text-cream shadow-danger/30'
+              : 'bg-gradient-to-r from-primary to-accent text-cream shadow-primary/30'
+          }`}
         >
-          Enregistrer le trade
+          {pendingConfirm
+            ? `Enregistrer quand même (${brokenRules.length} règle${
+                brokenRules.length > 1 ? 's' : ''
+              } non respectée${brokenRules.length > 1 ? 's' : ''})`
+            : 'Enregistrer le trade'}
         </button>
         {savedMessage && (
           <span className="text-sm text-success">{savedMessage}</span>
