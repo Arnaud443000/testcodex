@@ -92,6 +92,13 @@ export function CalendarPage() {
         </div>
       </header>
 
+      {pnlByDay.size === 0 && (
+        <p className="rounded-2xl border border-white/10 bg-surface/40 px-4 py-6 text-center text-sm text-cream/50">
+          Aucun trade enregistré. Ajoute un trade pour voir apparaître ton calendrier de
+          performance.
+        </p>
+      )}
+
       <div className="grid grid-cols-7 gap-2">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="text-center text-xs uppercase tracking-wide text-cream/40">
