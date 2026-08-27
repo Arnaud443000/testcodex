@@ -1,4 +1,5 @@
 export type TradeSide = 'long' | 'short';
+export type TradeType = 'system' | 'discretionary';
 
 export interface Trade {
   id: string;
@@ -25,4 +26,9 @@ export interface Trade {
   starRating: number;
   screenshot?: string;
   closed: boolean;
+  tradeType?: TradeType;
+  entryTime?: string;
+  exitTime?: string;
+  /** Price observed after exit, filled in later to measure opportunity cost (3.3.18). */
+  priceAfterExit?: number;
 }

@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import type { Trade } from '../types/trade';
 import { computeTradePnl } from '../lib/pnl';
+import { tradesStore } from '../lib/tradesStore';
+import { inputClass } from './Field';
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -19,8 +22,31 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
-export function TradeDetail({ trade }: { trade: Trade }) {
+const TRADE_TYPE_LABELS: Record<string, string> = {
+  system: 'Système',
+  discretionary: 'Discrétionnaire',
+};
+
+export function TradeDetail({
+  trade,
+  onUpdated,
+}: {
+  trade: Trade;
+  onUpdated?: (trade: Trade) => void;
+}) {
   const pnl = computeTradePnl(trade);
+  const [priceAfterExit, setPriceAfterExit] = useState(
+    trade.priceAfterExit !== undefined ? String(trade.priceAfterExit) : '',
+  );
+  const [saved, setSaved] = useState(false);
+
+  function handleSavePriceAfterExit() {
+    const parsed = Number(priceAfterExit);
+    if (priceAfterExit.trim() === '' || !Number.isFinite(parsed)) return;
+    const updated = tradesStore.update(trade.id, { priceAfterExit: parsed });
+    setSaved(true);
+    if (updated) onUpdated?.(updated);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,6 +55,7 @@ export function TradeDetail({ trade }: { trade: Trade }) {
           <h3 className="text-xl font-semibold text-cream">{trade.asset}</h3>
           <p className="text-sm text-cream/60">
             {trade.date} · {trade.session} · {trade.side === 'long' ? 'Long' : 'Short'}
+            {trade.tradeType && ` · ${TRADE_TYPE_LABELS[trade.tradeType]}`}
           </p>
         </div>
         <span
@@ -51,6 +78,12 @@ export function TradeDetail({ trade }: { trade: Trade }) {
         <DetailRow label="Setup" value={trade.setup || '—'} />
         <DetailRow label="Timeframe" value={trade.timeframe || '—'} />
         <DetailRow label="Condition de marché" value={trade.marketCondition} />
+        {(trade.entryTime || trade.exitTime) && (
+          <DetailRow
+            label="Horaires"
+            value={`${trade.entryTime ?? '—'} → ${trade.exitTime ?? '—'}`}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -68,6 +101,34 @@ export function TradeDetail({ trade }: { trade: Trade }) {
       {trade.postMortem && (
         <DetailRow label="Post-mortem" value={<p className="whitespace-pre-wrap">{trade.postMortem}</p>} />
       )}
+
+      <div className="flex items-end gap-3 rounded-xl bg-background/60 p-4">
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="text-xs text-cream/50" htmlFor="priceAfterExit">
+            Prix après sortie (coût d'opportunité)
+          </label>
+          <input
+            id="priceAfterExit"
+            type="number"
+            step="any"
+            className={inputClass}
+            value={priceAfterExit}
+            onChange={(e) => {
+              setPriceAfterExit(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="À renseigner plus tard"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleSavePriceAfterExit}
+          className="rounded-full bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-cream transition hover:brightness-110"
+        >
+          Enregistrer
+        </button>
+        {saved && <span className="text-xs text-success">Sauvegardé</span>}
+      </div>
 
       {trade.screenshot && (
         <div>

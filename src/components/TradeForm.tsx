@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Trade, TradeSide } from '../types/trade';
+import type { Trade, TradeSide, TradeType } from '../types/trade';
 import { tradesStore } from '../lib/tradesStore';
 import { computePnl } from '../lib/pnl';
 import { EMOTIONS, MARKET_CONDITIONS, SESSIONS } from '../lib/tradeOptions';
@@ -13,6 +13,9 @@ interface TradeFormState {
   date: string;
   session: string;
   timeframe: string;
+  tradeType: TradeType | '';
+  entryTime: string;
+  exitTime: string;
   entryPrice: string;
   exitPrice: string;
   size: string;
@@ -38,6 +41,9 @@ const emptyForm: TradeFormState = {
   date: '',
   session: SESSIONS[0],
   timeframe: '',
+  tradeType: '',
+  entryTime: '',
+  exitTime: '',
   entryPrice: '',
   exitPrice: '',
   size: '',
@@ -112,6 +118,9 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
       starRating: parseNumber(form.starRating) ?? 3,
       screenshot: form.screenshot || undefined,
       closed: true,
+      tradeType: form.tradeType || undefined,
+      entryTime: form.entryTime || undefined,
+      exitTime: form.exitTime || undefined,
     };
 
     tradesStore.create(trade);
@@ -171,6 +180,33 @@ export function TradeForm({ onSaved }: { onSaved?: (trade: Trade) => void }) {
             onChange={(e) => set('timeframe', e.target.value)}
             placeholder="M15, H1, D1..."
           />
+        </Field>
+        <Field label="Heure d'entrée">
+          <input
+            type="time"
+            className={inputClass}
+            value={form.entryTime}
+            onChange={(e) => set('entryTime', e.target.value)}
+          />
+        </Field>
+        <Field label="Heure de sortie">
+          <input
+            type="time"
+            className={inputClass}
+            value={form.exitTime}
+            onChange={(e) => set('exitTime', e.target.value)}
+          />
+        </Field>
+        <Field label="Type de trade">
+          <select
+            className={inputClass}
+            value={form.tradeType}
+            onChange={(e) => set('tradeType', e.target.value as TradeFormState['tradeType'])}
+          >
+            <option value="">Non tagué</option>
+            <option value="system">Système</option>
+            <option value="discretionary">Discrétionnaire</option>
+          </select>
         </Field>
       </FormSection>
 
