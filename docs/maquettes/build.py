@@ -518,3 +518,32 @@ def styleAE():
         h=h.replace(a,b)
     open(OUT+'style-ae.html','w',encoding='utf-8').write(h)
 styleAE()
+
+
+# ====================== STYLE A+D — hybride : structure Pulse + verre & aurora ======================
+def styleAD():
+    h=open(OUT+'style-a.html',encoding='utf-8').read()
+    extra="""
+body{background:#080B20}
+.app{background:
+ radial-gradient(900px 620px at 8% 6%,rgba(74,95,217,.42),transparent 60%),
+ radial-gradient(800px 600px at 95% 10%,rgba(139,127,232,.30),transparent 60%),
+ radial-gradient(900px 700px at 65% 108%,rgba(74,95,217,.30),transparent 60%),
+ radial-gradient(600px 420px at 3% 96%,rgba(95,203,158,.10),transparent 60%),#080B20}
+.side,.top{background:rgba(12,16,40,.55);backdrop-filter:blur(22px);border-color:rgba(255,255,255,.08)}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.085),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.10);border-radius:24px;backdrop-filter:blur(20px);
+ box-shadow:0 20px 50px -24px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.10)}
+.chip,.periods,.bellb{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+.nav.on{background:linear-gradient(135deg,rgba(74,95,217,.30),rgba(139,127,232,.20));box-shadow:0 8px 24px -10px rgba(139,127,232,.7),inset 0 1px 0 rgba(255,255,255,.12);color:#fff}
+.periods .on,.avatar{box-shadow:0 6px 18px -6px rgba(139,127,232,.9)}
+.btn{box-shadow:0 10px 30px -8px rgba(139,127,232,.85),inset 0 1px 0 rgba(255,255,255,.35)}
+.hero svg path:nth-of-type(2){filter:drop-shadow(0 0 8px rgba(139,127,232,.95))}
+.big{background:linear-gradient(90deg,#fff,#C9D2FF);-webkit-background-clip:text;color:transparent}
+.cell.g3{box-shadow:0 0 14px -2px rgba(95,203,158,.55)}.cell.l3{box-shadow:0 0 14px -2px rgba(240,119,107,.55)}
+.cell{border-radius:12px}.ii{background:linear-gradient(135deg,rgba(74,95,217,.35),rgba(139,127,232,.30));color:#DCD3FF}
+.badge.g,.badge.n{backdrop-filter:blur(6px)}
+"""
+    assert '</style>' in h
+    h=h.replace('</style>',extra+'</style>',1).replace('<title>Pulse — a</title>','<title>Pulse — Hybrid A+D</title>')
+    open(OUT+'style-ad.html','w',encoding='utf-8').write(h)
+styleAD()
