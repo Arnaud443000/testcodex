@@ -1,0 +1,95 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('../assets/fonts/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --grad: linear-gradient(135deg, #4a5fd9, #8b7fe8);
+  --glass: linear-gradient(160deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.03));
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --control: rgba(255, 255, 255, 0.05);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg-deep font-sans text-tx antialiased;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+
+@layer components {
+  /* Aurora background (charte 2.5) */
+  .app-shell {
+    background:
+      radial-gradient(900px 620px at 8% 6%, rgba(74, 95, 217, 0.42), transparent 60%),
+      radial-gradient(800px 600px at 95% 10%, rgba(139, 127, 232, 0.3), transparent 60%),
+      radial-gradient(900px 700px at 65% 108%, rgba(74, 95, 217, 0.3), transparent 60%),
+      radial-gradient(600px 420px at 3% 96%, rgba(95, 203, 158, 0.1), transparent 60%), #080b20;
+  }
+  .glass-bar {
+    background: rgba(12, 16, 40, 0.55);
+    backdrop-filter: blur(22px);
+    border-color: var(--hairline);
+  }
+  .glass-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    @apply rounded-card shadow-card;
+    backdrop-filter: blur(20px);
+  }
+  .control {
+    background: var(--control);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    @apply rounded-md text-sm text-tx;
+  }
+  .caption {
+    @apply text-[11.5px] font-semibold uppercase tracking-[0.06em] text-tx3;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-full px-[22px] py-3 text-[15px] font-semibold text-white transition;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet;
+  }
+  .btn-primary {
+    background: var(--grad);
+    @apply shadow-btn hover:brightness-110 disabled:opacity-45;
+  }
+  .btn-secondary {
+    background: var(--control);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    @apply text-tx hover:brightness-125;
+  }
+  .nt {
+    @apply flex gap-3 rounded-inner border px-[15px] py-[13px] text-[13px] leading-snug;
+  }
+  .nt-ok {
+    @apply border-gain/30 bg-gain/10 text-[#9BE3C4];
+  }
+  .nt-warn {
+    @apply border-warn/40 bg-warn/10 text-[#F0CE8E];
+  }
+  .nt-bad {
+    @apply border-loss/40 bg-loss/10 text-[#F5A198];
+  }
+}
+
+/* Reduced effects mode (charte 7) */
+:root[data-effects='reduced'] .app-shell {
+  background: #0b0e27;
+}
+:root[data-effects='reduced'] .glass-bar,
+:root[data-effects='reduced'] .glass-card {
+  backdrop-filter: none;
+  background: #171b33;
+}

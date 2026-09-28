@@ -1,0 +1,27 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+    branches: [main]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: cargo test -p pulse-core
+      - run: npm run tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pulse-windows-installer
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
