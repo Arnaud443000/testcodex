@@ -666,7 +666,9 @@ Ce glossaire garantit que chaque métrique est implémentée de façon identique
 
 ---
 
-## 8. Annexe — Identité visuelle (à traiter ultérieurement)
+## 8. Annexe — Identité visuelle
+
+**Mise à jour du 28/09/2026 (v2.0) — direction arrêtée : style « A+D »** (palette Pulse + panneaux en verre et lueurs d'aurore, thème sombre, police Inter embarquée). La référence est désormais `docs/charte-graphique.md` v2.0 et les maquettes de `docs/maquettes/`. Les pistes historiques ci-dessous sont conservées pour mémoire.
 
 Cette section conserve les pistes déjà évoquées, pour mémoire, dans l'attente du document de charte graphique dédié :
 

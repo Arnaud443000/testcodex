@@ -1,5 +1,7 @@
 # Pulse — Prompts de maquettes (ChatGPT / génération d'images)
 
+> **Archive** — la direction visuelle a été arrêtée le 28/09/2026 (style A+D, cf. `docs/charte-graphique.md` v2.0). Ces prompts restent utiles pour générer de nouvelles variantes.
+
 Objectif : générer plusieurs **directions visuelles** du même écran, comparer, en choisir une, puis me renvoyer les images pour que je mette à jour `docs/charte-graphique.md` (tokens, composants) avant de coder l'interface.
 
 Les prompts sont en **anglais** (meilleur rendu des images). Les libellés d'interface sont volontairement en anglais dans les maquettes : le texte généré par image est fiable surtout en anglais, on traduira à l'implémentation.
