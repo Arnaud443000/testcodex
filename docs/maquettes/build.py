@@ -495,3 +495,26 @@ td{padding:13px 8px;border-top:1px solid var(--bd)}td.r,th.r{text-align:right}
 </div></main></div></body></html>"""
     open(OUT+'style-d.html','w',encoding='utf-8').write(html)
 styleD()
+
+
+# ====================== STYLE A+E — hybride : palette Pulse + mise en page Carnet ======================
+def styleAE():
+    h=open(OUT+'style-e.html',encoding='utf-8').read()
+    subs=[('--brz:#C9A35A','--brz:#A79DF2'),('#C9A35A','#4A5FD9'),('#E6CB8E','#8B7FE8'),
+      ('--bg:#16140F','--bg:#0B0E27'),('--side:#1B1812','--side:#0D1120'),('--card:#211E17','--card:#171B33'),('--card2:#2A261D','--card2:#1F2440'),
+      ('--tx:#EFE9DC','--tx:#F0EDE4'),('--tx2:#B3AA98','--tx2:#9AA0C0'),('--tx3:#807867','--tx3:#6B7290'),
+      ('--teal:#3E8C86','--teal:#4A5FD9'),('--gain:#8DB48E','--gain:#5FCB9E'),('--loss:#D57A62','--loss:#F0776B'),
+      ('rgba(239,233,220,','rgba(240,237,228,'),('rgba(201,163,90,','rgba(139,127,232,'),
+      ('rgba(62,140,134,.18);border-color:rgba(62,140,134,.5);color:#8ACBC4','rgba(74,95,217,.2);border-color:rgba(74,95,217,.55);color:#B4BEFF'),
+      ('rgba(141,180,142,','rgba(95,203,158,'),('rgba(213,122,98,','rgba(240,119,107,'),
+      ('.btn{background:var(--brz);color:#1B1710;','.btn{background:linear-gradient(135deg,#4A5FD9,#8B7FE8);color:#fff;box-shadow:0 6px 16px -6px rgba(91,114,200,.6),inset 0 1px 0 rgba(255,255,255,.28);'),
+      ('.box.ok{background:var(--teal);border-color:var(--teal);color:#0F1B1A}','.box.ok{background:#4A5FD9;border-color:#4A5FD9;color:#fff}'),
+      ('<title>Pulse — Notebook style</title>','<title>Pulse — Hybrid A+E</title>'),
+      ('.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;','.card{background:var(--card);border:1px solid var(--bd);border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px -12px rgba(0,0,0,.5);'),
+      ('.strip{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--bd);border-radius:14px;','.strip{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--bd);border-radius:20px;'),
+      ]
+    for a,b in subs:
+        assert a in h,a
+        h=h.replace(a,b)
+    open(OUT+'style-ae.html','w',encoding='utf-8').write(h)
+styleAE()
