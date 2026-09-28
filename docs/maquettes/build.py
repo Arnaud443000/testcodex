@@ -627,3 +627,145 @@ td small{display:block;font-size:11px;letter-spacing:.12em;color:var(--ink3);tex
 </div></div></body></html>"""
     open(OUT+'style-f.html','w',encoding='utf-8').write(html)
 styleF()
+
+
+# ====================== ÉCRANS A+D : formulaire, détail, comportement ======================
+import re
+SCR_CSS="""
+.pg{flex:1;padding:24px 28px;display:flex;flex-direction:column;gap:18px;min-height:0}
+.pt{display:flex;align-items:center;justify-content:space-between}.pt h1{font-size:28px;font-weight:600;letter-spacing:-.02em}.pt p{color:var(--tx2);font-size:14px;margin-top:2px}
+.pt .acts{display:flex;gap:12px}
+.btn.ghost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);box-shadow:none;color:var(--tx)}
+.cols{flex:1;display:grid;gap:20px;min-height:0}
+.col{display:flex;flex-direction:column;gap:20px;min-height:0}
+.card.pad{padding:22px 24px}
+.sec{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;margin-bottom:16px}
+.sec i{width:24px;height:24px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-style:normal;font-size:12px;color:#fff}
+.f{display:flex;flex-direction:column;gap:6px;min-width:0}.f label{font-size:11.5px;color:var(--tx3);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.in{height:42px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);padding:0 14px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--tx)}
+.in.ta{height:auto;min-height:90px;align-items:flex-start;padding:12px 14px;line-height:1.55;color:var(--tx2)}.in .u{color:var(--tx3);font-size:12px}
+.in.auto{border-color:rgba(139,127,232,.45)}.in .tagx{font-size:10.5px;color:#B4BEFF;background:rgba(139,127,232,.18);padding:2px 8px;border-radius:999px;font-weight:600}
+.seg{display:flex;padding:4px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);height:42px}
+.seg span{flex:1;display:grid;place-items:center;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--tx2)}
+.seg .on{background:linear-gradient(135deg,rgba(95,203,158,.32),rgba(95,203,158,.14));color:#5FCB9E}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.gap{height:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chp{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:500;color:var(--tx2);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10)}
+.chp.on{background:linear-gradient(135deg,rgba(74,95,217,.38),rgba(139,127,232,.26));border-color:rgba(139,127,232,.6);color:#fff}
+.chp.bad{background:rgba(240,119,107,.14);border-color:rgba(240,119,107,.45);color:#F5A198}
+.sl{position:relative;height:6px;border-radius:99px;background:rgba(255,255,255,.10);margin:14px 0 6px}
+.sl b{position:absolute;left:0;top:0;bottom:0;width:66%;border-radius:99px;background:var(--grad)}
+.sl u{position:absolute;left:66%;top:-7px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(139,127,232,.35),0 4px 12px rgba(0,0,0,.5)}
+.dots{display:flex;gap:8px}.dots i{width:30px;height:8px;border-radius:99px;background:rgba(255,255,255,.12)}.dots i.on{background:var(--grad)}
+.stars{color:#D9A85A;letter-spacing:3px;font-size:18px}.stars s{text-decoration:none;opacity:.25}
+.tog{width:46px;height:26px;border-radius:99px;background:var(--grad);position:relative;flex:none}.tog::after{content:'';position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ck{display:flex;gap:11px;align-items:center;font-size:13.5px;color:var(--tx2);padding:6px 0}
+.ck .bx{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--tx3);display:grid;place-items:center;font-size:11px;flex:none}
+.ck .bx.ok{background:var(--grad);border-color:transparent;color:#fff}.ck .bx.ko{border-color:#F0776B;color:#F0776B}
+.nt{display:flex;gap:12px;padding:13px 15px;border-radius:16px;font-size:13px;line-height:1.45}
+.nt.ok{background:rgba(95,203,158,.10);border:1px solid rgba(95,203,158,.30);color:#9BE3C4}
+.nt.warn{background:rgba(217,168,90,.12);border:1px solid rgba(217,168,90,.38);color:#F0CE8E}
+.nt.bad{background:rgba(240,119,107,.12);border:1px solid rgba(240,119,107,.40);color:#F5A198}
+.drop{border:1.5px dashed rgba(255,255,255,.22);border-radius:16px;height:96px;display:grid;place-items:center;color:var(--tx3);font-size:13px;text-align:center}
+.kv2{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13.5px;color:var(--tx2)}.kv2 b{color:var(--tx);font-weight:600}.kv2:first-of-type{border-top:0}
+.bigg{font-size:44px;font-weight:700;letter-spacing:-.02em;color:#5FCB9E;line-height:1.05}
+.tl{display:flex;gap:10px;align-items:center}.tl span.ar{color:var(--tx3)}
+.ai{background:linear-gradient(160deg,rgba(74,95,217,.22),rgba(139,127,232,.10))!important;border-color:rgba(139,127,232,.35)!important}
+.aitag{font-size:10.5px;font-weight:700;letter-spacing:.1em;padding:3px 9px;border-radius:99px;background:var(--grad);color:#fff}
+.hb{display:flex;align-items:center;gap:12px;margin:10px 0;font-size:13.5px}.hb .n{width:92px;color:var(--tx2)}.hb .tr{flex:1;height:10px;border-radius:99px;background:rgba(255,255,255,.07);position:relative}
+.hb .tr i{position:absolute;top:0;bottom:0;border-radius:99px}.hb .v{width:150px;text-align:right;font-variant-numeric:tabular-nums}
+.pn{display:flex;justify-content:space-between;align-items:baseline}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cmp>div{padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.cmp small{display:block;font-size:11px;letter-spacing:.08em;color:var(--tx3);font-weight:600;text-transform:uppercase;margin-bottom:8px}
+.cmp b{font-size:26px;font-weight:600}.cmp span{display:block;font-size:12.5px;color:var(--tx2);margin-top:2px}
+.mist{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.07);font-size:14px}.mist:first-of-type{border-top:0}
+.mist .c{width:30px;height:30px;border-radius:10px;background:rgba(240,119,107,.16);color:#F5A198;display:grid;place-items:center;font-weight:700;font-size:13px}
+.mist .m{flex:1}.mist .p{color:#F0776B;font-weight:600;font-variant-numeric:tabular-nums}
+"""
+
+def _shell(active,label,content,title):
+    h=open(OUT+'style-ad.html',encoding='utf-8').read()
+    head,_=h.split('<div class="grid">',1)
+    head=head.replace('class="nav on"','class="nav"',1)
+    head,n=re.subn(r'<div class="nav">(<svg(?:(?!</svg>).)*</svg>)<span>'+re.escape(active)+'</span>',r'<div class="nav on">\1<span>'+active+'</span>',head,count=1,flags=re.S)
+    assert n==1,active
+    head=head.replace('</style>',SCR_CSS+'</style>',1).replace('Pulse — Hybrid A+D','Pulse — '+title)
+    return head+content+'</main></div></body></html>'
+
+def candles(w,h,seed=9):
+    r=random.Random(seed); n=58; p=100; cs=[]
+    for i in range(n):
+        o=p; c=o+r.gauss(.15 if i>26 else -.05,1.4); hi=max(o,c)+abs(r.gauss(0,.7)); lo=min(o,c)-abs(r.gauss(0,.7)); cs.append((o,c,hi,lo)); p=c
+    mn=min(c[3] for c in cs)-1; mx=max(c[2] for c in cs)+1
+    Y=lambda v:h-30-(v-mn)/(mx-mn)*(h-50)
+    bw=(w-150)/n; out=''
+    for k in range(6): out+=f'<line x1="0" x2="{w-90}" y1="{20+k*(h-70)/5:.0f}" y2="{20+k*(h-70)/5:.0f}" stroke="rgba(255,255,255,.05)"/>'
+    for i,(o,c,hi,lo) in enumerate(cs):
+        x=14+i*bw; col='#5FCB9E' if c>=o else '#F0776B'
+        out+=f'<line x1="{x+bw*.35:.1f}" x2="{x+bw*.35:.1f}" y1="{Y(hi):.1f}" y2="{Y(lo):.1f}" stroke="{col}" stroke-width="1.2"/><rect x="{x:.1f}" y="{Y(max(o,c)):.1f}" width="{bw*.7:.1f}" height="{max(abs(Y(o)-Y(c)),1.5):.1f}" rx="1.5" fill="{col}"/>'
+    ent=cs[30][0]+0.2; sl=ent-3.6; tp=ent+8.2
+    def line(v,col,lab,dash=''):
+        return f'<line x1="{14+29*bw:.0f}" x2="{w-90}" y1="{Y(v):.1f}" y2="{Y(v):.1f}" stroke="{col}" stroke-width="1.4" stroke-dasharray="{dash}"/><rect x="{w-86}" y="{Y(v)-12:.1f}" width="80" height="24" rx="12" fill="{col}" fill-opacity=".18" stroke="{col}" stroke-opacity=".7"/><text x="{w-46}" y="{Y(v)+4:.1f}" text-anchor="middle" font-size="12" font-weight="600" fill="{col}">{lab}</text>'
+    out+=line(ent,'#8B7FE8','ENTRY 1.0842')+line(sl,'#F0776B','SL 1.0824','6 5')+line(tp,'#5FCB9E','TP 1.0888','6 5')
+    out+=f'<circle cx="{14+30*bw+bw*.35:.1f}" cy="{Y(cs[30][0]):.1f}" r="6" fill="#8B7FE8" stroke="#fff" stroke-width="2"/><circle cx="{14+51*bw+bw*.35:.1f}" cy="{Y(cs[51][1]):.1f}" r="6" fill="#5FCB9E" stroke="#fff" stroke-width="2"/>'
+    return f'<svg width="100%" height="{h}" viewBox="0 0 {w} {h}" preserveAspectRatio="xMidYMid meet">{out}</svg>'
+
+def field(l,v,u='',cls=''):
+    return f'<div class="f"><label>{l}</label><div class="in {cls}"><span>{v}</span>{f"<span class=u>{u}</span>" if u else ""}</div></div>'
+
+def screen_form():
+    basics=f'''<div class="card pad"><div class="sec"><i>1</i>Basics</div><div class="g3">{field('Asset','EURUSD','Forex')}<div class="f"><label>Side</label><div class="seg"><span class="on">Long</span><span>Short</span></div></div>{field('Account','Main account')}</div><div class="gap"></div><div class="g3">{field('Date & time','28 Sep 2026 · 09:42')}<div class="f"><label>Session</label><div class="in auto"><span>New York</span><span class="tagx">AUTO</span></div></div>{field('Timeframe','M15')}</div></div>'''
+    price=f'''<div class="card pad"><div class="sec"><i>2</i>Price &amp; size</div><div class="g3">{field('Entry','1.0842')}{field('Exit','1.0871')}{field('Size','1.20','lots')}</div><div class="gap"></div><div class="g3">{field('Stop loss','1.0824','planned')}{field('Take profit','1.0888','planned')}{field('Fees','6.40','USD')}</div></div>'''
+    ctx=f'''<div class="card pad" style="flex:1"><div class="sec"><i>3</i>Context</div><div class="f"><label>Setup</label><div class="chips"><span class="chp on">Breakout NY</span><span class="chp">Mean reversion</span><span class="chp">Trend pullback</span><span class="chp">＋ New setup</span></div></div><div class="gap"></div><div class="f"><label>Market condition</label><div class="chips"><span class="chp">Range</span><span class="chp on">Trend</span><span class="chp">High volatility</span><span class="chp">Economic news</span></div></div><div class="gap"></div><div class="f"><label>Trade type</label><div class="seg" style="max-width:280px"><span class="on" style="background:linear-gradient(135deg,rgba(74,95,217,.4),rgba(139,127,232,.28));color:#fff">Discretionary</span><span>System</span></div></div></div>'''
+    why=f'''<div class="card pad"><div class="sec"><i>4</i>The “why”</div><div class="f"><label>Entry thesis</label><div class="in ta">NY open breakout above the Asian range high, confirmed by a retest on M5. Stop under the retest low, target = previous day high.</div></div><div class="gap"></div>
+<div class="f"><label>Conviction before the result</label><div class="sl"><b></b><u></u></div><div class="row"><span style="font-size:12px;color:var(--tx3)">1</span><b style="font-size:18px">7 / 10</b><span style="font-size:12px;color:var(--tx3)">10</span></div></div><div class="gap"></div>
+<div class="f"><label>Emotion before</label><div class="chips"><span class="chp on">Calm</span><span class="chp">FOMO</span><span class="chp">Doubt</span><span class="chp">Stress</span></div></div><div class="gap"></div>
+<div class="f"><label>Emotion during</label><div class="chips"><span class="chp">Calm</span><span class="chp on">Discipline</span><span class="chp">Impatience</span></div></div><div class="gap"></div>
+<div class="row"><div class="f"><label>Plan followed</label></div><div class="tog"></div></div></div>'''
+    after=f'''<div class="card pad" style="flex:1"><div class="sec"><i>5</i>After the trade</div><div class="row"><div class="f"><label>Execution quality</label><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div><div class="f"><label>Star rating</label><div class="stars">★★★★<s>★</s></div></div></div><div class="gap"></div><div class="f"><label>Post-mortem</label><div class="in ta" style="min-height:76px">Took profit at the plan target. Could have trailed the stop after 1.5R.</div></div><div class="gap"></div><div class="f"><label>Mistakes</label><div class="chips"><span class="chp">Early exit</span><span class="chp">Overtrading</span><span class="chp">Revenge</span><span class="chp">No plan</span></div></div></div>'''
+    rules=''.join(f'<div class="ck"><span class="bx {k}">{"✓" if k=="ok" else "✕" if k=="ko" else ""}</span>{t}</div>' for k,t in [('ok','Stop loss set before entry'),('ok','Risk ≤ 1% of capital'),('ok','Max 3 trades per day'),('ko','No trading after 3 pm'),('ok','Pre-trade checklist completed')])
+    right=f'''<div class="card pad"><div class="lbl">LIVE PREVIEW</div><div class="bigg num" style="margin-top:6px">+$412.00</div><div style="color:var(--tx2);font-size:13px;margin-top:2px">Net of fees · +2.1 R</div><div style="height:12px"></div><div class="kv2"><span>Gross P&amp;L</span><b class="num">+$418.40</b></div><div class="kv2"><span>Risk taken</span><b class="num">0.9% · $216</b></div><div class="kv2"><span>Planned R:R</span><b class="num">2.5</b></div><div class="kv2"><span>Duration</span><b class="num">1h 12m</b></div></div>
+<div class="nt ok"><b>✓</b><span>Risk is within your 1% per-trade limit.</span></div>
+<div class="card pad"><div class="sec" style="font-size:14px;margin-bottom:8px">Rules &amp; checklist</div>{rules}</div>
+<div class="nt bad"><b>!</b><span>Rule “No trading after 3 pm” not respected — it will count against your discipline score.</span></div>
+<div class="drop">Drop the chart screenshot here<br><small style="opacity:.7">or paste from clipboard</small></div>'''
+    content=f'''<div class="pg"><div class="pt"><div><h1>New trade</h1><p>Log the result <i>and</i> the process behind it.</p></div><div class="acts"><button class="btn ghost">Quick add</button><button class="btn ghost">Cancel</button><button class="btn">Save trade</button></div></div>
+<div class="cols" style="grid-template-columns:5fr 4.2fr 3.2fr"><div class="col">{basics}{price}{ctx}</div><div class="col">{why}{after}</div><div class="col">{right}</div></div></div>'''
+    open(OUT+'screen-form.html','w',encoding='utf-8').write(_shell('Trades','Trades',content,'New trade'))
+
+def screen_detail():
+    ch=candles(1100,540)
+    left=f'''<div class="card pad" style="padding-bottom:10px"><div class="row" style="margin-bottom:8px"><div class="sec" style="margin:0">Chart at decision time</div><div class="chips"><span class="chp on">M15</span><span class="chp">M5</span><span class="chp">H1</span></div></div>{ch}</div>
+<div class="cmp" style="grid-template-columns:1fr 1fr"><div class="card pad" style="border-radius:24px"><small>Entry thesis</small><p style="font-size:14px;line-height:1.6;color:var(--tx2)">NY open breakout above the Asian range high, confirmed by a retest on M5. Stop under the retest low, target = previous day high.</p></div><div class="card pad" style="border-radius:24px"><small>Post-mortem</small><p style="font-size:14px;line-height:1.6;color:var(--tx2)">Took profit at the plan target. Could have trailed the stop after 1.5R — price ran another 18 pips after exit (≈ +$216 left on the table).</p></div></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px"><div class="card pad" style="padding:16px 20px"><div class="lbl">STOP · PLAN vs REAL</div><div class="num" style="font-size:20px;font-weight:600;margin-top:4px">1.0824 <span style="color:var(--tx3);font-weight:400">/</span> —</div><div style="font-size:12px;color:var(--tx3)">not hit</div></div><div class="card pad" style="padding:16px 20px"><div class="lbl">TARGET · PLAN vs REAL</div><div class="num" style="font-size:20px;font-weight:600;margin-top:4px">1.0888 <span style="color:var(--tx3);font-weight:400">/</span> 1.0871</div><div style="font-size:12px;color:#D9A85A">exited 17 pips early</div></div><div class="card pad" style="padding:16px 20px"><div class="lbl">R · PLANNED vs REALIZED</div><div class="num" style="font-size:20px;font-weight:600;margin-top:4px">2.5 <span style="color:var(--tx3);font-weight:400">/</span> 2.1</div><div style="font-size:12px;color:var(--tx3)">84% of plan</div></div><div class="card pad" style="padding:16px 20px"><div class="lbl">OPPORTUNITY COST</div><div class="num" style="font-size:20px;font-weight:600;margin-top:4px;color:#D9A85A">≈ +$216</div><div style="font-size:12px;color:var(--tx3)">price after exit: 1.0889</div></div></div>'''
+    right=f'''<div class="card pad"><div class="row"><div><div style="font-size:24px;font-weight:600">EURUSD <span style="font-size:13px;color:#5FCB9E;font-weight:600;margin-left:6px">LONG</span></div><div style="font-size:13px;color:var(--tx3);margin-top:2px">28 Sep 2026 · 09:42 → 10:54 · New York · M15</div></div><div style="display:flex;gap:8px"><span class="badge g"><i></i>Gain</span></div></div><div style="height:14px"></div><div class="bigg num">+$412.00</div><div style="color:var(--tx2);font-size:13.5px;margin-top:2px">+2.1 R · net of $6.40 fees</div><div style="height:12px"></div>
+<div class="kv2"><span>Entry → Exit</span><b class="num">1.0842 → 1.0871</b></div><div class="kv2"><span>Stop / Target (planned)</span><b class="num">1.0824 / 1.0888</b></div><div class="kv2"><span>Size · risk</span><b class="num">1.20 lots · 0.9%</b></div><div class="kv2"><span>Setup</span><b>Breakout NY · Trend</b></div></div>
+<div class="card pad"><div class="sec" style="font-size:14px;margin-bottom:12px">Process</div><div class="row"><div class="f"><label>Execution quality</label><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div><div class="f"><label>Rating</label><div class="stars">★★★★<s>★</s></div></div><span class="badge g"><i></i>Plan followed</span></div><div style="height:14px"></div><div class="f"><label>Emotions</label><div class="tl"><span class="chp on">Calm</span><span class="ar">→</span><span class="chp on">Discipline</span><span class="ar">→</span><span class="chp on">Relief</span></div></div><div style="height:10px"></div><div class="ck"><span class="bx ok">✓</span>Checklist 5 / 5</div><div class="ck"><span class="bx ok">✓</span>Rules 4 / 5 respected</div></div>
+<div class="card pad ai"><div class="row" style="margin-bottom:10px"><div class="sec" style="margin:0;font-size:14px">Screenshot review</div><span class="aitag">AI · OPTIONAL</span></div><p style="font-size:13.5px;line-height:1.6;color:var(--tx2)">Entry follows the retest of the Asian high, consistent with your thesis. The stop sits below the retest low as planned. Note: momentum was still strong at your target — consider partial exits.</p></div>
+<div class="card pad"><div class="sec" style="font-size:14px;margin-bottom:8px">Compared with your Breakout NY trades</div><div class="kv2"><span>Average result</span><b class="num">+1.2 R</b></div><div class="kv2"><span>This trade</span><b class="num" style="color:#5FCB9E">+2.1 R</b></div><div class="kv2"><span>Percentile among 41 trades</span><b class="num">top 12%</b></div></div>'''
+    content=f'''<div class="pg"><div class="pt"><div><h1>Trade #0928-07</h1><p>Review · previous / next by rating</p></div><div class="acts"><button class="btn ghost">‹ Previous</button><button class="btn ghost">Next ›</button><button class="btn ghost">Edit</button></div></div>
+<div class="cols" style="grid-template-columns:8fr 4fr"><div class="col">{left}</div><div class="col">{right}</div></div></div>'''
+    open(OUT+'screen-detail.html','w',encoding='utf-8').write(_shell('Trades','Trades',content,'Trade detail'))
+
+def screen_behavior():
+    rg=ring(78,210,17,'#4A5FD9','#8B7FE8','rgba(255,255,255,.08)','br','#F5F2EC','#9AA0C0',56)
+    comp=''.join(f'<div class="row" style="padding:7px 0;font-size:13.5px"><span style="color:var(--tx2)">{a}</span><b class="num">{b}</b></div>' for a,b in [('Plan followed','86%'),('Rules respected','91%'),('Checklist completion','74%'),('Risk limit respected','69%')])
+    emo=[('Calm',1420,74,'g'),('Discipline',980,68,'g'),('Doubt',210,52,'g'),('Stress',-340,41,'l'),('FOMO',-1180,33,'l'),('Revenge',-1620,22,'l')]
+    mx=1700; eb=''
+    for n,v,wr,k in emo:
+        col='#5FCB9E' if v>0 else '#F0776B'; wpc=abs(v)/mx*50
+        pos=f'left:50%;width:{wpc}%' if v>0 else f'right:50%;width:{wpc}%'
+        eb+=f'<div class="hb"><span class="n">{n}</span><div class="tr"><i style="{pos};background:{col}"></i><i style="left:50%;width:1px;background:rgba(255,255,255,.25)"></i></div><span class="v num"><b style="color:{col}">{"+" if v>0 else "−"}${abs(v):,}</b> <span style="color:var(--tx3)">· {wr}% win</span></span></div>'
+    mist=''.join(f'<div class="mist"><div class="c">{c}</div><div class="m">{n}<div style="font-size:12px;color:var(--tx3)">{c} trades · click to review</div></div><div class="p">−${p:,}</div></div>' for n,c,p in [('Revenge trade',9,1620),('Overtrading',14,1180),('Early exit',22,940),('Poor risk management',7,860),('No plan',5,410)])
+    content=f'''<div class="pg"><div class="pt"><div><h1>Behavior</h1><p>What your process says about your results · last 3 months</p></div><div class="acts"><button class="btn ghost">Export report</button></div></div>
+<div class="nt bad" style="padding:15px 18px;font-size:14px"><b>!</b><span><b>Overtrading risk today</b> — 3 losing trades in a row (limit 3). Your discipline score drops on average 11 points after this pattern.</span></div>
+<div class="cols" style="grid-template-columns:repeat(12,1fr);grid-template-rows:1fr 1fr">
+<section class="card pad" style="grid-column:span 4"><h3>Discipline score</h3><div class="center">{rg}</div><div style="margin-top:14px">{comp}</div></section>
+<section class="card pad" style="grid-column:span 5"><h3>Emotion vs result</h3><div style="font-size:12.5px;color:var(--tx3);margin-bottom:8px">Net P&amp;L and win rate by emotion declared before the trade</div>{eb}</section>
+<section class="card pad" style="grid-column:span 3"><h3>Streaks</h3><div class="kv2"><span>Current</span><b style="color:#F0776B">L3</b></div><div class="kv2"><span>Longest win streak</span><b style="color:#5FCB9E">W9</b></div><div class="kv2"><span>Longest loss streak</span><b style="color:#F0776B">L5</b></div><div class="kv2"><span>Avg after 2 losses</span><b>−0.4 R</b></div><div class="kv2"><span>Size change after a loss</span><b style="color:#D9A85A">+23%</b></div></section>
+<section class="card pad" style="grid-column:span 4"><h3>In plan vs out of plan</h3><div class="cmp"><div><small>In plan · 155 trades</small><b style="color:#5FCB9E">+0.61 R</b><span>Win rate 64% · +$14,210</span></div><div><small>Out of plan · 25 trades</small><b style="color:#F0776B">−0.38 R</b><span>Win rate 28% · −$1,730</span></div></div><div class="nt warn" style="margin-top:14px"><b>i</b><span>Following your plan every time would have added about <b>$1,730</b>.</span></div></section>
+<section class="card pad" style="grid-column:span 4"><h3>First trade vs the next ones</h3><div class="cmp"><div><small>First trade of the day</small><b>+0.52 R</b><span>Win rate 63% · discipline 88</span></div><div><small>Following trades</small><b>+0.21 R</b><span>Win rate 51% · discipline 74</span></div></div><div style="font-size:13px;color:var(--tx2);margin-top:14px;line-height:1.5">Your edge fades after the first trade of the day.</div></section>
+<section class="card pad" style="grid-column:span 4"><h3>Recurring mistakes</h3>{mist}</section></div></div>'''
+    open(OUT+'screen-behavior.html','w',encoding='utf-8').write(_shell('Behavior','Behavior',content,'Behavior'))
+
+screen_form(); screen_detail(); screen_behavior()
