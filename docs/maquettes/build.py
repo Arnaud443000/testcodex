@@ -547,3 +547,83 @@ body{background:#080B20}
     h=h.replace('</style>',extra+'</style>',1).replace('<title>Pulse — a</title>','<title>Pulse — Hybrid A+D</title>')
     open(OUT+'style-ad.html','w',encoding='utf-8').write(h)
 styleAD()
+
+
+# ====================== STYLE F — « Maison » (ultra-luxe, ivoire / émeraude / or champagne) ======================
+def styleF():
+    css=FONT_FACE+"""
+:root{--ivory:#F2EEE4;--paper:#FBF9F4;--ink:#101513;--ink2:rgba(16,21,19,.62);--ink3:rgba(16,21,19,.42);--hl:rgba(16,21,19,.12);
+--em:#0C231D;--em2:#12362D;--gold:#B79A5B;--champ:#E3D2A6;--gain:#2B7A58;--loss:#9E3A31;--cream:#F0E8D4}
+body{background:var(--ivory);color:var(--ink)}
+.serif,.sf{font-family:Fraunces,serif;font-variant-numeric:lining-nums tabular-nums;font-feature-settings:'lnum','tnum'}
+svg text{font-family:Inter}
+.top{height:92px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 56px;border-bottom:1px solid var(--hl);background:var(--paper)}
+.wm{display:flex;align-items:center;gap:14px}.wm b{font-family:Fraunces,serif;font-weight:400;font-size:26px;letter-spacing:.34em}
+.nav{display:flex;gap:40px}.nav span{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);padding:34px 0 30px;position:relative;font-weight:500}
+.nav .on{color:var(--ink)}.nav .on::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--gold)}
+.rt{display:flex;justify-content:flex-end;align-items:center;gap:26px}
+.acct{text-align:right;line-height:1.35}.acct small{display:block;font-size:10.5px;letter-spacing:.16em;color:var(--ink3);text-transform:uppercase}.acct b{font-size:14px;font-weight:500}
+.btn{background:var(--ink);color:var(--champ);border:0;border-radius:3px;font:500 12.5px Inter;letter-spacing:.16em;text-transform:uppercase;padding:15px 26px;display:flex;gap:10px;align-items:center}
+.av{width:40px;height:40px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center;font-family:Fraunces,serif;color:var(--gold);font-size:16px}
+.body{padding:40px 56px 40px;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:456px 1fr;gap:32px;height:988px}
+.cap{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+.hero{grid-column:span 8;background:linear-gradient(160deg,var(--em2),var(--em) 62%);border-radius:6px;position:relative;color:var(--cream);padding:40px 48px;display:flex;flex-direction:column;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:12px;border:1px solid rgba(227,210,166,.22);border-radius:3px;pointer-events:none}
+.hero .gl{position:absolute;right:-120px;top:-120px;opacity:.5}
+.hero .cap{color:var(--champ)}
+.big{font-family:Fraunces,serif;font-weight:300;font-size:92px;letter-spacing:-.025em;line-height:1;margin-top:14px;font-variant-numeric:lining-nums tabular-nums;color:#FBF3DE}
+.sub{display:flex;gap:18px;align-items:center;margin-top:12px;font-size:14px;color:rgba(240,232,212,.65)}.sub b{color:#8ED2AE;font-weight:500}
+.hero svg.eq{margin-top:auto;display:block}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid rgba(227,210,166,.22);margin-top:12px;padding-top:16px}
+.kp>div{padding-left:22px;border-left:1px solid rgba(227,210,166,.16)}.kp>div:first-child{padding-left:0;border-left:0}
+.kp .cap{font-size:10px;color:rgba(227,210,166,.75)}.kp .v{font-family:Fraunces,serif;font-weight:300;font-size:32px;margin-top:4px;font-variant-numeric:lining-nums tabular-nums}
+.paper{background:var(--paper);border:1px solid var(--hl);border-radius:6px;padding:28px 30px;min-height:0;overflow:hidden}
+.paper h3{font-family:Fraunces,serif;font-weight:400;font-size:22px;letter-spacing:-.005em}
+.paper .cap{color:var(--ink3);margin-bottom:4px}
+.led{grid-column:span 4;display:flex;flex-direction:column}
+table{width:100%;border-collapse:collapse;margin-top:14px}
+td{padding:14px 0;border-top:1px solid var(--hl);font-size:14px}td.r{text-align:right;font-family:Fraunces,serif;font-size:19px;font-variant-numeric:lining-nums tabular-nums}
+td small{display:block;font-size:11px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;margin-top:2px}
+.g{color:var(--gain)}.l{color:var(--loss)}
+.row2{grid-column:span 12;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;min-height:0}
+.rc{display:flex;justify-content:center;margin-top:14px}
+.tri{display:flex;justify-content:space-between;margin-top:14px;font-size:12px;color:var(--ink3);letter-spacing:.06em}.tri b{display:block;font-family:Fraunces,serif;font-weight:400;font-size:20px;color:var(--ink);letter-spacing:0}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:14px}.dow{font-size:10.5px;letter-spacing:.14em;color:var(--ink3);text-align:center}
+.cell{height:50px;border-radius:2px;background:transparent;border-top:1px solid var(--hl);padding:5px 4px;font-size:11px;color:var(--ink3);position:relative}
+.cell.empty{border:0}.cell.off{opacity:.4}
+.cell b{position:absolute;left:4px;bottom:4px;font-size:11px;font-weight:600;font-family:Fraunces,serif}
+.cell.g1,.cell.g2,.cell.g3{background:rgba(43,122,88,.08)}.cell.g2{background:rgba(43,122,88,.15)}.cell.g3{background:rgba(43,122,88,.26)}
+.cell.l1,.cell.l2,.cell.l3{background:rgba(158,58,49,.08)}.cell.l2{background:rgba(158,58,49,.15)}.cell.l3{background:rgba(158,58,49,.26)}
+.cell.g1 b,.cell.g2 b,.cell.g3 b{color:var(--gain)}.cell.l1 b,.cell.l2 b,.cell.l3 b{color:var(--loss)}
+.note{display:grid;grid-template-columns:34px 1fr;gap:6px;padding:16px 0;border-top:1px solid var(--hl)}
+.note:first-of-type{margin-top:12px}
+.note i{font-family:Fraunces,serif;font-style:italic;color:var(--gold);font-size:20px}
+.note b{font-weight:500;font-size:14.5px}.note p{font-size:13px;color:var(--ink2);line-height:1.55;margin-top:3px}
+"""
+    eq=equity(1000,222,'#B79A5B','#E3D2A6',.22,uid='fe',grid='rgba(227,210,166,.10)',labels='rgba(240,232,212,.5)',sw=2).replace('<svg ','<svg class="eq" ',1)
+    ring_=ring(82,196,7,'#8F7439','#E3D2A6','rgba(16,21,19,.08)','fr','#101513','#7B7F7C',60,sub='OF 100').replace('font-weight="600"','font-weight="300"').replace('<text x="50%" y="','<text style="font-family:Fraunces,serif" x="50%" y="',1)
+    hb=hourly(360,250,'#2B7A58','#9E3A31','rgba(16,21,19,.42)','rgba(16,21,19,.14)').replace('rx="5"','rx="1"')
+    # guilloché
+    gl=''.join(f'<circle cx="300" cy="300" r="{r}" fill="none" stroke="#E3D2A6" stroke-width=".6" stroke-opacity=".28"/>' for r in range(20,300,9))
+    gl=f'<svg class="gl" width="600" height="600" viewBox="0 0 600 600">{gl}</svg>'
+    led=[('EURUSD','Long · Breakout NY','+$412.00','g','09:42'),('NAS100','Short · Trend pullback','−$186.50','l','11:05'),('XAUUSD','Long · Mean reversion','+$96.20','g','14:20'),('GBPUSD','Short · Breakout NY','−$204.00','l','15:48'),('US30','Long · Trend pullback','+$218.40','g','Fri 10:12')]
+    lr=''.join(f'<tr><td><b style="font-weight:500">{a}</b><small>{b}</small></td><td class="r {k}">{p}<small style="text-align:right">{t}</small></td></tr>' for a,b,p,k,t in led)
+    notes=''.join(f'<div class="note"><i>{n}</i><div><b>{t}</b><p>{d}</p></div></div>' for n,t,d in [('i.','Best setup — Breakout NY','58% win rate and +$4,120 across 41 trades.'),('ii.','Discipline slips after two losses','Position size rose 23% over your last ten trades.'),('iii.','Friday is the weakest day','−$1,340 net; three rule breaches after 3 pm.')])
+    nav=''.join(f'<span class="{"on" if i==0 else ""}">{n}</span>' for i,n in enumerate(['Overview','Trades','Calendar','Analytics','Behavior','Journal','Goals']))
+    html=f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Pulse — Maison style</title><style>{css}</style></head><body>
+<header class="top"><div class="wm">{logo(34,'fl','#8F7439','#D8C08A',False)}<b>PULSE</b></div><nav class="nav">{nav}</nav>
+<div class="rt"><div class="acct"><small>Account</small><b>Main account · USD</b></div><div class="acct"><small>Period</small><b>Apr 1 – Sep 28</b></div><button class="btn">New entry</button><div class="av">T</div></div></header>
+<div class="body">
+<section class="hero">{gl}<div class="cap">Net performance · Three months</div><div class="big">+$12,480.00</div>
+<div class="sub"><b>▲ 8.4%</b><span>versus previous quarter</span><span style="opacity:.4">|</span><span>180 closed trades</span></div>
+{eq}
+<div class="kp"><div><div class="cap">Win rate</div><div class="v">58%</div></div><div><div class="cap">Profit factor</div><div class="v">1.74</div></div><div><div class="cap">Expectancy</div><div class="v">+0.34 R</div></div><div><div class="cap">Max drawdown</div><div class="v">−6.2%</div></div></div></section>
+<section class="paper led"><div class="cap">Ledger</div><h3>Recent trades</h3><table>{lr}</table></section>
+<div class="row2">
+<section class="paper"><div class="cap">Process</div><h3>Discipline score</h3><div class="rc">{ring_}</div><div class="tri"><span><b>86%</b>Plan</span><span><b>91%</b>Rules</span><span><b>74%</b>Checklist</span></div></section>
+<section class="paper"><div class="cap">By hour</div><h3>Hourly performance</h3><div style="margin-top:22px">{hb}</div></section>
+<section class="paper"><div class="cap">September</div><h3>Trading calendar</h3>{calendar()}</section>
+<section class="paper"><div class="cap">Observations</div><h3>Insights</h3>{notes}</section>
+</div></div></body></html>"""
+    open(OUT+'style-f.html','w',encoding='utf-8').write(html)
+styleF()
