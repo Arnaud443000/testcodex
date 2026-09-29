@@ -23,6 +23,8 @@ import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CoachPage } from './pages/CoachPage'
 import { SizingPage } from './pages/SizingPage'
+import { EconomicCalendarPage } from './pages/EconomicCalendarPage'
+import { NewsAutoRefresh } from './lib/newsAutoRefresh'
 import { LockProvider, useLock } from './lib/lock'
 import { LockScreen, LockSplash } from './components/LockScreen'
 import { LockWarningBanner, PersistBanner } from './components/PersistBanner'
@@ -57,6 +59,7 @@ export default function App() {
               <div className="mx-auto w-full max-w-[1480px]">
               <PersistBanner />
               <LockWarningBanner />
+              <NewsAutoRefresh />
               <AlertBanner />
               <ReminderBanner />
               <Routes>
@@ -66,6 +69,7 @@ export default function App() {
                 <Route path="/trades/:id" element={<TradeDetailPage />} />
                 <Route path="/trades/:id/edit" element={<TradeFormPage key="edit" />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/calendar/news" element={<EconomicCalendarPage />} />
                 <Route path="/analytics" element={<AnalysesPage />} />
                 <Route path="/comparisons" element={<ComparisonsPage />} />
                 <Route path="/behavior" element={<BehaviorPage />} />

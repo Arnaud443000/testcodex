@@ -47,6 +47,8 @@ pub mod coach;
 pub mod lock;
 // Lot 27 (calculateur de taille de position).
 pub mod sizing;
+// Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
+pub mod news;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

@@ -47,7 +47,8 @@ describe('bibliothèque de widgets', () => {
     const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
     const mixed = env([account(1, 'USD'), account(2, 'EUR')])
     // Les insights évaluent chaque compte seul (chacun avec sa devise) : aucune somme, donc aucun blocage.
-    for (const d of catalog.filter((c) => c.kind !== 'insights')) {
+    // Les prochaines news (lot 25) ne lisent aucun compte.
+    for (const d of catalog.filter((c) => c.kind !== 'insights' && c.account)) {
       const out = html(instance(d.kind), mixed)
       expect(out, d.kind).toContain(fr.dashboardBuilder.mixedCurrencies)
       expect(out, d.kind).toContain(fr.dashboardBuilder.widgets[d.kind].title)
@@ -75,3 +76,15 @@ describe('bibliothèque de widgets', () => {
     expect(out).toContain(fr.dashboardBuilder.ownPeriodTag('1 semaine'))
   })
 })
+
+describe('widget « Prochaines news » (lot 25)', () => {
+  it('ni compte ni période, et ne bloque pas sur des devises mélangées', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'upcoming_news')!
+    expect([d.category, d.period, d.account, d.modes]).toEqual(['temporal', false, false, ['medium', 'high', 'all']])
+    const out = html(instance('upcoming_news'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.upcoming_news.title)
+  })
+})
+

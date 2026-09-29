@@ -10,7 +10,7 @@ import type { Rule, TradeView } from '../types/trade'
  * trades (pertes d'affilée, limites de trades, perte du jour ou de la semaine) n'affichent rien : leur trade
  * n'est que le dernier de la série, pas la cause.
  */
-const SINGLE_TRADE_KINDS: AlertKind[] = ['revenge', 'outsideHours', 'unusualSession', 'noStopLoss']
+const SINGLE_TRADE_KINDS: AlertKind[] = ['revenge', 'outsideHours', 'unusualSession', 'noStopLoss', 'newsTrade']
 
 interface Linkable {
   kind: AlertKind

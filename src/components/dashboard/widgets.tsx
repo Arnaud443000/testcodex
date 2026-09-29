@@ -1,4 +1,4 @@
-import { useMemo, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { DisciplineCard } from '../behavior/DisciplineCard'
 import { EmotionsCard, type Moment } from '../behavior/EmotionsCard'
@@ -10,6 +10,8 @@ import { FirstTradeCard, PlanCard } from '../behavior/PlanCard'
 import { RulesCard } from '../behavior/RulesCard'
 import { HeatmapCard, LongShortCard, RDistributionCard, RiskCard } from '../behavior/StatsCards'
 import { StreaksCard } from '../behavior/StreaksCard'
+import { ImportanceMark, SimulationBadge } from '../news/ImportanceMark'
+import { countdown, widgetImportances } from '../../lib/newsView'
 import { OutcomeBadge, Pnl } from '../ui'
 import { CalendarCard, CapitalCard, DailyCard, HeroCard, KPI_MODES, KpiCard, type KpiMode } from './DashboardCards'
 import { useT } from '../../i18n'
@@ -374,4 +376,65 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   hesitation: Hesitation,
   factors: Factors,
   insights: InsightsWidget,
+  upcoming_news: UpcomingNewsWidget,
+}
+
+/**
+ * Prochaines news (lot 25) : ni compte ni période ; le mode choisit l'importance. Heures de Paris fournies par
+ * pulse-core ; seul le temps restant est recompté chaque minute pour l'affichage.
+ */
+function UpcomingNewsWidget({ instance }: WidgetProps) {
+  const t = useT()
+  const n = t.news
+  const title = useTitle('upcoming_news')
+  const [tick, setTick] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setTick(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
+  const importances = widgetImportances(instance.mode)
+  const minute = Math.floor(tick / 60_000)
+  const status = useCached(`news-status|${minute}`, () => api.getNewsStatus())
+  const upcoming = useCached(status.data?.settings.enabled ? `news-upcoming|${importances.join(',')}|${minute}` : null, () => api.getUpcomingNews(4, importances))
+  if (status.error) return <Failed title={title} detail={status.error} />
+  if (!status.data) return <Pending title={title} />
+  if (!status.data.settings.enabled) {
+    return (
+      <Message title={title} action={<Link to="/settings#news" className="btn btn-secondary btn-sm">{n.widget.enable}</Link>}>
+        {n.widget.disabled}
+      </Message>
+    )
+  }
+  if (upcoming.error) return <Failed title={title} detail={upcoming.error} />
+  if (!upcoming.data) return <Pending title={title} />
+  const events = upcoming.data
+  return (
+    <Frame title={title}>
+      {events.length === 0 ? (
+        <p className="py-4 text-sm text-tx2">{n.widget.none}</p>
+      ) : (
+        <ul className="flex flex-col divide-y" style={{ borderColor: 'var(--hairline)' }}>
+          {events.map((e) => (
+            <li key={e.id} className="flex items-center gap-3 py-2.5 text-sm">
+              <span className="w-[44px] shrink-0 self-start pt-px tabular-nums text-tx2">{e.parisTime ?? n.allDay}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium" title={e.title}>{e.title}</span>
+                <span className="block truncate text-xs text-tx3">
+                  <span className="font-semibold text-tx2" title={e.currency ? undefined : n.noCurrencyHint}>{e.currency || n.noCurrency}</span>
+                  {' · '}
+                  {countdown(e, tick, n)}
+                </span>
+              </span>
+              <ImportanceMark importance={e.importance} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-xs text-tx3">
+        <span>{n.widget.parisShort}</span>
+        {events.some((e) => e.source === 'simulation') && <SimulationBadge />}
+        <Link to="/calendar/news" className="shrink-0 font-semibold text-[#B7AEF5] hover:underline">{n.widget.seeAll}</Link>
+      </div>
+    </Frame>
+  )
 }

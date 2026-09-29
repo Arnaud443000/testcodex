@@ -256,7 +256,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 13, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 14, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -947,3 +947,6 @@ export const mockSizing = {
     return mockSize(input, account.currency)
   },
 }
+// --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
+import { createNewsMock } from './mockNews'
+export const mockNews = createNewsMock()

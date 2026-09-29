@@ -33,6 +33,7 @@ export const frDashboardBuilder = {
     hesitation: widget('Hésitation', 'Trades manqués et hésitations détectées.'),
     factors: widget('Facteurs externes', 'Sommeil, fatigue, humeur du journal contre qualité des trades.'),
     insights: widget('Insights', 'Les tendances, points forts et suggestions à retenir (20 derniers trades, 90 derniers jours).'),
+    upcoming_news: widget('Prochaines news', 'Les prochaines annonces du calendrier économique, en heure de Paris, avec le temps restant.'),
   } as Record<string, { title: string; description: string }>,
   /** Libellés des modes d’affichage, par widget. */
   modes: {
@@ -45,6 +46,7 @@ export const frDashboardBuilder = {
     },
     emotions: { before: 'Avant le trade', during: 'Pendant le trade', after: 'Après le trade', any: 'Toutes' },
     recent_trades: { '5': '5 derniers', '10': '10 derniers', '15': '15 derniers' },
+    upcoming_news: { medium: 'Importance moyenne et forte', high: 'Importance forte', all: 'Toutes' },
   } as Record<string, Record<string, string>>,
 
   unknownWidget: 'Widget indisponible dans cette version',

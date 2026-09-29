@@ -479,6 +479,29 @@ export const api = {
   // --- Lot 27 : calculateur de taille de position (un refus est une donnée : `status: 'refused'` + code traduisible) ---
   calculatePositionSize: (request: SizingRequest): Promise<SizingOutcome> =>
     inTauri ? invoke('calculate_position_size', { request }) : mockSizing.calculatePositionSize(request),
+
+  // --- Lot 25 : calendrier économique (réseau seulement dans pulse-news ; simulation dans le navigateur) ---
+  getNewsStatus: (): Promise<NewsStatus> => (inTauri ? invoke('get_news_status') : mockNews.getNewsStatus()),
+  setNewsSettings: (settings: NewsSettings): Promise<NewsStatus> =>
+    inTauri ? invoke('set_news_settings', { settings }) : mockNews.setNewsSettings(settings),
+  /** Fichier local ICS ou CSV (aucun réseau). */
+  importNewsFile: (format: NewsFileFormat, path: string, defaults: NewsDefaults): Promise<ImportSummary> =>
+    inTauri ? invoke('import_news_file', { format, path, defaults }) : mockNews.importNewsFile(format, path, defaults),
+  /** `manual` : bouton « Actualiser » (au plus toutes les 5 min) ; sinon l'appel de l'ouverture (au plus une fois par jour). Erreurs : `news:…`. */
+  refreshNews: (manual: boolean): Promise<NewsRefresh> => (inTauri ? invoke('refresh_news', { manual }) : mockNews.refreshNews(manual)),
+  getNewsCalendar: (view: CalendarView, filter: NewsFilter): Promise<NewsCalendar> =>
+    inTauri ? invoke('get_news_calendar', { view, filter }) : mockNews.getNewsCalendar(view, filter),
+  getUpcomingNews: (limit: number, importances: Importance[]): Promise<EconomicEvent[]> =>
+    inTauri ? invoke('get_upcoming_news', { limit, importances }) : mockNews.getUpcomingNews(limit, importances),
+  clearNewsEvents: (): Promise<number> => (inTauri ? invoke('clear_news_events') : mockNews.clearNewsEvents()),
+  /** Boîte de dialogue « ouvrir » d'un calendrier (`null` si annulée). */
+  pickNewsFile: async (title: string, format: NewsFileFormat): Promise<string | null> => {
+    if (!inTauri) return `simulation.${format}`
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const filter = format === 'ics' ? { name: 'Calendrier (ICS)', extensions: ['ics', 'ical'] } : { name: 'CSV', extensions: ['csv', 'txt'] }
+    const picked = await open({ title, multiple: false, directory: false, filters: [filter] })
+    return typeof picked === 'string' ? picked : null
+  },
   isBrowserPreview: !inTauri,
 
   // --- Lot 24 : carte de trade (3.7.7) ---
@@ -517,3 +540,17 @@ import type { TradeCardFigures } from '../types/tradeCard'
 import { mockTradeCard } from './mockBackend'
 import type { SizingOutcome, SizingRequest } from '../types/sizing'
 import { mockSizing } from './mockBackend'
+import type {
+  CalendarView,
+  EconomicEvent,
+  ImportSummary,
+  Importance,
+  NewsCalendar,
+  NewsDefaults,
+  NewsFileFormat,
+  NewsFilter,
+  NewsRefresh,
+  NewsSettings,
+  NewsStatus,
+} from '../types/news'
+import { mockNews } from './mockBackend'

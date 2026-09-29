@@ -104,6 +104,7 @@ const fn def(
 const KPI_MODES: &[&str] = &["win_rate", "profit_factor", "expectancy", "risk_reward", "max_drawdown"];
 const EMOTION_MODES: &[&str] = &["before", "during", "after", "any"];
 const RECENT_MODES: &[&str] = &["5", "10", "15"];
+const NEWS_MODES: &[&str] = &["medium", "high", "all"];
 
 const LIBRARY: &[Def] = &[
     // Performance
@@ -133,6 +134,9 @@ const LIBRARY: &[Def] = &[
     def("factors", "behavior", (20, 18), (12, 12), &[], true, true),
     // Insights (lot 19 bis): fixed windows (last 20 trades, 90 days), so no period of its own.
     def("insights", "behavior", (12, 20), (8, 10), &[], false, true),
+    // Upcoming economic news (lot 25): the calendar is neither per account nor per period; the mode
+    // chooses the importance shown (medium and high by default).
+    def("upcoming_news", "temporal", (10, 16), (8, 10), NEWS_MODES, false, false),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

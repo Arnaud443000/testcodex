@@ -6,6 +6,8 @@
 //! its own. Nothing an account does ever raises an alert on another one.
 
 pub mod log;
+// Lot 25: 3.6.8, trade taken during a major economic news.
+pub mod news;
 pub mod settings;
 
 pub use log::{AlertRecord, active_alerts, dismiss, history};
@@ -86,6 +88,14 @@ pub enum AlertDetail {
     UnusualSession { session: String, session_count: usize, history_count: usize, share: f64 },
     /// 3.6.6: no valid planned stop loss.
     NoStopLoss { open: bool },
+    /// 3.6.8 (lot 25): entered around a major news while the trader's news trades did worse.
+    NewsTrade {
+        events: Vec<news::NewsEventRef>,
+        event_count: usize,
+        window_before_min: u32,
+        window_after_min: u32,
+        comparison: news::NewsComparison,
+    },
 }
 
 impl AlertDetail {
@@ -100,6 +110,7 @@ impl AlertDetail {
             AlertDetail::OutsideHours { .. } => 6,
             AlertDetail::UnusualSession { .. } => 7,
             AlertDetail::NoStopLoss { .. } => 8,
+            AlertDetail::NewsTrade { .. } => 9,
         }
     }
 }

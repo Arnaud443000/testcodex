@@ -39,3 +39,23 @@ describe('texte des alertes à seuils', () => {
     expect(alertMessage(fr, { ...base, severity: 'critical', id: 'h', messageKey: 'noStopLoss.open', kind: 'noStopLoss', open: true })).toBe('Position ouverte sans stop loss prévu.')
   })
 })
+
+describe('alerte 3.6.8 (lot 25)', () => {
+  it('liste les news en heure de Paris et dit un constat, jamais une cause', () => {
+    const a = {
+      id: 'newsTrade:1:9', accountId: 1, severity: 'warning', messageKey: 'newsTrade', at: 0, tradeId: 9, kind: 'newsTrade',
+      events: [
+        { eventId: 1, title: 'CPI m/m', currency: 'USD', startsAt: 0, parisTime: '14:30' },
+        { eventId: 2, title: 'G7', currency: '', startsAt: 0, parisTime: '14:30' },
+      ],
+      eventCount: 3, windowBeforeMin: 15, windowAfterMin: 15,
+      comparison: { newsTradeCount: 12, newsRTradeCount: 10, newsExpectancyR: -0.5, otherTradeCount: 40, otherRTradeCount: 38, otherExpectancyR: 0.35, difference: -0.85, byCalendar: 8, byTag: 2, byBoth: 0 },
+    } as Alert
+    const text = alertMessage(fr, a)
+    expect(text).toContain('CPI m/m USD à 14:30, G7 à 14:30, et 1 autre')
+    expect(text).toContain('−0,50 R contre +0,35 R')
+    expect(text).toContain('10 et 38 trades avec R')
+    expect(text).toContain('pas une cause')
+    expect(text).not.toMatch(/parce que/i)
+  })
+})

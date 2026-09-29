@@ -3143,6 +3143,7 @@ dependencies = [
  "chrono",
  "pulse-ai",
  "pulse-core",
+ "pulse-news",
  "pulse-vault",
  "serde",
  "serde_json",
@@ -3179,6 +3180,14 @@ dependencies = [
  "getrandom 0.3.4",
  "thiserror 2.0.21",
  "zeroize",
+]
+
+[[package]]
+name = "pulse-news"
+version = "0.1.0"
+dependencies = [
+ "pulse-core",
+ "ureq",
 ]
 
 [[package]]

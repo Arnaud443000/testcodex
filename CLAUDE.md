@@ -29,6 +29,7 @@ npm run typecheck && npm test && npm run build     # interface
 cargo test -p pulse-core                           # cœur Rust
 cargo test -p pulse-ai -p pulse-vault              # IA : réseau (faux serveur local) et coffre (lot 20)
 cargo test -p pulse-lock                           # verrou : chiffrement en Rust pur (lot 22)
+cargo test -p pulse-news                           # calendrier économique : réseau contre un faux serveur local (lot 25)
 cargo check -p pulse-app                           # coque Tauri (libs WebKit requises sous Linux)
 npm run dev                                        # interface seule dans un navigateur
 ```
@@ -101,6 +102,8 @@ Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparai
 
 ### Étapes 4 et 5 (suite)
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : coach IA, insights automatiques, analyse de screenshot par IA. Le reste : Sonnet, moyen.
+
+- [x] Lot 25 (partie indépendante de la source) — Calendrier économique et alerte « trade pris pendant une news majeure » (3.6.8), optionnel, **désactivé par défaut** : `pulse-core/src/news/` (sans réseau), crate `pulse-news` (réseau isolé), alerte `alerts/news.rs`, onglet « Calendrier économique » de la page Calendrier, Paramètres > Calendrier économique, widget « Prochaines news » ; **migration v14** (à renuméroter à la fusion). **Le fournisseur en ligne dédié reste à choisir par l'utilisateur** (voir le comparatif) ; en attendant : import de fichier ICS / CSV et flux ICS à l'adresse de son choix. Voir « Calendrier économique (lot 25) » (**Opus, élevé**)
 
 
 ## Argent, prix et temps (décision du lot 2)
@@ -534,13 +537,13 @@ Un insight n'apparaît jamais pour un écart insignifiant : seuils ci-dessus (20
 
 Décisions prises **avant** d'écrire le code ; elles valent aussi pour le futur coach IA (3.5.5).
 
-**Principe** : Pulse reste 100 % local. L'IA est une option **désactivée par défaut**, déclenchée **à la demande uniquement**, jamais en tâche de fond. Aucune télémétrie, aucune mise à jour, aucun autre appel réseau dans l'application.
+**Principe** : Pulse reste 100 % local. L'IA est une option **désactivée par défaut**, déclenchée **à la demande uniquement**, jamais en tâche de fond. Aucune télémétrie, aucune mise à jour, aucun autre appel réseau dans l'application (seule exception, ajoutée au lot 25 avec les mêmes garanties : le calendrier économique optionnel, voir « Calendrier économique (lot 25) »).
 
 ### Où vit quoi
 | Crate | Rôle | Réseau |
 |---|---|---|
 | `pulse-core` (`ai/`) | réglages (`ai.*` de la table `settings`), **liste exacte** de ce qui est envoyé pour un trade, texte de la demande (prompt), stockage des commentaires | **aucun** (reste testable partout, sans dépendance UI ni réseau) |
-| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles ; `service.rs` = l'enchaînement en trois temps (préparer depuis la base → envoyer sans verrou sur la base → enregistrer), testé avec un faux fournisseur et un coffre en mémoire | **le seul code réseau de l'application** |
+| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles ; `service.rs` = l'enchaînement en trois temps (préparer depuis la base → envoyer sans verrou sur la base → enregistrer), testé avec un faux fournisseur et un coffre en mémoire | **le seul code réseau de l'application** (avec `pulse-news`, lot 25) |
 | `crates/pulse-vault` | clé API dans le **Gestionnaire d'identifiants Windows** (`keyring-core` + `windows-native-keyring-store`, compilés **seulement sous Windows**) ; ailleurs, le coffre répond « indisponible » | aucun |
 | `src-tauri` | commandes fines qui assemblent les trois (ajoutées en fin de `lib.rs`) | via `pulse-ai` |
 
@@ -889,3 +892,93 @@ Le résultat est une donnée : `{status: "ok", …}` ou `{status: "refused", cod
 - Les pas de taille par défaut ne sont **pas** ceux d'un courtier précis : à vérifier.
 - Le faux backend arrondit la division à l'échelle exacte (jamais d'écart d'arrondi) ; Rust, lui, retire un pas si sa division à 28 chiffres arrondissait vers le haut : cas non atteignable par un test à la main.
 - Signalé, non corrigé : dans le sélecteur d'actif (`AssetPicker`), le symbole et le nom complet se chevauchent visuellement quand la liste vient d'être ouverte puis fermée (visible aussi dans le formulaire de trade, hors périmètre du lot).
+
+
+## Calendrier économique (lot 25) — source, confidentialité, alerte 3.6.8
+
+Décisions prises **avant** d'écrire le code. C'est le **seul** lot qui ajoute un accès réseau en dehors de l'IA : mêmes garanties que le lot 20 (option **désactivée par défaut**, **rien d'automatique** hors de la règle « au plus une fois par jour à l'ouverture » ci-dessous, **aucune télémétrie**, code réseau isolé dans un crate testé contre un **faux serveur local**, jamais contre la vraie source).
+
+### Choix de la source (point ouvert de la section 9) — comparatif
+
+**Limite de la recherche** : la politique réseau de l'environnement de développement bloque tous les sites des fournisseurs (`nfs.faireconomy.media`, `www.forexfactory.com`, `docs.tradingeconomics.com`, `site.financialmodelingprep.com`, `finnhub.io`, `www.bls.gov`, `www.federalreserve.gov`, `www.rfc-editor.org`). Seule la recherche web a fonctionné : les formats ci-dessous viennent d'extraits de pages de documentation et de forums, **ils n'ont pas pu être vérifiés sur une vraie réponse**. Aucune URL ni aucun format n'est donc codé en dur pour une source précise.
+
+| Option | Fiabilité et risque de disparition | Licence, conditions d'usage | Prix, clé | Format et fuseau | Importance, valeurs |
+|---|---|---|---|---|---|
+| **Export hebdomadaire de Forex Factory** (fichiers `ff_calendar_thisweek.json` / `.xml` / `.csv` / `.ics` sur `nfs.faireconomy.media`, d'après la recherche) | très utilisé par les traders (indicateurs MT4/MT5) mais **non officiel en tant qu'API** ; le domaine a déjà changé (`cdn-nfs` → `nfs`) et une limite a été ajoutée en 2024 (**2 téléchargements par 5 minutes**, sinon page « Request Denied » en HTML) : risque **moyen à élevé** de changement | site commercial (Fair Economy, Inc.) ; **aucune licence écrite trouvée** pour un usage automatisé ; il faut accepter leurs conditions d'utilisation | gratuit, sans clé | JSON : `title`, `country` (en fait la **devise** : `USD`…), `date` en ISO 8601 **avec décalage** (heure de New York d'après des tiers), `impact`, `forecast`, `previous` | `impact` = `High` / `Medium` / `Low` / `Holiday` ; **pas de valeur réelle** (publiée seulement sur le site) ; **semaine en cours seulement** |
+| **Trading Economics API** | service commercial avec contrat : risque faible | conditions contractuelles claires | **payant** (plan Standard ≈ 199 $/mois d'après la page de tarifs ; l'accès invité `guest:guest` ne donne qu'un échantillon), clé obligatoire | JSON, dates en UTC d'après la documentation (non vérifié) | importance 1 à 3, `Actual`, `Forecast`, `Previous` |
+| **Financial Modeling Prep** (économic calendar) | commercial ; une page tierce signale le jeu de données comme « déprécié » : **incertain** | conditions contractuelles | clé obligatoire ; plan gratuit à 250 requêtes/jour, mais l'accès du calendrier au plan gratuit n'est pas confirmé | JSON (non vérifié) | `impact` Low / Medium / High, `actual`, `estimate`, `previous` |
+| **Finnhub** | commercial | contractuel | calendrier économique **réservé aux plans payants** (erreur « You don't have access to this resource » en gratuit) | JSON | `impact`, `actual`, `estimate`, `prev` |
+| **Sources officielles** : calendrier ICS du BLS (`bls.ics` : CPI, emploi = NFP, PPI…), calendrier FOMC de la Fed (page HTML, **aucun flux ICS trouvé**) | les plus fiables (organismes publics) ; format ICS standard | domaine public (administration américaine) | gratuit, sans clé | ICS (RFC 5545), heure de Washington | **aucune importance, aucune valeur** ; **États-Unis seulement** (ni BCE, ni Royaume-Uni…) |
+| **Fichier local importé** (ICS standard ou CSV au format Pulse) | ne dépend d'aucun service : **ne peut pas disparaître** | celles du fichier que l'utilisateur choisit | gratuit | au choix de l'utilisateur | celles du fichier |
+
+**Recommandation** : aucune source en ligne n'est à la fois **fiable, gratuite, complète et sous licence claire**. Pour un trader forex / indices en France, la plus pratique est l'**export hebdomadaire de Forex Factory**, mais c'est un flux non officiel d'un site commercial, sans licence écrite : **la décision revient à l'utilisateur** (accepter ce risque et ces conditions, ou payer Trading Economics, ou rester sur un fichier). Conformément à la consigne, **aucun fournisseur propre à une source n'est codé** avant cette décision ; le lot livre la partie indépendante de la source :
+
+1. le **plan B, sans réseau** : import d'un fichier **ICS** (norme RFC 5545, que publient Forex Factory et le BLS d'après la recherche) ou **CSV au format Pulse** (documenté ci-dessous) ;
+2. un **flux ICS en ligne à l'adresse choisie par l'utilisateur** (fournisseur générique `icsUrl` : la norme ICS n'est pas une source, l'utilisateur colle l'adresse de son choix ; **aucune adresse par défaut**) ;
+3. toute l'architecture (abstraction de fournisseur, client HTTPS borné, stockage, heure de Paris, alerte, interface) : un fournisseur dédié (JSON de Forex Factory, API payante) s'ajoutera comme **une implémentation de plus**, après vérification de son format sur une vraie réponse.
+
+### Architecture
+
+| Crate | Rôle | Réseau |
+|---|---|---|
+| `pulse-core` (`news/`) | modèle d'un événement, **heure de Paris**, lecture des fichiers ICS / CSV (pure, sans panique), stockage, mise à jour de la valeur réelle, purge, réglages `news.*`, règle « au plus une fois par jour », vues pour l'interface ; alerte 3.6.8 dans `alerts/news.rs` | **aucun** : il reçoit des événements déjà récupérés |
+| `crates/pulse-news` | trait `CalendarProvider` (un fournisseur = une implémentation), client HTTPS borné (`ureq` 3, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL** : exactement la pile du lot 20, donc aucune nouvelle dépendance compilée), fournisseur `IcsUrl` ; erreurs à codes `news:<code>` | **le seul autre code réseau** |
+| `src-tauri` | commandes fines en fin de `lib.rs` ; appel réseau **asynchrone**, base non verrouillée pendant l'appel | via `pulse-news` |
+
+Pourquoi un crate à part plutôt que `pulse-ai` : l'IA et le calendrier sont deux options indépendantes ; chacune peut être retirée ou désactivée sans toucher à l'autre.
+
+### Confidentialité : ce qui part, et rien d'autre
+
+- **Désactivé par défaut** (`news.enabled` absent = éteint). Interrupteur dans Paramètres > « Calendrier économique ». Éteint : aucune connexion, aucune alerte 3.6.8, le widget et la page expliquent comment l'activer. Les événements déjà stockés restent (supprimables d'un bouton).
+- **Source en ligne** : aucune par défaut (`news.source = none`) ; même activé, rien ne sort tant que l'utilisateur n'a pas saisi une adresse de flux ICS.
+- **Requête** (la seule) : `GET` de l'adresse **exactement telle que saisie** (HTTPS obligatoire, sans identifiant dans l'adresse, 2 048 caractères au plus). En-têtes envoyés : `Host`, `User-Agent: Pulse`, `Accept: text/calendar` — liste vérifiée par le test du faux serveur. **Aucun** cookie, corps, paramètre ajouté, compte, trade, identifiant d'installation ni clé. Aucune plage de dates n'est envoyée (un flux ICS se télécharge en entier) ; Pulse garde ensuite les événements de J − 7 à J + 60 (jours de Paris).
+- **Redirection refusée** (`news:redirected`) : l'utilisateur saisit l'adresse finale, la requête reste exactement celle qui est documentée.
+- **Limites** : connexion 10 s, requête 30 s, réponse ≤ 2 Mio, 5 000 événements au plus par récupération.
+- **Fréquence** : à l'ouverture de Pulse, **au plus une fois par jour de Paris** (même en cas d'échec, pas de nouvel essai automatique ce jour-là) ; bouton « Actualiser » à la demande, **au plus une fois toutes les 5 minutes** (`news:tooSoon`) — compatible avec la limite de Forex Factory. Jamais de boucle.
+- **Hors ligne** : les événements déjà stockés restent affichés avec la date de la **dernière mise à jour réussie** et l'erreur traduite de la dernière tentative.
+
+### Données (migration v14, à renuméroter à la fusion)
+
+- Table `economic_events` : `source` (`file` / `icsUrl`), `uid` (clé de l'événement dans sa source : `UID` du fichier ICS, sinon jour + heure + devise + titre), `starts_at` (instant **UTC** en ms ; `NULL` = **sans heure**), `day` (jour de Paris de l'événement, ou le jour donné pour un événement sans heure), `currency` (code à 3 lettres, `''` = non précisée), `title`, `importance` (`low` / `medium` / `high`), `forecast`, `previous`, `actual` (**texte tel que donné par la source**, unité comprise : ce ne sont pas des montants d'argent, rien ne les additionne), `updated_at` ; unique par (`source`, `uid`).
+- **Mise à jour** : même (`source`, `uid`) → titre, heure, devise, importance remplacés ; prévue / précédente remplacées si la nouvelle copie les donne ; **réelle** remplacée si elle est donnée, **gardée** si la nouvelle copie ne l'a plus (une valeur publiée n'est jamais effacée).
+- **Purge** : événements dont le jour est antérieur à aujourd'hui − 730 jours, à chaque import / récupération. Deux ans, parce que l'alerte 3.6.8 a besoin des news passées pour savoir quels trades passés ont été pris « pendant une news ».
+- **Heure de Paris** : `news::paris` applique la règle de l'Union européenne (en vigueur depuis 1996) : heure d'été (UTC+2) du **dernier dimanche de mars 01:00 UTC** au **dernier dimanche d'octobre 01:00 UTC**, sinon UTC+1. Testée aux deux bascules. `pulse-core` renvoie jour et heure de Paris déjà calculés : l'interface ne convertit rien, quel que soit le fuseau du PC. Si l'UE supprime un jour le changement d'heure, cette fonction sera à modifier.
+- **ICS** (RFC 5545, sous-ensemble) : lignes dépliées, composants `VEVENT`, `UID`, `SUMMARY` (échappements `\,` `\;` `\\` `\n`), `DTSTART` en UTC (`…Z`), en date seule (`VALUE=DATE` → **sans heure**), ou avec `TZID=Europe/Paris` (règle UE) ou `TZID=America/New_York` (règle américaine depuis 2007 : 2ᵉ dimanche de mars 02:00 → 1ᵉʳ dimanche de novembre 02:00, heure locale) ; **tout autre fuseau** et l'heure « flottante » (sans fuseau) sont **refusés** ligne par ligne (compteur et motif), jamais devinés. Importance = `PRIORITY` (1–4 forte, 5 moyenne, 6–9 faible, plage de la RFC 5545 §3.8.1.9) ; absente ou 0 → l'importance choisie par l'utilisateur pour ce fichier ou ce flux. Devise = `CATEGORIES` si c'est un code de 3 lettres, sinon celle choisie pour le fichier ou le flux (ou « non précisée »). Répétitions (`RRULE`) non développées : l'événement compte une fois, à sa date de début (les calendriers économiques publient des événements uniques).
+- **CSV au format Pulse** : séparateur `;`, UTF-8 (BOM accepté), en-tête obligatoire `date;heure;devise;titre;importance;prevu;precedent;reel` ; `date` = `AAAA-MM-JJ`, `heure` = `HH:MM` **heure de Paris** (vide = sans heure), `importance` = `faible` / `moyenne` / `forte` ; une heure qui n'existe pas à Paris (passage à l'heure d'été, 02:00–02:59) est refusée ; une heure ambiguë (retour à l'heure d'hiver, 02:00–02:59 existe deux fois) prend la **première** (heure d'été).
+- Fichier : 2 Mio et 5 000 événements au plus ; une ligne illisible est ignorée avec son numéro et son motif, jamais une panique ; rien n'est écrit si le fichier entier est illisible.
+
+### Alerte 3.6.8 « trade pris pendant une news majeure » (`newsTrade`)
+
+Dans `pulse-core/src/alerts/news.rs`, évaluation **pure** appelée par `alerts::active_alerts` après les alertes du lot 12, **sans changer** `alerts::evaluate` (ni ses tests, ni le coach et les insights qui l'appellent). Même principe que le lot 12 : chaque compte seul, instant `now`, jamais d'alerte sans donnée suffisante.
+
+- **Fenêtre** : `news.window_before_min` (défaut **15**) et `news.window_after_min` (défaut **15**), entiers de 0 à 240. Un trade est « pendant » une news si son instant d'**entrée** est dans `[news − avant ; news + après]` (bornes incluses).
+- **News concernées** : importance **forte** et **avec une heure** (un événement sans heure n'a pas de fenêtre : jamais d'alerte). Devise : pour un actif **forex** dont le symbole se lit comme deux codes de 3 lettres (`EURUSD`, `EUR/USD`), seules les news de **ces deux devises** comptent (cas « deux devises ») ; pour les autres classes (indices, crypto, matières premières, actions) la devise de l'actif n'est pas connue, **toutes** les news fortes comptent ; une news sans devise compte pour tous.
+- **Trades examinés** : ceux du compte **entrés aujourd'hui**, ouverts ou clôturés (un trade ouvert a une entrée : il peut déclencher l'alerte). Plusieurs news simultanées : **une seule** alerte par trade, qui les liste (5 au plus, dans l'ordre de l'heure puis du titre).
+- **Condition statistique** (3.3.9 × 3.1.6) : groupe « pendant les news » = trades **clôturés** du compte (hors le trade examiné) dont l'entrée tombe dans la fenêtre d'une news concernée **ou** qui portent la condition de marché saisie à la main « Actualité économique » (nom de départ, v3 ; « Economic news » s'il n'a pas été renommé ; un tag renommé n'est pas reconnu). C'est le **croisement** du cahier : l'étiquette manuelle compte les trades plus anciens que l'historique du calendrier ; le calendrier compte les trades non étiquetés. Autres trades = le reste des trades clôturés du compte. L'alerte ne se déclenche **que si** chaque groupe a **au moins 10 trades avec un R** (même échantillon que les mises en avant du lot 19) **et** que l'expectancy R du groupe « news » est **inférieure d'au moins 0,25 R** à celle des autres (`EXPECTANCY_GAP_R` des lots 8 bis et 19). Sinon, **aucune alerte** (jamais par défaut).
+- **Jamais de causalité** : le message dit « en même temps » (« vos trades pris pendant une news majeure ont eu une expectancy plus basse »), jamais « parce que ».
+- Gravité `warning`, identifiant `newsTrade:<compte>:<trade>`, réglage `news.alert` (`on` par défaut, sans effet tant que `news.enabled` est éteint).
+
+### Interface et code (lot 25)
+
+- **pulse-core** (`src/news/`, sans réseau) : `zones.rs` (règles UE pour Paris et US pour New York, lecture d'une heure locale : trou du printemps refusé, heure répétée de l'automne = la première), `ics.rs` et `csv.rs` (lecteurs purs, `Skipped` ligne + motif, 100 motifs listés au plus), `store.rs` (table `economic_events`, `save` avec valeur réelle jamais effacée, `purge`, `list`, `upcoming`, `calendar` du jour / de la semaine de Paris, `currencies`, `clear`), `settings.rs` (`news.*`, `check_url`, `prepare_fetch` / `finish_fetch` / `fail_fetch`, `import_file` / `import_path`), `mod.rs` (modèle, devises ISO connues, `pair_currencies`). **Migration v14** (`economic_events`, à renuméroter). Alerte : `alerts/news.rs` (`evaluate` pur, appelé par `alerts::active_alerts` après les alertes du lot 12 ; `AlertDetail::NewsTrade`, rang 9). Widget : une ligne `upcoming_news` dans la bibliothèque de `dashboards.rs` (catégorie « temporel », ni période ni compte, modes `medium` / `high` / `all`). Seuls changements dans des fichiers existants de pulse-core : `lib.rs`, `migrations.rs` (ajout en fin), `alerts/mod.rs` (variante + module), `alerts/log.rs` (appel de l'alerte 3.6.8), `dashboards.rs` (une ligne).
+- **Tests pulse-core** : `news/tests.rs` et `news/zones.rs` (bascules d'heure 2025 et 2026 à Paris et New York, ICS en UTC / Paris / New York / date seule, fuseaux refusés, fichiers corrompus octet par octet et tronqués à chaque longueur sans panique, CSV, valeur réelle conservée, purge à 730 jours pile, filtres et ordre, semaine de Paris, réglages refusés sans rien écrire, « une fois par jour / 5 minutes », changement d'adresse, **migration v14 avec données existantes**) ; `alerts/news/tests.rs` (journal N calculé à la main : déclenchée, pas pire, écart juste sous le seuil, écart exactement −0,25 R, échantillon trop petit, trade sans R, bornes de la fenêtre, news à venir, news de la veille, news simultanées, paire forex / indice / news sans devise, condition de marché manuelle, trade examiné exclu de sa comparaison, désactivé ; puis de bout en bout par SQLite avec historique et masquage). Le verrou du lot 22 teste automatiquement la v14 sur une base chiffrée (boucle jusqu'à `latest_version`).
+- **pulse-news** : `lib.rs` (`CalendarProvider`, `IcsUrl`, `NewsError`), 7 tests contre un faux serveur local : en-têtes exacts (`host`, `user-agent`, `accept`), adresse transmise telle quelle, réponse vide, page HTML, octets invalides, flux tronqué, réponse trop grosse (annoncée ou non), 400 / 401 / 403 / 404 / 429 / 500 / 503, redirection non suivie, délai dépassé, port fermé (hors ligne), aucune connexion en clair avec le vrai client. Ajouté à `ci.yml` et `build-windows.yml`.
+- **Coque** (fin de `src-tauri/src/lib.rs`) : `get_news_status`, `set_news_settings`, `import_news_file`, `refresh_news` (**asynchrone** : décision et inscription de la tentative dans pulse-core, appel réseau sans tenir la base, puis enregistrement ou erreur), `get_news_calendar`, `get_upcoming_news`, `clear_news_events`.
+- **TypeScript** : types `src/types/news.ts` (+ `NewsTradeDetail` en fin de `types/alerts.ts`), bloc « Lot 25 » en fin d'objet `api`, faux backend `src/lib/mockNews.ts` (**simulation** : événements `source = simulation`, badge « Simulation », aucun réseau ; mêmes contrôles et même règle d'heure de Paris, testés : `mockNews.test.ts`) ; l'alerte 3.6.8 elle-même **n'est pas simulée** dans le navigateur (son texte est testé : `alertFormat.test.ts`). Affichage pur `src/lib/newsView.ts` (testé). Textes `src/i18n/fr.news.ts` (clé `news` de `fr`), plus `alerts.messages.newsTrade` et `alertHistory.kinds.newsTrade` dans `fr.ts`, widget dans `fr.dashboard.ts`.
+- **Interface** : onglets « Résultats / Calendrier économique » en haut de la page Calendrier (`/calendar/news`, pas de nouvelle entrée dans la barre latérale) ; `pages/EconomicCalendarPage.tsx` (aujourd'hui / semaine, filtres importance et devise, heure « Journée » pour un événement sans heure, prévu · précédent · réel, dernière mise à jour, dernière erreur, Actualiser seulement avec un flux en ligne, états vides) ; `components/news/` (`ImportanceMark` : mot + trois barres, `CurrencyTag`, `SimulationBadge`, `CalendarTabs`) ; `components/NewsSettingsPanel.tsx` (Paramètres, ancre `/settings#news`) ; widget `UpcomingNewsWidget` (4 prochaines news, décompte recalculé chaque minute) ; `lib/newsAutoRefresh.tsx` (un seul appel à l'ouverture, pulse-core décide). Captures : `docs/captures/lot25-*.png` (1440×900 et 1920×1080 ; le script vérifie qu'aucune requête ne sort de `localhost`).
+
+### Non testé (lot 25)
+
+- **Aucune vraie source en ligne** : ni Forex Factory, ni Trading Economics, ni le BLS, ni aucun flux ICS réel (réseau de l'environnement de développement bloqué ; formats connus seulement par des extraits de recherche). Le client est testé contre un faux serveur local.
+- **Windows** : `pulse-news` n'a pas pu être compilé pour `x86_64-pc-windows-msvc` depuis Linux (partie C de `ring`, comme `pulse-ai` au lot 20) ; il le sera par `build-windows.yml`, qui lance aussi ses tests. Ni l'application installée, ni la boîte de dialogue d'import de fichier, ni un proxy d'entreprise ou un antivirus qui inspecte le TLS.
+- La norme ICS (RFC 5545) n'a pas pu être relue (site bloqué) : seule la plage de `PRIORITY` a été confirmée par la recherche ; le dépliage des lignes, les formes de `DTSTART` et les échappements suivent la norme telle que je la connais.
+- L'alerte 3.6.8 sur la vraie base de l'utilisateur, et son affichage dans la bannière (le faux backend ne la simule pas).
+- La migration v14 sur la vraie base (testée en mémoire avec des données existantes, et sur une base chiffrée).
+
+### Décisions qui restent à l'utilisateur (lot 25)
+
+1. **La source en ligne** : Forex Factory (gratuit, non officiel, conditions à accepter, pas de valeur réelle, semaine en cours), Trading Economics (payant, officiel), ou aucune (fichiers seulement). Pour ajouter un fournisseur dédié, il faudra un accès réseau à sa documentation ou un exemple de vraie réponse.
+2. Les seuils de l'alerte : fenêtre 15 min avant / après, 10 trades avec R de chaque côté, écart de 0,25 R (repris des lots 8 bis et 19).
+3. Actifs non forex : toutes les news fortes comptent (la devise d'un indice ou d'une crypto n'est pas connue) ; une liste « actif → devises » serait à définir si ce choix gêne.
+4. Durée de conservation : 2 ans.
+
