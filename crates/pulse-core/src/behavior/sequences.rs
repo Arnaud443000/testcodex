@@ -3,11 +3,12 @@
 //! with after a win. See CLAUDE.md, "Compléments du moteur (lot 8 bis)".
 
 use super::discipline::{TradeDiscipline, mean_score, of_closed};
-use super::Context;
+use super::{Context, ExposureBasis, exposures};
 use crate::error::Result;
 use crate::money::Decimal;
 use crate::settings::{self, BehaviorSettings};
-use crate::stats::pnl::{Outcome, checked};
+use crate::stats::distribution::median;
+use crate::stats::pnl::{self, Outcome, checked};
 use crate::stats::summary::{Summary, analyze};
 use crate::stats::{Closed, Ledger, StatsQuery, TradeFacts, load};
 use rusqlite::Connection;
@@ -15,6 +16,8 @@ use serde::Serialize;
 
 /// Below this many trades in either group, the "after two losses" gaps are `None`.
 pub const MIN_SEQUENCE_TRADES: usize = 5;
+/// Below this many comparable cases, a mean or median size change is `None`.
+pub const MIN_SIZE_CASES: usize = 5;
 
 impl Context<'_> {
     /// The two last trades of the account at `t`'s entry are both losses.
@@ -101,4 +104,99 @@ pub fn after_losses(ledger: &Ledger, query: &StatsQuery, settings: &BehaviorSett
 
 pub fn after_losses_report(conn: &Connection, query: &StatsQuery) -> Result<AfterLossesReport> {
     after_losses(&load(conn, &query.account_ids)?, query, &settings::behavior(conn)?)
+}
+
+// --- Size change after a loss ---------------------------------------------------------
+
+/// A trade compared with the previous trade of its account.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SizeChangeCase {
+    pub trade_id: i64,
+    pub previous_trade_id: i64,
+    pub basis: ExposureBasis,
+    /// Exposure / previous exposure − 1 (0.23 = +23 %).
+    pub change: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SizeChangeGroup {
+    /// Outcome of the previous trade: `win`, `loss` or `breakeven`.
+    pub previous_outcome: Outcome,
+    /// Comparable cases (same basis as the revenge detection).
+    pub case_count: usize,
+    /// No planned stop on one side and a different instrument.
+    pub not_comparable_count: usize,
+    /// Cases where the exposure grew (change > 0).
+    pub increased_count: usize,
+    /// `None` below [`MIN_SIZE_CASES`] cases.
+    pub mean_change: Option<f64>,
+    pub median_change: Option<f64>,
+    /// In exit order of the trades.
+    pub cases: Vec<SizeChangeCase>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SizeChangeReport {
+    pub after_loss: SizeChangeGroup,
+    pub after_win: SizeChangeGroup,
+    pub after_breakeven: SizeChangeGroup,
+    /// Trades without an earlier closed trade on their account.
+    pub no_previous_count: usize,
+    pub trade_count: usize,
+    pub min_case_count: usize,
+    /// Mean change after a loss − mean change after a win.
+    pub loss_vs_win: Option<f64>,
+}
+
+fn size_group(previous_outcome: Outcome, cases: Vec<SizeChangeCase>, not_comparable_count: usize) -> SizeChangeGroup {
+    let changes: Vec<f64> = cases.iter().map(|c| c.change).collect();
+    let enough = changes.len() >= MIN_SIZE_CASES;
+    SizeChangeGroup {
+        previous_outcome,
+        case_count: cases.len(),
+        not_comparable_count,
+        increased_count: changes.iter().filter(|c| **c > 0.0).count(),
+        mean_change: enough.then(|| changes.iter().sum::<f64>() / changes.len() as f64),
+        median_change: median(changes).filter(|_| enough),
+        cases,
+    }
+}
+
+pub fn size_change(ledger: &Ledger, query: &StatsQuery, settings: &BehaviorSettings) -> Result<SizeChangeReport> {
+    let ctx = Context::new(ledger, settings.clone())?;
+    let set = ctx.replay.selected(query);
+    let outcomes = [Outcome::Loss, Outcome::Win, Outcome::Breakeven];
+    let mut cases: [Vec<SizeChangeCase>; 3] = Default::default();
+    let mut not_comparable = [0usize; 3];
+    let mut no_previous_count = 0;
+    for c in &set {
+        let Some(p) = ctx.previous(c.facts) else {
+            no_previous_count += 1;
+            continue;
+        };
+        let k = outcomes.iter().position(|o| *o == p.figures.outcome).expect("three outcomes");
+        match exposures(c.facts, p)?.and_then(|(basis, mine, theirs)| Some((basis, pnl::ratio(mine, theirs)?))) {
+            Some((basis, ratio)) => cases[k].push(SizeChangeCase { trade_id: c.facts.id, previous_trade_id: p.facts.id, basis, change: ratio - 1.0 }),
+            None => not_comparable[k] += 1,
+        }
+    }
+    let [loss, win, breakeven] = cases;
+    let after_loss = size_group(Outcome::Loss, loss, not_comparable[0]);
+    let after_win = size_group(Outcome::Win, win, not_comparable[1]);
+    Ok(SizeChangeReport {
+        loss_vs_win: after_loss.mean_change.zip(after_win.mean_change).map(|(l, w)| l - w),
+        after_loss,
+        after_win,
+        after_breakeven: size_group(Outcome::Breakeven, breakeven, not_comparable[2]),
+        no_previous_count,
+        trade_count: set.len(),
+        min_case_count: MIN_SIZE_CASES,
+    })
+}
+
+pub fn size_change_report(conn: &Connection, query: &StatsQuery) -> Result<SizeChangeReport> {
+    size_change(&load(conn, &query.account_ids)?, query, &settings::behavior(conn)?)
 }

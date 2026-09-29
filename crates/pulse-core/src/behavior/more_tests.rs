@@ -350,3 +350,94 @@ fn after_two_losses_never_mixes_accounts() {
     assert_eq!(r.after_two_losses.trade_ids, [3, 4, 23, 7, 8, 11]);
     assert!(r.others.trade_ids.contains(&5));
 }
+
+// --- Size change after a loss -----------------------------------------------------------
+
+fn changes(g: &SizeChangeGroup) -> Vec<(i64, i64, f64)> {
+    g.cases.iter().map(|c| (c.trade_id, c.previous_trade_id, c.change)).collect()
+}
+
+#[test]
+fn size_change_on_journal_f() {
+    // Risk 10 × size everywhere: only 7 (size 2 after 6) and 8 (size 1 after 7) move.
+    let r = size_change(&ledger("10000", journal_f()), &all(), &defaults()).unwrap();
+    assert_eq!((r.trade_count, r.no_previous_count, r.min_case_count), (13, 1, 5));
+    assert_eq!(
+        changes(&r.after_loss),
+        [(2, 1, 0.0), (3, 2, 0.0), (4, 3, 0.0), (6, 5, 0.0), (7, 6, 1.0), (8, 7, -0.5), (10, 9, 0.0), (11, 10, 0.0)]
+    );
+    assert!(r.after_loss.cases.iter().all(|c| c.basis == ExposureBasis::Risk));
+    // Mean (1 − 0.5) / 8; median of [−0.5, 0 ×6, 1] = 0.
+    approx(r.after_loss.mean_change, 0.0625);
+    approx(r.after_loss.median_change, 0.0);
+    assert_eq!((r.after_loss.increased_count, r.after_loss.not_comparable_count), (1, 0));
+    // After a win: 5, 12, 13 — three cases, below the minimum.
+    assert_eq!(changes(&r.after_win), [(5, 4, 0.0), (12, 11, 0.0), (13, 12, 0.0)]);
+    assert_eq!((r.after_win.mean_change, r.after_win.median_change, r.loss_vs_win), (None, None, None));
+    assert_eq!(changes(&r.after_breakeven), [(9, 8, 0.0)]);
+    assert_eq!(r.after_breakeven.previous_outcome, Outcome::Breakeven);
+}
+
+/// Journal G — one long a day at 100, SL 90, alternating win (exit 110) and loss (exit 90).
+///
+/// | #  | outcome | size | previous | change              |
+/// |----|---------|------|----------|---------------------|
+/// | 1  | W       | 1    | —        |                     |
+/// | 2  | L       | 1    | 1 W      | 0                   |
+/// | 3  | W       | 2    | 2 L      | 2 / 1 − 1 = 1       |
+/// | 4  | L       | 2    | 3 W      | 0                   |
+/// | 5  | W       | 3    | 4 L      | 3 / 2 − 1 = 0.5     |
+/// | 6  | L       | 3    | 5 W      | 0                   |
+/// | 7  | W       | 3    | 6 L      | 0                   |
+/// | 8  | L       | 1.5  | 7 W      | 1.5 / 3 − 1 = −0.5  |
+/// | 9  | W       | 3    | 8 L      | 3 / 1.5 − 1 = 1     |
+/// | 10 | L       | 3    | 9 W      | 0                   |
+/// | 11 | W       | 6    | 10 L     | 6 / 3 − 1 = 1       |
+/// | 12 | L       | 6    | 11 W     | 0                   |
+#[test]
+fn size_grows_after_losses_in_journal_g() {
+    let sizes = ["1", "1", "2", "2", "3", "3", "3", "1.5", "3", "3", "6", "6"];
+    let trades = sizes
+        .iter()
+        .enumerate()
+        .map(|(i, size)| {
+            let exit = if i % 2 == 0 { "110" } else { "90" };
+            trade(i as i64 + 1, Long, "100", Some(exit), size, Some("90"), i as i64, 9 * 60, 10 * 60)
+        })
+        .collect();
+    let r = size_change(&ledger("100000", trades), &all(), &defaults()).unwrap();
+    // After a loss: [1, 0.5, 0, 1, 1] → mean 3.5 / 5 = 0.7, median 1, 4 increases.
+    assert_eq!(changes(&r.after_loss).iter().map(|c| c.0).collect::<Vec<_>>(), [3, 5, 7, 9, 11]);
+    approx(r.after_loss.mean_change, 0.7);
+    approx(r.after_loss.median_change, 1.0);
+    assert_eq!(r.after_loss.increased_count, 4);
+    // After a win: [0, 0, 0, −0.5, 0, 0] → mean −0.5 / 6, median 0.
+    approx(r.after_win.mean_change, -0.5 / 6.0);
+    approx(r.after_win.median_change, 0.0);
+    approx(r.loss_vs_win, 0.7 + 0.5 / 6.0);
+    assert_eq!((r.after_breakeven.case_count, r.after_breakeven.mean_change), (0, None));
+}
+
+#[test]
+fn size_change_compares_sizes_without_a_stop_and_never_across_accounts() {
+    // 1: instrument 1, SL, size 2, loss. 2: same instrument, no SL, size 3: 3 / 2 − 1 on size × multiplier.
+    // 3: instrument 2, no SL: not comparable with 2. Account 2 loses with size 100 between 1 and 2.
+    let mut t = vec![
+        trade(1, Long, "100", Some("90"), "2", Some("90"), 0, 9 * 60, 10 * 60),
+        trade(2, Long, "100", Some("95"), "3", None, 1, 9 * 60, 10 * 60),
+        trade(3, Long, "100", Some("110"), "1", None, 2, 9 * 60, 10 * 60),
+        trade(4, Long, "100", Some("50"), "100", Some("90"), 0, 12 * 60, 13 * 60),
+    ];
+    t[2].instrument_id = 2;
+    t[3].account_id = 2;
+    let mut l = ledger("10000", t);
+    l.accounts.push(AccountCapital { id: 2, initial_capital: dec("10000") });
+    let r = size_change(&l, &all(), &defaults()).unwrap();
+    assert_eq!(changes(&r.after_loss), [(2, 1, 0.5)]);
+    assert_eq!(r.after_loss.cases[0].basis, ExposureBasis::Size);
+    assert_eq!((r.after_loss.not_comparable_count, r.no_previous_count), (1, 2), "trades 1 and 4 open their accounts");
+
+    let empty = size_change(&ledger("10000", vec![]), &all(), &defaults()).unwrap();
+    assert_eq!((empty.trade_count, empty.no_previous_count, empty.after_loss.case_count), (0, 0, 0));
+    assert_eq!((empty.after_loss.mean_change, empty.loss_vs_win), (None, None));
+}

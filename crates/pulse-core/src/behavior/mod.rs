@@ -31,7 +31,10 @@ pub use factors::{
     Comparison, DISCIPLINE_GAP, EXPECTANCY_GAP_R, ExternalFactorReport, FACTORS, FactorKey, FactorReport, FactorSide, MIN_FACTOR_DAYS,
     MIN_R_TRADES, Verdict, external_factor_report, external_factors,
 };
-pub use sequences::{AfterLossesReport, MIN_SEQUENCE_TRADES, SequenceGroup, after_losses, after_losses_report};
+pub use sequences::{
+    AfterLossesReport, MIN_SEQUENCE_TRADES, MIN_SIZE_CASES, SequenceGroup, SizeChangeCase, SizeChangeGroup, SizeChangeReport, after_losses,
+    after_losses_report, size_change, size_change_report,
+};
 
 use crate::error::Result;
 use crate::money::Decimal;
