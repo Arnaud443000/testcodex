@@ -70,3 +70,13 @@ Audit fait **avant toute modification** avec `scripts/visual-audit.mjs` (Playwri
 - Le pied de la barre latérale affiche « Local · 0 compte » tant que des comptes sont créés hors de l'écran des comptes (déjà signalé au lot 20).
 - Tableau de bord sans trade : écran d'accueil au lieu des widgets (déjà signalé au lot 25).
 - Le champ « Jour » du journal suit la langue du navigateur (format américain `09/29/2026` sous Chromium en anglais) ; sous WebView2 français il doit suivre Windows : à vérifier sur un vrai Windows.
+
+## Résultat après corrections
+Même script, mêmes 232 vues (4 tailles, états vide et chargé, y compris 2560×1440) : **0 défaut probable, 0 défilement horizontal de page** (avant : 3 vues signalées, dont Replay à 1280). Captures : `docs/captures/lot26-apres-*.png` (à comparer aux `lot26-avant-*.png` de mêmes noms), `lot26-effets-reduits-*.png`.
+
+Corrigés : n° 1 à 14, 16 à 19, 21 à 27 et 29 (voir les tableaux). Laissés : n° 15 (aperçu de la bibliothèque), n° 20 (deux styles d'onglets), n° 28 (info : pas d'aurore animée). Ajouté en cours de lot : retour en haut de page à chaque changement d'écran.
+
+**Mesure du coût des flous** (Chromium headless, rendu logiciel, 1920×1080, défilement automatique 4 s, jeu de démonstration) : tableau de bord (9 cartes) 20,5 → 39,3 images/s ; page Comportement (13 cartes) 14,5 → 46 images/s en retirant le flou des cartes. Les chiffres absolus ne valent rien sur une vraie carte graphique ; seul le rapport est un indice. Comparaison de captures avec / sans flou : seul l'anticrénelage du texte diffère, aucun fond ni bord de carte.
+
+## Relecture des textes
+Vouvoiement partout (aucun « tu / ton / tes » trouvé), apostrophes typographiques, pas de « ... » ASCII. Corrigé : espaces insécables (U+00A0) avant `:` `;` `?` `!` `%` et dans « … » sur tous les fichiers `src/i18n/*.ts` (pas U+202F : absent des polices Inter). Jargon de trader gardé (Replay, Insights, Drawdown, Profit factor, Scaling) : décision laissée à l'utilisateur.
