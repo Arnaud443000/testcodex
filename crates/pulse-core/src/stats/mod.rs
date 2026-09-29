@@ -22,6 +22,7 @@ pub mod risk;
 pub(crate) mod segments;
 pub(crate) mod summary;
 pub mod time;
+pub mod trade_card;
 
 pub use load::load;
 pub use pnl::{Figures, Outcome, Position};

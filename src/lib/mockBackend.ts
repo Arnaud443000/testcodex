@@ -923,3 +923,9 @@ export const mockPdf = createPdfMock({
     ).length,
 })
 
+import { createTradeCardMock } from './mockTradeCard'
+// Lot 24 : carte de trade (3.7.7)
+export const mockTradeCard = createTradeCardMock({
+  getTrade: (id) => mock.getTrade(id),
+  balanceAtEntry: (t) => behavior.mockRisk(behaviorInput([t.accountId]), { accountIds: [t.accountId] }).trades.find((r) => r.tradeId === t.id)?.balanceAtEntry ?? null,
+})

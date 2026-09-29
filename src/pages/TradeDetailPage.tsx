@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
+import { TradeCardDialog } from '../components/TradeCardDialog'
 import { ScreenshotAiCard } from '../components/ScreenshotAiCard'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
 import { EmptyState } from '../components/EmptyState'
@@ -27,6 +28,7 @@ export function TradeDetailPage() {
   const [screenshot, setScreenshot] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [cardOpen, setCardOpen] = useState(false)
 
   useEffect(() => {
     let live = true
@@ -124,11 +126,14 @@ export function TradeDetailPage() {
           <>
             <NavBtn to={neighbours.prev}>‹ {d.previous}</NavBtn>
             <NavBtn to={neighbours.next}>{d.next} ›</NavBtn>
+            <button type="button" className="btn btn-secondary" onClick={() => setCardOpen(true)} title={t.tradeCard.openHint}>{t.tradeCard.open}</button>
             <Link to={`/trades/${trade.id}/edit`} className="btn btn-secondary">{d.edit}</Link>
             <button type="button" className="btn btn-danger" onClick={() => setConfirmDelete(true)}>{d.delete}</button>
           </>
         }
       />
+
+      {cardOpen && <TradeCardDialog trade={trade} setupName={setup?.name ?? null} screenshotUrl={screenshot} onClose={() => setCardOpen(false)} />}
 
       {confirmDelete && (
         <div className="nt nt-bad flex-col" role="alertdialog" aria-labelledby="del-title">

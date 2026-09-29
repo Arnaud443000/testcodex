@@ -477,6 +477,20 @@ export const api = {
         })
       : mockPdf.exportPeriodPdf(req, path, overwrite),
   isBrowserPreview: !inTauri,
+
+  // --- Lot 24 : carte de trade (3.7.7) ---
+  /** R, rendement en % et P&L net d'un trade (jamais un solde), calculés par pulse-core. */
+  getTradeCardFigures: (tradeId: number): Promise<TradeCardFigures> =>
+    inTauri ? invoke('get_trade_card_figures', { tradeId }) : mockTradeCard.getTradeCardFigures(tradeId),
+  /** Boîte de dialogue « enregistrer sous » d'une image PNG (`null` si annulée). Elle demande elle-même avant de remplacer un fichier. */
+  pickPngPath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return mockTradeCard.pickPngPath(defaultName)
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'PNG', extensions: ['png'] }] })
+  },
+  /** Écrit l'image (PNG en base64) à `path` ; renvoie la taille écrite en octets. */
+  saveTradeCardImage: (path: string, image: string): Promise<number> =>
+    inTauri ? invoke('save_trade_card_image', { path, image }) : mockTradeCard.saveTradeCardImage(path, image),
 }
 
 
@@ -496,3 +510,5 @@ import { isLockedError } from './lockView'
 
 import type { PdfExport, PdfExportRequest } from '../types/pdf'
 import { mockPdf } from './mockBackend'
+import type { TradeCardFigures } from '../types/tradeCard'
+import { mockTradeCard } from './mockBackend'
