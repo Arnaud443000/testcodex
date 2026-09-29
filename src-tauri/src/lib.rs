@@ -1,4 +1,5 @@
 use pulse_core::accounts::{self, Account, AccountUpdate, NewAccount};
+use pulse_core::alerts::{self, Alert, AlertRecord, AlertSettings};
 use pulse_core::behavior::{
     self, DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, RuleAdherenceReport,
     StreakReport, TradeDiscipline,
@@ -186,6 +187,7 @@ fn get_trade(state: State<AppState>, id: i64) -> Result<TradeView, String> {
 fn create_trade(state: State<AppState>, trade: TradeData) -> Result<TradeView, String> {
     let conn = state.db.lock().map_err(err)?;
     let saved = trades::create(&conn, &trade).map_err(err)?;
+    record_alerts_after_save(&conn, saved.data.account_id);
     trade_view::get(&conn, saved.id).map_err(err)
 }
 
@@ -193,6 +195,7 @@ fn create_trade(state: State<AppState>, trade: TradeData) -> Result<TradeView, S
 fn update_trade(state: State<AppState>, id: i64, trade: TradeData) -> Result<TradeView, String> {
     let conn = state.db.lock().map_err(err)?;
     trades::update(&conn, id, &trade).map_err(err)?;
+    record_alerts_after_save(&conn, trade.account_id);
     trade_view::get(&conn, id).map_err(err)
 }
 
@@ -607,7 +610,12 @@ pub fn run() {
             get_external_factors,
             get_after_losses,
             get_size_change,
-            get_plan_simulation
+            get_plan_simulation,
+            get_active_alerts,
+            dismiss_alert,
+            get_alert_history,
+            get_alert_settings,
+            set_alert_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -652,4 +660,50 @@ fn get_size_change(state: State<AppState>, query: StatsQuery) -> Result<behavior
 fn get_plan_simulation(state: State<AppState>, query: StatsQuery) -> Result<behavior::PlanSimulation, String> {
     let conn = state.db.lock().map_err(err)?;
     behavior::plan_simulation_report(&conn, &query).map_err(err)
+}
+
+// --- Lot 12 : alertes à seuils (garde-fous, 3.6) ---
+
+fn local_tz_offset_min() -> i32 {
+    use chrono::{Local, Offset};
+    Local::now().offset().fix().local_minus_utc() / 60
+}
+
+/// Right after a trade is saved: evaluates its account so the alert history records the alert at the
+/// time of entry. An evaluation error never fails the save.
+fn record_alerts_after_save(conn: &Connection, account_id: i64) {
+    if let Err(e) = alerts::active_alerts(conn, &[account_id], now_ms(), local_tz_offset_min()) {
+        eprintln!("Pulse: could not evaluate the alerts after saving a trade: {e}");
+    }
+}
+
+/// Alerts active now on the given accounts (active accounts when empty), dismissed ones left out.
+#[tauri::command]
+fn get_active_alerts(state: State<AppState>, account_ids: Vec<i64>, tz_offset_min: i32) -> Result<Vec<Alert>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::active_alerts(&conn, &account_ids, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn dismiss_alert(state: State<AppState>, alert_id: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::dismiss(&conn, &alert_id, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn get_alert_history(state: State<AppState>, account_ids: Vec<i64>, limit: Option<u32>) -> Result<Vec<AlertRecord>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::history(&conn, &account_ids, limit.unwrap_or(100)).map_err(err)
+}
+
+#[tauri::command]
+fn get_alert_settings(state: State<AppState>) -> Result<AlertSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::settings::get(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_alert_settings(state: State<AppState>, settings: AlertSettings) -> Result<AlertSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::settings::set(&conn, &settings).map_err(err)
 }
