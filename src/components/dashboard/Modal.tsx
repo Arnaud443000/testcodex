@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 /** Boîte de dialogue : Échap ou clic sur le fond pour fermer, le focus y entre et revient à l'élément d'origine. */
-export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Modal({ title, onClose, children, wide = false, maxWidth }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; maxWidth?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -26,7 +26,7 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`glass-card bg-bg max-h-[90vh] w-full overflow-auto p-6 outline-none ${wide ? 'max-w-[720px]' : 'max-w-[460px]'}`}
+        className={`glass-card bg-bg max-h-[90vh] w-full overflow-auto p-6 outline-none ${maxWidth ?? (wide ? 'max-w-[720px]' : 'max-w-[460px]')}`}
       >
         <h2 className="mb-4 text-lg font-semibold">{title}</h2>
         {children}
