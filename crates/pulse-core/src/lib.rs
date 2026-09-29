@@ -44,6 +44,8 @@ pub mod ai;
 pub mod coach;
 // Lot 22 (verrouillage optionnel par mot de passe, chiffrement de la base et des captures).
 pub mod lock;
+// Lot 27 (calculateur de taille de position).
+pub mod sizing;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
