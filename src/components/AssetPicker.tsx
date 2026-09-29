@@ -17,7 +17,8 @@ export function AssetPicker({
   instruments: Instrument[]
   value: number | null
   onChange: (instrument: Instrument) => void
-  onAddCustom: () => void
+  /** Sans cette fonction, le lien « ajouter un actif personnalisé » n'est pas proposé. */
+  onAddCustom?: () => void
   error?: boolean
 }) {
   const t = useT()
@@ -145,18 +146,20 @@ export function AssetPicker({
               <li role="presentation" className="px-4 py-4 text-sm text-tx2">{t.form.assetNoResult(query.trim())}</li>
             )}
           </ul>
-          <button
-            type="button"
-            className="border-t px-4 py-3 text-left text-sm text-tx-accent hover:bg-white/5"
-            style={{ borderColor: 'var(--hairline)' }}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              setOpen(false)
-              onAddCustom()
-            }}
-          >
-            {t.form.addCustomAsset}
-          </button>
+          {onAddCustom && (
+            <button
+              type="button"
+              className="border-t px-4 py-3 text-left text-sm text-tx-accent hover:bg-white/5"
+              style={{ borderColor: 'var(--hairline)' }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setOpen(false)
+                onAddCustom()
+              }}
+            >
+              {t.form.addCustomAsset}
+            </button>
+          )}
         </div>
       )}
     </div>

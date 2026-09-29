@@ -56,7 +56,11 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 - [x] Lot 6 (réduit) — Export CSV des trades (`export.rs` : `;`, virgule décimale, BOM UTF-8, protection des formules), sauvegarde manuelle et restauration sécurisée (`backup.rs` : VACUUM INTO, validation, copie de sécurité, API de backup SQLite) ; UI dans Paramètres > Données (**Sonnet, moyen**). **L'import CSV broker (profils, doublons, annulation de lot) est repoussé à plus tard** (décision de l'utilisateur, il faudra un vrai export de son broker)
 - [x] Lot 7 — Règles personnelles + checklist pré-trade (volet déclaratif), dépôts/retraits UI (**Sonnet, moyen**)
 
-### Étapes 2 à 5
+### Étape 2 — Le « pourquoi » et l'analyse comportementale (lots en cours)
+- [x] Lot 10 — Trades manqués (saisie, liste, modification), journal quotidien, rappel natif du journal, note de qualité d'exécution (auto + manuelle), mode confiance (conviction × résultat) : `pulse-core` (`journal.rs`, `execution_quality.rs`, `confidence.rs`, `reminder.rs`, `period.rs`, `missed_trades::update`), migration v5, page Journal (**Sonnet, moyen**)
+- [ ] Lot 11 — Objectifs mensuels et mode replay d'un trade, sans données de marché externes : `goals.rs`, `replay.rs` (**Sonnet, moyen**)
+
+### Étapes 2 à 5 (reste)
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : score de discipline, détection de patterns comportementaux, alertes à seuils, coach IA. Le reste : Sonnet, moyen.
 
 ## Argent, prix et temps (décision du lot 2)
