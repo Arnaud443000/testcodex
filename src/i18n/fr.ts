@@ -638,6 +638,7 @@ export const fr = {
       no: 'Hors plan',
       partial: 'Plan suivi en partie',
       none: 'Plan non renseigné',
+      expectancyShort: 'Espérance',
       expectancyNote: 'La grande valeur est l’espérance en R (R moyen des trades ayant un stop loss prévu).',
       others: 'Autres groupes',
       empty: 'Aucun trade dans ce groupe',

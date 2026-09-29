@@ -4,6 +4,7 @@ import { DisciplineCard } from '../components/behavior/DisciplineCard'
 import { EmotionsCard } from '../components/behavior/EmotionsCard'
 import { MistakesCard } from '../components/behavior/MistakesCard'
 import { FirstTradeCard, PlanCard } from '../components/behavior/PlanCard'
+import { HeatmapCard, LongShortCard, RDistributionCard, RiskCard } from '../components/behavior/StatsCards'
 import { StreaksCard } from '../components/behavior/StreaksCard'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -13,6 +14,7 @@ import { api } from '../lib/api'
 import { buildAlerts, type BehaviorAlert } from '../lib/behaviorAlerts'
 import { formatSignedMoney } from '../lib/format'
 import { localTzOffsetMin, periodRange, usePeriod } from '../lib/period'
+import type { Heatmap, LongShort, RDistribution, RiskReport } from '../types/stats'
 import type { DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, StreakReport } from '../types/behavior'
 
 /** Tout ce que la page affiche, chargé d'un bloc : une seule requête par rapport, aucun calcul ici. */
@@ -24,6 +26,10 @@ interface Data {
   firstTrade: FirstTradeReport
   mistakes: MistakeReport
   patterns: PatternReport
+  rDistribution: RDistribution
+  heatmap: Heatmap
+  longShort: LongShort
+  risk: RiskReport
   alerts: BehaviorAlert[]
 }
 
@@ -54,10 +60,14 @@ export function BehaviorPage() {
       api.getFirstTrade(query),
       api.getMistakes(query),
       api.getPatterns(query),
+      api.getRDistribution(query),
+      api.getHeatmap(query),
+      api.getLongShort(query),
+      api.getRisk(query),
     ])
-      .then(([discipline, emotions, streaks, plan, firstTrade, mistakes, patterns]) => {
+      .then(([discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, rDistribution, heatmap, longShort, risk]) => {
         if (cancelled) return
-        setData({ discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, alerts: buildAlerts(patterns, now, tzOffsetMin) })
+        setData({ discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, rDistribution, heatmap, longShort, risk, alerts: buildAlerts(patterns, now, tzOffsetMin) })
         setError(null)
       })
       .catch((e) => !cancelled && setError(String(e)))
@@ -116,6 +126,10 @@ export function BehaviorPage() {
         <PlanCard report={data.plan} currency={currency} />
         <FirstTradeCard report={data.firstTrade} currency={currency} />
         <MistakesCard report={data.mistakes} currency={currency} />
+        <RDistributionCard report={data.rDistribution} />
+        <RiskCard report={data.risk} currency={currency} />
+        <HeatmapCard report={data.heatmap} currency={currency} />
+        <LongShortCard report={data.longShort} currency={currency} />
       </div>
     </>,
   )
