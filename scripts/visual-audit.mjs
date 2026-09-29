@@ -233,9 +233,9 @@ async function main() {
           await page.waitForTimeout(400)
         }
         const res = await page.evaluate(inspect)
-        res.focusInvisible = await focusCheck(page)
         const key = `${name}-${state}-${w}x${h}`
-        if (shotDir) await page.screenshot({ path: `${shotDir}/${key}.png` })
+        if (shotDir) await page.screenshot({ path: `${shotDir}/${key}.png` }) // avant le contrôle du focus, qui fait défiler la barre latérale
+        res.focusInvisible = await focusCheck(page)
         if (res.pageOverflowX) overflowFail++
         report.push({ key, page: name, state, size: `${w}x${h}`, errors: [...errors], ...res })
         errors.length = 0

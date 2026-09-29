@@ -3,7 +3,7 @@ export const frSizing = {
   title: 'Calculateur de position',
   subtitle: 'Calcule la taille qui garde votre risque sous le montant voulu. Tout reste sur ce PC.',
   disclaimer:
-    'Ceci est un calcul, pas une recommandation : le risque choisi est le vôtre. Les frais, le spread et le glissement ne sont pas inclus.',
+    'Ceci est un calcul, pas une recommandation : le risque choisi est le vôtre. Les frais, le spread et le glissement ne sont pas inclus.',
   sections: { setup: 'Position', risk: 'Risque voulu', advanced: 'Réglages avancés' },
   fields: {
     account: 'Compte',
@@ -22,14 +22,14 @@ export const frSizing = {
   },
   placeholders: { optional: 'Optionnel', price: '0,00', percent: '1', amount: '100', stepDefault: 'Selon la classe d’actif' },
   hints: {
-    advanced: 'Le multiplicateur est la valeur, dans la devise du compte, d’un mouvement de prix de 1,0 pour une taille de 1. Le pas de taille est le plus petit incrément que votre courtier accepte : laissé vide, un pas courant selon la classe d’actif est utilisé (à vérifier auprès du courtier).',
+    advanced: 'Le multiplicateur est la valeur, dans la devise du compte, d’un mouvement de prix de 1,0 pour une taille de 1. Le pas de taille est le plus petit incrément que votre courtier accepte : laissé vide, un pas courant selon la classe d’actif est utilisé (à vérifier auprès du courtier).',
     remembered: 'Le compte, l’actif et le risque sont mémorisés sur ce PC (jamais les prix).',
   },
   errors: {
-    entry: 'Nombre invalide (exemple : 1,0842).',
-    stop: 'Nombre invalide (exemple : 1,0800).',
+    entry: 'Nombre invalide (exemple : 1,0842).',
+    stop: 'Nombre invalide (exemple : 1,0800).',
     takeProfit: 'Nombre invalide, ou laissez vide.',
-    risk: 'Nombre invalide (exemple : 1 ou 100).',
+    risk: 'Nombre invalide (exemple : 1 ou 100).',
     multiplier: 'Nombre invalide, ou laissez vide pour prendre celui de l’actif.',
     sizeStep: 'Nombre invalide, ou laissez vide pour le pas par défaut.',
   },
@@ -40,17 +40,17 @@ export const frSizing = {
     noAssetTitle: 'Choisissez un actif',
     noAssetText: 'Le multiplicateur de l’actif est nécessaire pour convertir la distance au stop en argent.',
     incompleteTitle: 'Saisie incomplète',
-    incompleteText: 'Renseignez l’actif, le prix d’entrée, le stop loss et le risque voulu : la taille s’affiche dès que tout est prêt.',
+    incompleteText: 'Renseignez l’actif, le prix d’entrée, le stop loss et le risque voulu : la taille s’affiche dès que tout est prêt.',
     calculating: 'Calcul en cours…',
-    failed: (m: string) => `Le calcul a échoué : ${m}`,
+    failed: (m: string) => `Le calcul a échoué : ${m}`,
   },
   result: {
     label: 'Taille à saisir',
-    sizeAria: (size: string) => `Taille calculée : ${size}`,
+    sizeAria: (size: string) => `Taille calculée : ${size}`,
     unit: 'unités de taille',
     copy: 'Copier la taille',
     copied: 'Taille copiée',
-    copyFailed: 'Copie impossible : sélectionnez la taille à la main.',
+    copyFailed: 'Copie impossible : sélectionnez la taille à la main.',
     useInTrade: 'Utiliser dans un nouveau trade',
     useInTradeHint: 'Ouvre le formulaire de saisie prérempli. Rien n’est enregistré.',
     detailsTitle: 'Détail du calcul',
@@ -72,38 +72,38 @@ export const frSizing = {
     limitValue: (percent: string, amount: string) => `${percent} du solde (${amount})`,
     percentOf: (money: string, percent: string) => `${money} (${percent} du solde)`,
     none: '—',
-    rounding: 'La taille est toujours arrondie vers le bas : le risque réel ne dépasse jamais le risque voulu.',
+    rounding: 'La taille est toujours arrondie vers le bas : le risque réel ne dépasse jamais le risque voulu.',
   },
   warnings: {
     prefix: 'Attention',
     exceedsMax: (amount: string, percent: string, limitPercent: string, limitAmount: string | null) =>
-      `Le risque réel de ${amount}, soit ${percent} du solde, dépasse votre limite de risque max de ${limitPercent}${limitAmount ? ` (${limitAmount})` : ''}. Le calcul reste affiché : c’est à vous de décider.`,
+      `Le risque réel de ${amount}, soit ${percent} du solde, dépasse votre limite de risque max de ${limitPercent}${limitAmount ? ` (${limitAmount})` : ''}. Le calcul reste affiché : c’est à vous de décider.`,
     takeProfitWrongSide: (side: 'long' | 'short') =>
       side === 'long'
-        ? 'Le take profit est du mauvais côté : pour un long, il doit être au-dessus du prix d’entrée. Aucun ratio gain / risque n’est calculé.'
-        : 'Le take profit est du mauvais côté : pour un short, il doit être sous le prix d’entrée. Aucun ratio gain / risque n’est calculé.',
-    defaultStep: 'Le pas de taille est un pas courant selon la classe d’actif, pas celui de votre courtier : vérifiez-le (réglages avancés).',
+        ? 'Le take profit est du mauvais côté : pour un long, il doit être au-dessus du prix d’entrée. Aucun ratio gain / risque n’est calculé.'
+        : 'Le take profit est du mauvais côté : pour un short, il doit être sous le prix d’entrée. Aucun ratio gain / risque n’est calculé.',
+    defaultStep: 'Le pas de taille est un pas courant selon la classe d’actif, pas celui de votre courtier : vérifiez-le (réglages avancés).',
   },
   refused: {
     title: 'Calcul impossible',
     priceNotPositive: 'Les prix (entrée, stop loss, take profit) doivent être supérieurs à zéro.',
-    stopEqualsEntry: 'Le stop loss est égal au prix d’entrée : il n’y a aucune distance à risquer, donc aucune taille à calculer.',
+    stopEqualsEntry: 'Le stop loss est égal au prix d’entrée : il n’y a aucune distance à risquer, donc aucune taille à calculer.',
     stopWrongSide: (side: 'long' | 'short') =>
       side === 'long'
         ? 'Pour un long, le stop loss doit être sous le prix d’entrée.'
         : 'Pour un short, le stop loss doit être au-dessus du prix d’entrée.',
     riskNotPositive: 'Le risque doit être supérieur à zéro.',
-    riskPercentTooHigh: 'Le risque ne peut pas dépasser 100 % du solde.',
-    balanceNotPositive: 'Le solde du compte est nul ou négatif : un risque en % du solde n’a pas de sens. Saisissez plutôt un risque en montant.',
+    riskPercentTooHigh: 'Le risque ne peut pas dépasser 100 % du solde.',
+    balanceNotPositive: 'Le solde du compte est nul ou négatif : un risque en % du solde n’a pas de sens. Saisissez plutôt un risque en montant.',
     multiplierNotPositive: 'Le multiplicateur doit être supérieur à zéro.',
     stepNotPositive: 'Le pas de taille doit être supérieur à zéro.',
     sizeZero: (riskAtMinimum: string) =>
-      `Le risque voulu est trop faible pour la taille minimale (un seul pas de taille) : elle prendrait ${riskAtMinimum} de risque, soit plus que voulu. Aucune taille n’est proposée.`,
+      `Le risque voulu est trop faible pour la taille minimale (un seul pas de taille) : elle prendrait ${riskAtMinimum} de risque, soit plus que voulu. Aucune taille n’est proposée.`,
     sizeZeroHint: 'Vous pouvez augmenter le risque voulu, rapprocher le stop loss, ou vérifier le pas de taille.',
     overflow: 'Les nombres saisis sont trop grands pour être calculés.',
     unknown: (code: string) => `Calcul refusé (${code}).`,
   },
   link: 'Calculer la taille',
   linkHint: 'Ouvre le calculateur avec cet actif, ce sens et ces prix.',
-  prefilled: 'Formulaire prérempli depuis le calculateur de position : vérifiez chaque champ avant d’enregistrer.',
+  prefilled: 'Formulaire prérempli depuis le calculateur de position : vérifiez chaque champ avant d’enregistrer.',
 }
