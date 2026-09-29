@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useT, type Messages } from '../i18n'
 import { useAccounts } from '../lib/accounts'
+import { useInsights } from '../lib/insights'
 import { Icon, type IconName } from './Icon'
 import { Logo } from './Logo'
 
@@ -12,6 +13,7 @@ export const NAV: { to: string; key: keyof Messages['nav']; icon: IconName }[] =
   { to: '/comparisons', key: 'comparisons', icon: 'comparisons' },
   { to: '/behavior', key: 'behavior', icon: 'behavior' },
   { to: '/discipline', key: 'discipline', icon: 'discipline' },
+  { to: '/insights', key: 'insights', icon: 'insights' },
   { to: '/journal', key: 'journal', icon: 'journal' },
   { to: '/goals', key: 'goals', icon: 'goals' },
   { to: '/replay', key: 'replay', icon: 'replay' },
@@ -21,6 +23,7 @@ export const NAV: { to: string; key: keyof Messages['nav']; icon: IconName }[] =
 export function Sidebar() {
   const { accounts } = useAccounts()
   const t = useT()
+  const { unseen } = useInsights()
   return (
     <aside className="glass-bar flex w-[248px] shrink-0 flex-col border-r px-4 py-[26px]">
       <div className="flex items-center gap-3 px-2.5 pb-[30px]">
@@ -43,6 +46,11 @@ export function Sidebar() {
           >
             <Icon name={icon} />
             <span>{t.nav[key]}</span>
+            {to === '/insights' && unseen > 0 && (
+              <span className="badge badge-gain ml-auto !px-2" data-testid="insights-unseen" aria-label={t.insights.sidebarUnseen(unseen)}>
+                {unseen > 9 ? '9+' : unseen}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
