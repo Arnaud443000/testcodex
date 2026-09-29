@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { CashFlowsPanel } from '../components/CashFlowsPanel'
+import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
@@ -6,6 +8,7 @@ import { useAccounts } from '../lib/accounts'
 import { parseDecimalInput } from '../lib/decimal'
 import { formatDecimal } from '../lib/format'
 import type { Account, AccountKind, AppInfo } from '../types/account'
+import type { ChecklistItem, Rule } from '../types/trade'
 
 function AccountForm() {
   const { create } = useAccounts()
@@ -126,6 +129,60 @@ function AccountRow({ account: a }: { account: Account }) {
   )
 }
 
+function RulesSection() {
+  const t = useT()
+  const [rules, setRules] = useState<Rule[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const reload = () => api.listRules(true).then(setRules).catch((e) => setError(String(e)))
+  useEffect(() => {
+    void reload()
+  }, [])
+  return (
+    <>
+      {error && <div className="nt nt-bad" role="alert">{t.settings.list.loadError(error)}</div>}
+      <EditableList
+        title={t.settings.rules.title}
+        intro={t.settings.rules.intro}
+        placeholder={t.settings.rules.placeholder}
+        emptyText={t.settings.rules.empty}
+        addLabel={t.settings.rules.add}
+        inputLabel={t.settings.rules.label}
+        items={rules.map((r) => ({ id: r.id, text: r.text, archived: r.archived }))}
+        onCreate={async (text) => { await api.createRule(text); await reload() }}
+        onRename={async (id, text) => { await api.renameRule(id, text); await reload() }}
+        onArchive={async (id, archived) => { await api.setRuleArchived(id, archived); await reload() }}
+      />
+    </>
+  )
+}
+
+function ChecklistSection() {
+  const t = useT()
+  const [items, setItems] = useState<ChecklistItem[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const reload = () => api.listChecklist(true).then(setItems).catch((e) => setError(String(e)))
+  useEffect(() => {
+    void reload()
+  }, [])
+  return (
+    <>
+      {error && <div className="nt nt-bad" role="alert">{t.settings.list.loadError(error)}</div>}
+      <EditableList
+        title={t.settings.checklist.title}
+        intro={t.settings.checklist.intro}
+        placeholder={t.settings.checklist.placeholder}
+        emptyText={t.settings.checklist.empty}
+        addLabel={t.settings.checklist.add}
+        inputLabel={t.settings.checklist.label}
+        items={items.map((c) => ({ id: c.id, text: c.label, archived: c.archived }))}
+        onCreate={async (text) => { await api.createChecklistItem(text); await reload() }}
+        onRename={async (id, text) => { await api.renameChecklistItem(id, text); await reload() }}
+        onArchive={async (id, archived) => { await api.setChecklistItemArchived(id, archived); await reload() }}
+      />
+    </>
+  )
+}
+
 export function SettingsPage() {
   const { accounts } = useAccounts()
   const t = useT()
@@ -149,6 +206,10 @@ export function SettingsPage() {
         )}
         <AccountForm />
       </section>
+
+      <RulesSection />
+      <ChecklistSection />
+      <CashFlowsPanel />
 
       <section className="glass-card p-6">
         <h3 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h3>

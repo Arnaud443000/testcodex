@@ -1,4 +1,4 @@
-import type { Account, AppInfo, NewAccount } from '../types/account'
+import type { Account, AppInfo, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type {
   ChecklistItem,
   Instrument,
@@ -47,10 +47,26 @@ export const api = {
     inTauri ? invoke('list_rules', { includeArchived }) : mock.listRules(includeArchived),
   createRule: (text: string): Promise<Rule> => (inTauri ? invoke('create_rule', { text }) : mock.createRule(text)),
 
+  renameRule: (id: number, text: string): Promise<Rule> =>
+    inTauri ? invoke('rename_rule', { id, text }) : mock.renameRule(id, text),
+  setRuleArchived: (id: number, archived: boolean): Promise<Rule> =>
+    inTauri ? invoke('set_rule_archived', { id, archived }) : mock.setRuleArchived(id, archived),
+
   listChecklist: (includeArchived = false): Promise<ChecklistItem[]> =>
     inTauri ? invoke('list_checklist', { includeArchived }) : mock.listChecklist(includeArchived),
   createChecklistItem: (label: string): Promise<ChecklistItem> =>
     inTauri ? invoke('create_checklist_item', { label }) : mock.createChecklistItem(label),
+
+  renameChecklistItem: (id: number, label: string): Promise<ChecklistItem> =>
+    inTauri ? invoke('rename_checklist_item', { id, label }) : mock.renameChecklistItem(id, label),
+  setChecklistItemArchived: (id: number, archived: boolean): Promise<ChecklistItem> =>
+    inTauri ? invoke('set_checklist_item_archived', { id, archived }) : mock.setChecklistItemArchived(id, archived),
+
+  listCashFlows: (accountId: number): Promise<CashFlow[]> =>
+    inTauri ? invoke('list_cash_flows', { accountId }) : mock.listCashFlows(accountId),
+  createCashFlow: (cashFlow: NewCashFlow): Promise<CashFlow> =>
+    inTauri ? invoke('create_cash_flow', { cashFlow }) : mock.createCashFlow(cashFlow),
+  deleteCashFlow: (id: number): Promise<void> => (inTauri ? invoke('delete_cash_flow', { id }) : mock.deleteCashFlow(id)),
 
   listTrades: (filter?: TradeFilter): Promise<TradeView[]> =>
     inTauri ? invoke('list_trades', { filter: filter ?? null }) : mock.listTrades(filter),

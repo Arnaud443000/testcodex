@@ -52,9 +52,9 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 - [x] Lot 2 — Schéma complet SQLite : trades, tags normalisés, règles, checklist, dépôts/retraits, trades manqués ; décision argent/prix ; migrations testées (**Opus, élevé**)
 - [x] Lot 3 — Moteur de statistiques dans `pulse-core` : PnL brut/net, win rate, R:R, expectancy, profit factor, drawdown, courbe d'équité hors dépôts, segments ; tests à résultats connus (**Opus, élevé**)
 - [x] Lot 4 — Saisie de trade (formulaire maquette `screen-form`), liste, détail (**Sonnet, moyen**)
-- [ ] Lot 5 — Dashboard réel branché sur les stats, calendrier, filtres de période (**Sonnet, moyen**)
+- [x] Lot 5 — Dashboard réel branché sur les stats, calendrier, filtres de période (**Sonnet, moyen**)
 - [ ] Lot 6 — Import CSV broker (profils, doublons, annulation de lot), export CSV, sauvegarde/restauration (**Sonnet, moyen**)
-- [ ] Lot 7 — Règles personnelles + checklist pré-trade (volet déclaratif), dépôts/retraits UI (**Sonnet, moyen**)
+- [x] Lot 7 — Règles personnelles + checklist pré-trade (volet déclaratif), dépôts/retraits UI (**Sonnet, moyen**)
 
 ### Étapes 2 à 5
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : score de discipline, détection de patterns comportementaux, alertes à seuils, coach IA. Le reste : Sonnet, moyen.
@@ -101,6 +101,9 @@ Code : `crates/pulse-core/src/stats/` (`pnl.rs` par trade, `summary.rs` agrégat
 `accounts`, `instruments` (symbole normalisé, classe d'actif, multiplicateur par défaut), `trades` (données saisies seulement : aucun PnL/R stocké), `tags` (types `setup`, `timeframe`, `session`, `market_condition`, `emotion`, `mistake` ; unicité insensible à la casse et aux espaces ; archivage au lieu de suppression), `trade_tags`, `trade_emotions` (avant/pendant/après), `rules` + `trade_rule_checks`, `checklist_items` + `trade_checklist` (copie remplie, libellés figés), `cash_flows` (dépôts/retraits, montant > 0), `missed_trades` + `missed_trade_tags`. Un trade a au plus un tag de chaque type `setup/timeframe/session/market_condition`. Des déclencheurs SQL empêchent de mélanger émotions et tags ordinaires. Suppression d'un trade : ses lignes filles partent avec lui ; un compte, un instrument, un tag ou une règle utilisés ne peuvent pas être supprimés.
 
 ## Décisions déjà prises
+
+- Tableau de bord et calendrier : commandes `get_dashboard`, `get_calendar`, `get_day_trades` (module `stats::dashboard` de `pulse-core`). La période (1J = aujourd'hui, 1S = 7 jours, 1M = 30, 3M = 90, 1A = 365, jours locaux se terminant aujourd'hui) est comparée à la période de même longueur juste avant ; « Tout » n'a pas de comparaison. L'interface ne calcule rien : elle formate et dessine.
+- Tags par défaut en français depuis la migration v3 (sessions « Asie » / « Londres » / « New York », retrouvées par nom pour la session déduite de l'heure).
 
 - Application 100 % locale, aucun serveur ; IA optionnelle (clé API de l'utilisateur, coffre Windows, jamais en clair).
 - Thème **sombre uniquement** en v2.0 ; réglage « Réduire les effets » prévu (charte 7).

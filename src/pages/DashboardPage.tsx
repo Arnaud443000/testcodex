@@ -345,11 +345,11 @@ function DailyBars({ data, currency }: { data: Dashboard; currency: string }) {
               title={t.dashboard.daily.bar(d.day, formatSignedMoney(d.netPnl, currency), d.tradeCount)}
             >
               <div className="flex flex-1 items-end">
-                {sign > 0 && <div className="w-full rounded-[5px] bg-gain" style={{ height: h }} />}
+                {sign > 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-gain" style={{ height: h }} />}
               </div>
               <div className="h-px bg-white/10" />
               <div className="flex flex-1 items-start">
-                {sign < 0 && <div className="w-full rounded-[5px] bg-loss" style={{ height: h }} />}
+                {sign < 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-loss" style={{ height: h }} />}
               </div>
             </div>
           )

@@ -373,11 +373,20 @@ mod tests {
             &NewCashFlow { account_id: a, kind: CashFlowKind::Deposit, amount: dec("5000"), occurred_at: SEP_1 + 27 * DAY_MS + 8 * HOUR, tz_offset_min: 0, note: String::new() },
         )
         .unwrap();
+        cash_flows::create(
+            &conn,
+            &NewCashFlow { account_id: a, kind: CashFlowKind::Withdrawal, amount: dec("2000"), occurred_at: SEP_1 + 28 * DAY_MS + 8 * HOUR, tz_offset_min: 0, note: String::new() },
+        )
+        .unwrap();
         let after = dashboard(&conn, &query(Period::Week)).unwrap();
         assert_eq!(after.report.summary.net_pnl, before.report.summary.net_pnl);
         assert_eq!(after.report.equity_curve.iter().map(|p| p.cumulative_net_pnl).collect::<Vec<_>>(), before.report.equity_curve.iter().map(|p| p.cumulative_net_pnl).collect::<Vec<_>>());
         assert_eq!(after.sparklines, before.sparklines);
-        assert_eq!(after.report.current_capital, dec("15112"));
+        // Only the balance moves: 10 000 + 112 of PnL + 5 000 deposited − 2 000 withdrawn.
+        assert_eq!(after.report.current_capital, dec("13112"));
+        assert_eq!((after.report.total_deposits, after.report.total_withdrawals), (dec("5000"), dec("2000")));
+        let all = dashboard(&conn, &query(Period::All)).unwrap();
+        assert_eq!(all.report.summary.net_pnl, dec("112"));
     }
 
     #[test]

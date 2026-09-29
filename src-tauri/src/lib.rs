@@ -1,4 +1,5 @@
 use pulse_core::accounts::{self, Account, NewAccount};
+use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
@@ -96,6 +97,18 @@ fn create_rule(state: State<AppState>, text: String) -> Result<Rule, String> {
 }
 
 #[tauri::command]
+fn rename_rule(state: State<AppState>, id: i64, text: String) -> Result<Rule, String> {
+    let conn = state.db.lock().map_err(err)?;
+    rules::update_text(&conn, id, &text).map_err(err)
+}
+
+#[tauri::command]
+fn set_rule_archived(state: State<AppState>, id: i64, archived: bool) -> Result<Rule, String> {
+    let conn = state.db.lock().map_err(err)?;
+    rules::set_archived(&conn, id, archived).map_err(err)
+}
+
+#[tauri::command]
 fn list_checklist(state: State<AppState>, include_archived: Option<bool>) -> Result<Vec<ChecklistItem>, String> {
     let conn = state.db.lock().map_err(err)?;
     checklist::list(&conn, include_archived.unwrap_or(false)).map_err(err)
@@ -105,6 +118,37 @@ fn list_checklist(state: State<AppState>, include_archived: Option<bool>) -> Res
 fn create_checklist_item(state: State<AppState>, label: String) -> Result<ChecklistItem, String> {
     let conn = state.db.lock().map_err(err)?;
     checklist::create(&conn, &label).map_err(err)
+}
+
+#[tauri::command]
+fn rename_checklist_item(state: State<AppState>, id: i64, label: String) -> Result<ChecklistItem, String> {
+    let conn = state.db.lock().map_err(err)?;
+    checklist::rename(&conn, id, &label).map_err(err)
+}
+
+#[tauri::command]
+fn set_checklist_item_archived(state: State<AppState>, id: i64, archived: bool) -> Result<ChecklistItem, String> {
+    let conn = state.db.lock().map_err(err)?;
+    checklist::set_archived(&conn, id, archived).map_err(err)
+}
+
+/// Deposits and withdrawals of one account, oldest first. They never count as performance.
+#[tauri::command]
+fn list_cash_flows(state: State<AppState>, account_id: i64) -> Result<Vec<CashFlow>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    cash_flows::list(&conn, &[account_id]).map_err(err)
+}
+
+#[tauri::command]
+fn create_cash_flow(state: State<AppState>, cash_flow: NewCashFlow) -> Result<CashFlow, String> {
+    let conn = state.db.lock().map_err(err)?;
+    cash_flows::create(&conn, &cash_flow).map_err(err)
+}
+
+#[tauri::command]
+fn delete_cash_flow(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    cash_flows::delete(&conn, id).map_err(err)
 }
 
 #[tauri::command]
@@ -195,8 +239,15 @@ pub fn run() {
             create_tag,
             list_rules,
             create_rule,
+            rename_rule,
+            set_rule_archived,
             list_checklist,
             create_checklist_item,
+            rename_checklist_item,
+            set_checklist_item_archived,
+            list_cash_flows,
+            create_cash_flow,
+            delete_cash_flow,
             list_trades,
             get_trade,
             create_trade,

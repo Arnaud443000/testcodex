@@ -1,4 +1,4 @@
-import type { Account, NewAccount } from '../types/account'
+import type { Account, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
   ChecklistItem,
@@ -83,6 +83,7 @@ const instruments: Instrument[] = [
 ]
 const rules: Rule[] = []
 const checklist: ChecklistItem[] = []
+const cashFlows: CashFlow[] = []
 const trades = new Map<number, TradeData & { id: number; createdAt: string; updatedAt: string }>()
 const screenshots = new Map<string, string>()
 
@@ -193,7 +194,9 @@ function ledgerOf(accountIds: number[]): MockLedger {
   return {
     currency: chosen[0].currency,
     initialCapital: str(initial),
-    capitalMoves: [],
+    capitalMoves: cashFlows
+      .filter((f) => chosen.some((a) => a.id === f.accountId))
+      .map((f) => ({ at: f.occurredAt, amount: f.kind === 'deposit' ? f.amount : `-${f.amount}` })),
     closed: views.flatMap((v) =>
       v.figures && v.exitTime != null
         ? [{ id: v.id, symbol: v.symbol, direction: v.direction, exitTime: v.exitTime, tzOffsetMin: v.tzOffsetMin, netPnl: v.figures.netPnl, rMultiple: v.figures.rMultiple, outcome: v.figures.outcome }]
@@ -208,6 +211,7 @@ export const mock = {
   listAccounts: async (): Promise<Account[]> => [...accounts],
   deleteAccount: async (accountId: number): Promise<void> => {
     if ([...trades.values()].some((t) => t.accountId === accountId)) throw invalid('account_in_use')
+    if (cashFlows.some((f) => f.accountId === accountId)) throw invalid('account_in_use')
     const i = accounts.findIndex((a) => a.id === accountId)
     if (i >= 0) accounts.splice(i, 1)
   },
@@ -246,11 +250,49 @@ export const mock = {
     rules.push(r)
     return r
   },
+  renameRule: async (rid: number, text: string): Promise<Rule> => {
+    const r = rules.find((x) => x.id === rid)
+    if (!r) throw new Error(`not found: rule ${rid}`)
+    r.text = need(text, 'rule')
+    return { ...r }
+  },
+  setRuleArchived: async (rid: number, archived: boolean): Promise<Rule> => {
+    const r = rules.find((x) => x.id === rid)
+    if (!r) throw new Error(`not found: rule ${rid}`)
+    r.archived = archived
+    return { ...r }
+  },
   listChecklist: async (includeArchived = false): Promise<ChecklistItem[]> => checklist.filter((c) => includeArchived || !c.archived),
   createChecklistItem: async (label: string): Promise<ChecklistItem> => {
     const c = { id: id(), label: need(label, 'checklist item'), archived: false, position: checklist.length }
     checklist.push(c)
     return c
+  },
+  renameChecklistItem: async (cid: number, label: string): Promise<ChecklistItem> => {
+    const c = checklist.find((x) => x.id === cid)
+    if (!c) throw new Error(`not found: checklist item ${cid}`)
+    c.label = need(label, 'checklist item')
+    return { ...c }
+  },
+  setChecklistItemArchived: async (cid: number, archived: boolean): Promise<ChecklistItem> => {
+    const c = checklist.find((x) => x.id === cid)
+    if (!c) throw new Error(`not found: checklist item ${cid}`)
+    c.archived = archived
+    return { ...c }
+  },
+  listCashFlows: async (accountId: number): Promise<CashFlow[]> =>
+    cashFlows.filter((f) => f.accountId === accountId).sort((a, b) => a.occurredAt - b.occurredAt || a.id - b.id),
+  createCashFlow: async (n: NewCashFlow): Promise<CashFlow> => {
+    if (!accounts.some((a) => a.id === n.accountId)) throw new Error(`not found: account ${n.accountId}`)
+    if (!/^\d+(\.\d+)?$/.test(n.amount) || sign(parse(n.amount)) <= 0) throw invalid('amount must be greater than zero')
+    const f = { ...n, note: n.note.trim(), id: id() }
+    cashFlows.push(f)
+    return f
+  },
+  deleteCashFlow: async (fid: number): Promise<void> => {
+    const i = cashFlows.findIndex((f) => f.id === fid)
+    if (i < 0) throw new Error(`not found: deposit/withdrawal ${fid}`)
+    cashFlows.splice(i, 1)
   },
   listTrades: async (filter?: TradeFilter | null): Promise<TradeView[]> =>
     [...trades.values()]

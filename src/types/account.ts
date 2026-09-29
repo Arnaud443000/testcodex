@@ -18,3 +18,19 @@ export interface AppInfo {
   dataDir: string
   schemaVersion: number
 }
+
+export type CashFlowKind = 'deposit' | 'withdrawal'
+
+/** Dépôt ou retrait : jamais compté dans la performance (cahier des charges 3.7.10). */
+export interface CashFlow {
+  id: number
+  accountId: number
+  kind: CashFlowKind
+  /** Toujours positif : le type donne le sens. */
+  amount: Decimal
+  occurredAt: number
+  tzOffsetMin: number
+  note: string
+}
+
+export type NewCashFlow = Omit<CashFlow, 'id'>
