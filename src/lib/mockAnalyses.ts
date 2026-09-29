@@ -161,7 +161,7 @@ export function mockExecutions(input: BehaviorInput, q: StatsQuery): ExecutionRe
   const diff = (a: number | null, b: number | null) => (comparable && a !== null && b !== null ? a - b : null)
   const [sa, da] = [system.summary.avgNetPnl, discretionary.summary.avgNetPnl]
   return {
-    system, discretionary, unclassified: block(null), comparable,
+    system, discretionary, unclassified: block(null), minSample: MIN_SAMPLE, comparable,
     winRateDelta: diff(system.summary.winRate, discretionary.summary.winRate),
     expectancyRDelta: diff(system.summary.expectancyR, discretionary.summary.expectancyR),
     avgNetPnlDelta: comparable && sa !== null && da !== null ? toDec(toScaled(sa) - toScaled(da)) : null,

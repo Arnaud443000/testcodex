@@ -306,6 +306,7 @@ fn executions_journal_f_is_not_comparable() {
     assert_eq!((r.unclassified.summary.trade_count, r.unclassified.summary.net_pnl), (2, d("-65")));
     // Too few trades on both sides: no gap is quoted.
     assert!(!r.comparable);
+    assert_eq!(r.min_sample, 5);
     assert_eq!((r.win_rate_delta, r.expectancy_r_delta, r.avg_net_pnl_delta), (None, None, None));
     assert!(r.system.low_sample && r.discretionary.low_sample && r.unclassified.low_sample);
 }

@@ -1,7 +1,6 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
-import { useT } from './i18n'
 import { AccountsProvider } from './lib/accounts'
 import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
@@ -11,7 +10,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { JournalPage } from './pages/JournalPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { AnalysesPage } from './pages/AnalysesPage'
 import { ReplayPage } from './pages/ReplayPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
 import { TradeFormPage } from './pages/TradeFormPage'
@@ -19,7 +18,6 @@ import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
-  const t = useT()
   return (
     <AccountsProvider>
       <PeriodProvider>
@@ -39,7 +37,7 @@ export default function App() {
                 <Route path="/trades/:id" element={<TradeDetailPage />} />
                 <Route path="/trades/:id/edit" element={<TradeFormPage key="edit" />} />
                 <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/analytics" element={<PlaceholderPage title={t.pages.analytics.title} subtitle={t.pages.analytics.subtitle} step={1} />} />
+                <Route path="/analytics" element={<AnalysesPage />} />
                 <Route path="/behavior" element={<BehaviorPage />} />
                 <Route path="/discipline" element={<DisciplinePage />} />
                 <Route path="/journal" element={<JournalPage />} />

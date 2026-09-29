@@ -70,6 +70,8 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 ### Étapes 3 à 5
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : alertes à seuils (à relier aux réglages du lot 8 et aux règles personnelles), coach IA. Le reste : Sonnet, moyen.
 
+- [x] Lot 14 — Quatre analyses d'étape 3, moteur puis interface : vue par actif (3.3.13), frais et commissions cumulés dans le temps (3.3.15), comparaison de stratégies = tags `setup` (3.3.16), système contre discrétionnaire = champ `execution_type` du trade (3.3.17). `stats/analyses.rs`, commandes `get_asset_report` / `get_fee_report` / `get_strategy_report` / `get_execution_report`, page Analyses, faux backend testé. **Aucune migration.** Interprétation détaillée : « Statistiques d'étape 3 » (**Sonnet, moyen**)
+
 ## Argent, prix et temps (décision du lot 2)
 
 | Donnée | Rust (`pulse-core`) | SQLite | IPC / TypeScript |
@@ -236,4 +238,4 @@ Quatre analyses dans `crates/pulse-core/src/stats/analyses.rs`, toutes calculée
 - Le bloc « Non classé » n'est mis en avant dans l'interface que s'il contient des trades, avec un rappel de comment les classer.
 
 ### Interface
-Page « Analyses » (`/analytics`, qui remplace le placeholder) avec quatre onglets : Par actif, Frais, Stratégies, Système / discrétionnaire. Elle respecte la période et le compte de la barre supérieure. Aucun calcul en TypeScript : l'interface formate, trie et dessine. Faux backend : `src/lib/mockAnalyses.ts`, testé contre les mêmes journaux calculés à la main que les tests Rust.
+Page « Analyses » (`/analytics`, qui remplace le placeholder) avec quatre onglets : Par actif, Frais, Stratégies, Système / discrétionnaire. Elle respecte la période et le compte de la barre supérieure. Code : `src/pages/AnalysesPage.tsx`, `src/components/analyses/`, affichage pur (tri, libellés, points à tracer) dans `src/lib/analysesView.ts`, textes dans la clé `analyses` de `fr.ts`. Aucun calcul en TypeScript : l'interface formate, trie et dessine. Les montants agrégés (P&L net, frais, drawdown) sont **arrondis au centime à l'affichage seulement** (sur la chaîne décimale, jamais via un flottant) ; la valeur exacte reste celle de `pulse-core`. Un groupe `lowSample` porte le badge « Échantillon faible » ; « ∞ » s'affiche pour un facteur de profit sans aucune perte. Un clic sur un actif ou une stratégie ouvre la liste des trades filtrée (`/trades?instrument=ID`, `/trades?setup=ID`), **toutes périodes confondues** (comme le filtre par erreur : la liste ne reprend pas la période du rapport). Faux backend : `src/lib/mockAnalyses.ts` (branché dans `mockBackend.ts`), testé contre le même journal F, calculé à la main, que le test Rust `stats/analyses_tests.rs`. Captures : `docs/captures/lot14-*.png` (1440×900 et 1920×1080, états vides et échantillons faibles compris).

@@ -261,7 +261,9 @@ pub struct ExecutionReport {
     pub discretionary: ExecutionBlock,
     /// Trades whose type was never set: never guessed, never counted in the gaps.
     pub unclassified: ExecutionBlock,
-    /// Both `system` and `discretionary` reach [`MIN_SAMPLE`].
+    /// Trades each side needs before a gap is quoted ([`MIN_SAMPLE`]), so the UI never hard-codes it.
+    pub min_sample: usize,
+    /// Both `system` and `discretionary` reach `min_sample`.
     pub comparable: bool,
     /// System − discretionary, in fraction points (0.10 = +10 points).
     pub win_rate_delta: Option<f64>,
@@ -290,6 +292,7 @@ pub fn executions(ledger: &Ledger, query: &StatsQuery) -> Result<ExecutionReport
         win_rate_delta: diff(s.win_rate, d.win_rate),
         expectancy_r_delta: diff(s.expectancy_r, d.expectancy_r),
         avg_net_pnl_delta,
+        min_sample: MIN_SAMPLE,
         comparable,
         system,
         discretionary,

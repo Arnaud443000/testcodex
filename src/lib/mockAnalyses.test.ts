@@ -130,6 +130,7 @@ describe('faux backend : analyses du lot 14 (journal F)', () => {
     expect([r.system.summary.tradeCount, r.system.summary.netPnl]).toEqual([3, '33'])
     expect([r.discretionary.summary.tradeCount, r.discretionary.summary.netPnl]).toEqual([2, '314'])
     expect([r.unclassified.summary.tradeCount, r.unclassified.summary.netPnl]).toEqual([2, '-65'])
+    expect(r.minSample).toBe(5)
     expect([r.comparable, r.winRateDelta, r.expectancyRDelta, r.avgNetPnlDelta]).toEqual([false, null, null, null])
   })
 

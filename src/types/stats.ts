@@ -296,6 +296,8 @@ export interface ExecutionReport {
   discretionary: ExecutionBlock
   /** Type jamais renseigné : jamais deviné, jamais compté dans les écarts. */
   unclassified: ExecutionBlock
+  /** Trades clôturés qu'il faut de chaque côté avant de chiffrer un écart. */
+  minSample: number
   comparable: boolean
   /** Système − discrétionnaire, en fraction (0,10 = +10 points). */
   winRateDelta: number | null
