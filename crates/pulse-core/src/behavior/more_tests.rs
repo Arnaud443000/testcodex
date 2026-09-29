@@ -252,3 +252,101 @@ fn external_factor_report_reads_the_daily_journal_from_sqlite() {
     assert_eq!((s.present.summary.net_pnl, s.absent.summary.net_pnl), (dec("-10"), dec("20")));
     assert_eq!((r.journal_day_count, s.discipline.verdict), (2, Verdict::NotEnoughData));
 }
+
+// --- After two losses ---------------------------------------------------------------
+
+/// Journal F — account 1, one long a day at 100 with SL 90 (risk 10 × size), 09:00 → 10:00,
+/// except trade 7 (same day as 6, 10:30 → 11:00, size 2). Default settings: trade 7 follows
+/// the loss of 6 by 30 min with twice its risk (20 vs 10), a revenge: score (10 + 0) / 20 = 50;
+/// every other trade scores (10 + 10) / 20 = 100 (no plan, no rules, no risk limit).
+///
+/// | #  | day | exit | size | net | R    | two last closed at entry | after 2 losses |
+/// |----|-----|------|------|-----|------|--------------------------|----------------|
+/// | 1  | 0   | 90   | 1    | −10 | −1   | —                        | no             |
+/// | 2  | 1   | 95   | 1    | −5  | −0.5 | 1                        | no             |
+/// | 3  | 2   | 80   | 1    | −20 | −2   | 2 L, 1 L                 | yes            |
+/// | 4  | 3   | 130  | 1    | +30 | +3   | 3 L, 2 L                 | yes            |
+/// | 5  | 4   | 90   | 1    | −10 | −1   | 4 W, 3 L                 | no             |
+/// | 6  | 5   | 90   | 1    | −10 | −1   | 5 L, 4 W                 | no             |
+/// | 7  | 5   | 85   | 2    | −30 | −1.5 | 6 L, 5 L                 | yes            |
+/// | 8  | 6   | 100  | 1    | 0   | 0    | 7 L, 6 L                 | yes            |
+/// | 9  | 7   | 90   | 1    | −10 | −1   | 8 BE, 7 L                | no             |
+/// | 10 | 8   | 95   | 1    | −5  | −0.5 | 9 L, 8 BE                | no (BE breaks) |
+/// | 11 | 9   | 110  | 1    | +10 | +1   | 10 L, 9 L                | yes            |
+/// | 12 | 10  | 120  | 1    | +20 | +2   | 11 W, 10 L               | no             |
+/// | 13 | 11  | 110  | 1    | +10 | +1   | 12 W, 11 W               | no             |
+fn journal_f() -> Vec<TradeFacts> {
+    let exits = ["90", "95", "80", "130", "90", "90", "85", "100", "90", "95", "110", "120", "110"];
+    exits
+        .iter()
+        .enumerate()
+        .map(|(i, x)| {
+            let id = i as i64 + 1;
+            match id {
+                7 => trade(7, Long, "100", Some(x), "2", Some("90"), 5, 10 * 60 + 30, 11 * 60),
+                _ => long(id, x, if id < 7 { id - 1 } else { id - 2 }),
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn after_two_losses_against_the_other_trades() {
+    let r = after_losses(&ledger("10000", journal_f()), &all(), &defaults()).unwrap();
+    let (a, o) = (&r.after_two_losses, &r.others);
+    assert_eq!(a.trade_ids, [3, 4, 7, 8, 11]);
+    assert_eq!(o.trade_ids, [1, 2, 5, 6, 9, 10, 12, 13]);
+    assert!(!r.sample_too_small);
+    // After: −20 + 30 − 30 + 0 + 10 = −10, 2 wins of 5, R (−2 + 3 − 1.5 + 0 + 1) / 5 = 0.1.
+    assert_eq!((a.summary.net_pnl, a.summary.avg_net_pnl), (dec("-10"), Some(dec("-2"))));
+    approx(a.summary.win_rate, 0.4);
+    approx(a.summary.expectancy_r, 0.1);
+    // Others: −10 − 5 − 10 − 10 − 10 − 5 + 20 + 10 = −20, 2 wins of 8, R −2 / 8.
+    assert_eq!((o.summary.net_pnl, o.summary.avg_net_pnl), (dec("-20"), Some(dec("-2.5"))));
+    approx(o.summary.win_rate, 0.25);
+    approx(o.summary.expectancy_r, -0.25);
+    // Discipline: (100 + 100 + 50 + 100 + 100) / 5 = 90 against 100.
+    approx(a.discipline_score, 90.0);
+    approx(o.discipline_score, 100.0);
+    approx(r.win_rate_difference, 0.15);
+    approx(r.expectancy_r_difference, 0.35);
+    approx(r.discipline_difference, -10.0);
+    assert_eq!(r.avg_net_pnl_difference, Some(dec("0.5")));
+}
+
+#[test]
+fn after_two_losses_reads_history_outside_the_period_and_needs_five_trades() {
+    // From day 6: trades 8–13. Trade 8 still follows 7 and 6 (before the period).
+    let q = StatsQuery { from: Some(SEP_1 + 6 * DAY), ..StatsQuery::default() };
+    let r = after_losses(&ledger("10000", journal_f()), &q, &defaults()).unwrap();
+    assert_eq!((r.after_two_losses.trade_ids.clone(), r.others.trade_ids.len()), (vec![8, 11], 4));
+    assert!(r.sample_too_small);
+    assert_eq!((r.win_rate_difference, r.expectancy_r_difference, r.discipline_difference, r.avg_net_pnl_difference), (None, None, None, None));
+    // Values stay visible: the UI shows them as "not enough trades".
+    assert_eq!(r.after_two_losses.summary.net_pnl, dec("10"));
+
+    let empty = after_losses(&ledger("10000", vec![]), &all(), &defaults()).unwrap();
+    assert!(empty.sample_too_small);
+    assert_eq!((empty.after_two_losses.summary.trade_count, empty.others.summary.win_rate), (0, None));
+    assert_eq!(empty.expectancy_r_difference, None);
+}
+
+#[test]
+fn after_two_losses_never_mixes_accounts() {
+    // Account 2 loses twice on day 3 afternoon, then trades on day 4 at noon.
+    let mut extra = vec![
+        trade(21, Long, "100", Some("90"), "1", Some("90"), 3, 13 * 60, 14 * 60),
+        trade(22, Long, "100", Some("90"), "1", Some("90"), 3, 15 * 60, 16 * 60),
+        trade(23, Long, "100", Some("110"), "1", Some("90"), 4, 12 * 60, 13 * 60),
+    ];
+    for t in &mut extra {
+        t.account_id = 2;
+    }
+    let mut l = ledger("10000", journal_f().into_iter().chain(extra).collect());
+    l.accounts.push(AccountCapital { id: 2, initial_capital: dec("10000") });
+    let r = after_losses(&l, &all(), &defaults()).unwrap();
+    // Trade 5 (account 1, entered day 4 09:00) follows 4 W / 3 L of its own account: still not.
+    // Exit order: 23 closes on day 4, before 7.
+    assert_eq!(r.after_two_losses.trade_ids, [3, 4, 23, 7, 8, 11]);
+    assert!(r.others.trade_ids.contains(&5));
+}
