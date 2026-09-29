@@ -532,6 +532,7 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             let conn = db::open(&data_dir).map_err(err)?;
             app.manage(AppState { db: Mutex::new(conn), data_dir });
+            app.manage(AiState::new());
             spawn_reminder_loop(app.handle().clone());
             Ok(())
         })
@@ -643,7 +644,17 @@ pub fn run() {
             import_dashboard_config,
             get_insights,
             dismiss_insight,
-            get_insight_history
+            get_insight_history,
+            get_ai_status,
+            set_ai_settings,
+            record_ai_consent,
+            save_ai_key,
+            delete_ai_key,
+            test_ai_connection,
+            preview_screenshot_analysis,
+            analyze_screenshot,
+            list_screenshot_notes,
+            delete_screenshot_note
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -938,4 +949,161 @@ fn dismiss_insight(state: State<AppState>, insight_id: String) -> Result<(), Str
 fn get_insight_history(state: State<AppState>, account_ids: Vec<i64>, limit: Option<u32>) -> Result<Vec<pulse_core::insights::InsightRecord>, String> {
     let conn = state.db.lock().map_err(err)?;
     pulse_core::insights::history(&conn, &account_ids, limit.unwrap_or(100)).map_err(err)
+}
+// --- Lot 20 : IA optionnelle (réseau seulement via pulse-ai, à la demande ; clé seulement dans le coffre Windows) ---
+
+/// The vault and the provider. Building them opens no connection: only `test_ai_connection` and
+/// `analyze_screenshot` can reach the network, and both refuse while the option is off.
+struct AiState {
+    vault: std::sync::Arc<dyn pulse_vault::Vault>,
+    provider: std::sync::Arc<dyn pulse_ai::Provider>,
+}
+
+impl AiState {
+    fn new() -> Self {
+        AiState { vault: std::sync::Arc::from(pulse_vault::system_vault()), provider: std::sync::Arc::new(pulse_ai::Claude::official()) }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AiStatus {
+    settings: pulse_core::ai::AiSettings,
+    vault_available: bool,
+    /// Whether a key is stored; the key itself never leaves the vault towards the interface.
+    key_stored: bool,
+    provider: &'static str,
+    provider_host: &'static str,
+    default_model: &'static str,
+    suggested_models: [&'static str; 3],
+}
+
+const AI_PROVIDER_HOST: &str = "api.anthropic.com";
+
+fn ai_status(conn: &Connection, ai: &AiState) -> Result<AiStatus, String> {
+    let key = pulse_ai::service::key_status(ai.vault.as_ref());
+    Ok(AiStatus {
+        settings: pulse_core::ai::get_settings(conn).map_err(err)?,
+        vault_available: key.vault_available,
+        key_stored: key.stored,
+        provider: ai.provider.id(),
+        provider_host: AI_PROVIDER_HOST,
+        default_model: pulse_core::ai::DEFAULT_MODEL,
+        suggested_models: pulse_core::ai::SUGGESTED_MODELS,
+    })
+}
+
+#[tauri::command]
+fn get_ai_status(state: State<AppState>, ai: State<AiState>) -> Result<AiStatus, String> {
+    let conn = state.db.lock().map_err(err)?;
+    ai_status(&conn, &ai)
+}
+
+/// Turning the option off forgets the first-use consent (see pulse_core::ai::set_settings).
+#[tauri::command]
+fn set_ai_settings(state: State<AppState>, ai: State<AiState>, settings: pulse_core::ai::AiSettingsUpdate) -> Result<AiStatus, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::ai::set_settings(&conn, &settings).map_err(err)?;
+    ai_status(&conn, &ai)
+}
+
+/// The user ticked the first-use explanation of the send dialog.
+#[tauri::command]
+fn record_ai_consent(state: State<AppState>, ai: State<AiState>) -> Result<AiStatus, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::ai::record_consent(&conn, now_ms()).map_err(err)?;
+    ai_status(&conn, &ai)
+}
+
+/// Saves or replaces the key in the vault. No network; the error never repeats the key.
+#[tauri::command]
+fn save_ai_key(state: State<AppState>, ai: State<AiState>, key: String) -> Result<AiStatus, String> {
+    let key = zeroize::Zeroizing::new(key);
+    pulse_ai::service::save_key(ai.vault.as_ref(), &key).map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(err)?;
+    ai_status(&conn, &ai)
+}
+
+#[tauri::command]
+fn delete_ai_key(state: State<AppState>, ai: State<AiState>) -> Result<AiStatus, String> {
+    pulse_ai::service::delete_key(ai.vault.as_ref()).map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(err)?;
+    ai_status(&conn, &ai)
+}
+
+/// Checks the key and the model (`GET /v1/models/{model}`); sends no trading data. Async: the
+/// call runs off the main thread and the database is not locked meanwhile.
+#[tauri::command]
+async fn test_ai_connection(state: State<'_, AppState>, ai: State<'_, AiState>) -> Result<(), String> {
+    let model = {
+        let conn = state.db.lock().map_err(err)?;
+        pulse_ai::service::connection_model(&conn).map_err(|e| e.to_string())?
+    };
+    let (vault, provider) = (ai.vault.clone(), ai.provider.clone());
+    tauri::async_runtime::spawn_blocking(move || pulse_ai::service::run_check(&model, vault.as_ref(), provider.as_ref()))
+        .await
+        .map_err(err)?
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AiSendPreview {
+    /// Exactly what would leave the computer (computed by pulse-core, shown as is in the dialog).
+    context: pulse_core::ai::ScreenshotContext,
+    enabled: bool,
+    first_use: bool,
+    provider: &'static str,
+    provider_host: &'static str,
+    model: String,
+}
+
+#[tauri::command]
+fn preview_screenshot_analysis(state: State<AppState>, ai: State<AiState>, trade_id: i64) -> Result<AiSendPreview, String> {
+    let conn = state.db.lock().map_err(err)?;
+    let settings = pulse_core::ai::get_settings(&conn).map_err(err)?;
+    Ok(AiSendPreview {
+        context: pulse_core::ai::screenshot_context(&conn, &state.data_dir, trade_id).map_err(err)?,
+        enabled: settings.enabled,
+        first_use: settings.consent_at.is_none(),
+        provider: ai.provider.id(),
+        provider_host: AI_PROVIDER_HOST,
+        model: settings.model,
+    })
+}
+
+/// On demand only, after the confirmation dialog (`confirmed`). The comment is stored locally.
+#[tauri::command]
+async fn analyze_screenshot(
+    state: State<'_, AppState>,
+    ai: State<'_, AiState>,
+    trade_id: i64,
+    confirmed: bool,
+) -> Result<pulse_core::ai::ScreenshotNote, String> {
+    let prepared = {
+        let conn = state.db.lock().map_err(err)?;
+        pulse_ai::service::prepare_analysis(&conn, &state.data_dir, trade_id, confirmed).map_err(|e| e.to_string())?
+    };
+    let (vault, provider) = (ai.vault.clone(), ai.provider.clone());
+    let (prepared, reply) = tauri::async_runtime::spawn_blocking(move || {
+        let reply = pulse_ai::service::run_analysis(&prepared, vault.as_ref(), provider.as_ref());
+        (prepared, reply)
+    })
+    .await
+    .map_err(err)?;
+    let reply = reply.map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(err)?;
+    pulse_ai::service::store_analysis(&conn, &prepared, ai.provider.id(), &reply, now_ms()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_screenshot_notes(state: State<AppState>, trade_id: i64) -> Result<Vec<pulse_core::ai::ScreenshotNote>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::ai::list_notes(&conn, trade_id).map_err(err)
+}
+
+#[tauri::command]
+fn delete_screenshot_note(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::ai::delete_note(&conn, id).map_err(err)
 }

@@ -252,7 +252,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 10, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 12, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
 })
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
@@ -795,3 +795,11 @@ export const mockInsights = {
   dismissInsight: async (insightId: string, now = Date.now()) => insightLog.dismiss(insightId, now),
   getInsightHistory: async (accountIds: number[], limit = 100) => insightLog.history(accountIds, limit),
 }
+// --- Lot 20 : IA optionnelle — SIMULATION, aucun appel réseau (voir mockAi.ts) ---
+import { createAiMock } from './mockAi'
+export const mockAi = createAiMock({
+  trade: (tid) => trades.get(tid),
+  instrument: (iid) => instruments.find((i) => i.id === iid),
+  screenshot: (path) => screenshots.get(path),
+  now: () => Date.now(),
+})

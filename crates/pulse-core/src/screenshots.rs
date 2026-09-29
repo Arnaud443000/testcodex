@@ -46,6 +46,13 @@ pub fn save_base64(data_dir: &Path, base64: &str) -> Result<String> {
 
 /// Reads a saved screenshot as a `data:` URL the UI can display.
 pub fn read_data_url(data_dir: &Path, rel: &str) -> Result<String> {
+    let (bytes, mime) = read_image(data_dir, rel)?;
+    Ok(format!("data:{mime};base64,{}", encode(&bytes)))
+}
+
+/// Reads a saved screenshot and its MIME type (taken from the contents). Only files of the
+/// `screenshots` folder can be read: the relative path is checked character by character.
+pub fn read_image(data_dir: &Path, rel: &str) -> Result<(Vec<u8>, &'static str)> {
     let name = rel.strip_prefix("screenshots/").unwrap_or("");
     let safe = !name.is_empty()
         && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
@@ -62,7 +69,7 @@ pub fn read_data_url(data_dir: &Path, rel: &str) -> Result<String> {
         .find(|(_, _, magic)| bytes.starts_with(magic))
         .map(|(_, mime, _)| *mime)
         .unwrap_or("application/octet-stream");
-    Ok(format!("data:{mime};base64,{}", encode(&bytes)))
+    Ok((bytes, mime))
 }
 
 fn io(e: std::io::Error) -> CoreError {

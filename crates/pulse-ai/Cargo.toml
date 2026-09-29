@@ -1,0 +1,15 @@
+[package]
+name = "pulse-ai"
+version = "0.1.0"
+edition = "2024"
+description = "Pulse: the only network code of the application (optional AI, on demand)"
+
+[dependencies]
+pulse-core = { path = "../pulse-core" }
+pulse-vault = { path = "../pulse-vault" }
+serde_json = "1"
+# HTTPS with rustls (ring) and the bundled Mozilla roots: no OpenSSL.
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"

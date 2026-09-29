@@ -38,6 +38,8 @@ pub mod alerts;
 pub mod dashboards;
 // Lot 19.
 pub mod insights;
+// Lot 20 (IA optionnelle, sans réseau ici).
+pub mod ai;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

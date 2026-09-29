@@ -377,6 +377,29 @@ export const api = {
   dismissInsight: (insightId: string): Promise<void> => (inTauri ? invoke('dismiss_insight', { insightId }) : mockInsights.dismissInsight(insightId)),
   getInsightHistory: (accountIds: number[], limit?: number): Promise<InsightRecord[]> =>
     inTauri ? invoke('get_insight_history', { accountIds, limit: limit ?? null }) : mockInsights.getInsightHistory(accountIds, limit),
+
+  // --- Lot 20 : IA optionnelle (réseau seulement dans pulse-ai, à la demande ; simulation dans le navigateur) ---
+  /** Réglages de l'IA et état du coffre : l'interface sait seulement si une clé est enregistrée, jamais laquelle. */
+  getAiStatus: (): Promise<AiStatus> => (inTauri ? invoke('get_ai_status') : mockAi.getAiStatus()),
+  /** Éteindre l'IA oublie le consentement de première utilisation. */
+  setAiSettings: (settings: AiSettingsUpdate): Promise<AiStatus> =>
+    inTauri ? invoke('set_ai_settings', { settings }) : mockAi.setAiSettings(settings),
+  recordAiConsent: (): Promise<AiStatus> => (inTauri ? invoke('record_ai_consent') : mockAi.recordAiConsent()),
+  /** Enregistre ou remplace la clé dans le coffre Windows ; l'erreur ne répète jamais la clé. */
+  saveAiKey: (key: string): Promise<AiStatus> => (inTauri ? invoke('save_ai_key', { key }) : mockAi.saveAiKey(key)),
+  deleteAiKey: (): Promise<AiStatus> => (inTauri ? invoke('delete_ai_key') : mockAi.deleteAiKey()),
+  /** Vérifie la clé et le modèle ; n'envoie aucune donnée de trading. */
+  testAiConnection: (): Promise<void> => (inTauri ? invoke('test_ai_connection') : mockAi.testAiConnection()),
+  /** Ce qui partirait pour ce trade, calculé par pulse-core et montré tel quel avant l'envoi. */
+  previewScreenshotAnalysis: (tradeId: number): Promise<AiSendPreview> =>
+    inTauri ? invoke('preview_screenshot_analysis', { tradeId }) : mockAi.previewScreenshotAnalysis(tradeId),
+  /** À la demande, après confirmation. Erreurs : codes `ai:…` (voir `aiErrorMessage`). */
+  analyzeScreenshot: (tradeId: number, confirmed: boolean): Promise<ScreenshotNote> =>
+    inTauri ? invoke('analyze_screenshot', { tradeId, confirmed }) : mockAi.analyzeScreenshot(tradeId, confirmed),
+  listScreenshotNotes: (tradeId: number): Promise<ScreenshotNote[]> =>
+    inTauri ? invoke('list_screenshot_notes', { tradeId }) : mockAi.listScreenshotNotes(tradeId),
+  deleteScreenshotNote: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_screenshot_note', { id }) : mockAi.deleteScreenshotNote(id),
 }
 
 
@@ -386,3 +409,5 @@ import type { DurationReport, OpportunityReport, ScalingReport, YearComparison, 
 import { mockAnalysesMore } from './mockBackend'
 import type { Insight, InsightRecord } from '../types/insights'
 import { mockInsights } from './mockBackend'
+import type { AiSendPreview, AiSettingsUpdate, AiStatus, ScreenshotNote } from '../types/ai'
+import { mockAi } from './mockBackend'

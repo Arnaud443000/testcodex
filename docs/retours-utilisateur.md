@@ -113,3 +113,15 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - Signalé, non corrigé : le faux backend du navigateur annonce toujours une version de schéma 10 dans ses sauvegardes simulées (`mockBackend.ts`, `infoOf`) ; sans effet sur l'application réelle. Aucun bug trouvé dans les formules existantes.
 - **Non testé** : l'application installée sous Windows (commandes Tauri vérifiées par compilation seulement, `cargo check -p pulse-app`).
 
+
+
+## Lot 20 (IA optionnelle, analyse de screenshot) — points à vérifier
+- **L'IA est désactivée par défaut.** Paramètres > « Intelligence artificielle (optionnelle) » : interrupteur, clé API, modèle, « Tester la connexion ». Tant qu'elle est éteinte, Pulse ne se connecte à rien.
+- **Clé API** : gardée uniquement dans le Gestionnaire d'identifiants Windows (entrée `anthropic-api-key.Pulse`), jamais dans la base, les sauvegardes ou les exports ; Pulse ne peut pas vous la réafficher. Si le coffre est indisponible, Pulse le dit et n'enregistre la clé nulle part ailleurs.
+- **Modèle par défaut** : Claude Opus 5.5 (le plus précis). Sonnet 5.5 et Haiku 4.5 coûtent moins cher : à vous de choisir. Chaque analyse est facturée sur votre compte Anthropic.
+- **Analyse d'un screenshot** : bouton dans le détail d'un trade. Une fenêtre montre à chaque fois exactement ce qui part (l'image, l'actif, le sens, l'entrée, le stop et l'objectif prévus, la thèse) et vers qui ; la première fois, une case à cocher en plus. Il n'y a pas de « ne plus demander ».
+- Le résultat est un **commentaire** étiqueté « Généré par IA » : il ne change aucune statistique, aucun score, aucune alerte ; supprimable ; supprimé avec le trade ; absent de l'export CSV ; présent dans la sauvegarde.
+- **Migration v11** (table des commentaires) : sauvegarde automatique avant migration comme d'habitude ; testée sur une base en mémoire avec des trades existants, **pas** sur votre vraie base. À renuméroter si une autre branche ajoute aussi une v11.
+- **Non testé** : un vrai appel à l'API d'Anthropic (seulement un faux serveur local), le coffre sur un vrai Windows, le passage par un proxy d'entreprise. À vérifier : enregistrer une clé, « Tester la connexion », analyser un trade avec screenshot, vérifier l'entrée dans le Gestionnaire d'identifiants, puis supprimer la clé et vérifier qu'elle disparaît.
+- Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend (réponses « Simulation ») ; **pas** sur un vrai Windows / WebView2.
+- Constats sans rapport avec le lot, non corrigés : dans le navigateur, le pied de la barre latérale affiche « 0 compte » quand les comptes sont créés sans passer par l'écran ; le bandeau « Trade à compléter » dit « Ajoutez la thèse et vos émotions » même quand seule l'émotion manque.

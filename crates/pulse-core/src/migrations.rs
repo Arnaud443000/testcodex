@@ -371,6 +371,19 @@ pub const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX insight_log_by_situation ON insight_log (situation, episode);
     CREATE INDEX insight_log_by_account ON insight_log (account_id, first_seen_at);",
+    // v12 — AI comments on a trade's screenshot (lot 20, spec 3.5.4; to renumber if another branch also adds
+    // a v12). Text to read only: nothing computes from it. It goes with its trade; `sent` is the JSON list of
+    // the trade fields that were sent with the image. The API key is never stored in the database.
+    "CREATE TABLE ai_screenshot_notes (
+        id         INTEGER PRIMARY KEY,
+        trade_id   INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        provider   TEXT NOT NULL CHECK (length(provider) BETWEEN 1 AND 40),
+        model      TEXT NOT NULL CHECK (length(model) BETWEEN 1 AND 80),
+        sent       TEXT NOT NULL,
+        content    TEXT NOT NULL CHECK (length(content) >= 1)
+    );
+    CREATE INDEX ai_screenshot_notes_by_trade ON ai_screenshot_notes (trade_id, created_at);",
 ];
 
 pub fn latest_version() -> u32 {

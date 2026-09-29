@@ -27,6 +27,7 @@ Le cahier des charges est la source de vérité fonctionnelle. Toute formule (R-
 npm ci
 npm run typecheck && npm test && npm run build     # interface
 cargo test -p pulse-core                           # cœur Rust
+cargo test -p pulse-ai -p pulse-vault              # IA : réseau (faux serveur local) et coffre (lot 20)
 cargo check -p pulse-app                           # coque Tauri (libs WebKit requises sous Linux)
 npm run dev                                        # interface seule dans un navigateur
 ```
@@ -83,6 +84,8 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparaisons, verrouillage…).
 - [x] Lot 19 — Moteur des insights automatiques (3.5.1 à 3.5.3), déterministe, sans IA ni réseau, sans interface : `crates/pulse-core/src/insights/`, **migration v11** (`insight_log`, à renuméroter à la fusion), commandes `get_insights`, `dismiss_insight`, `get_insight_history`, types `src/types/insights.ts`, faux backend testé, gabarits `insights` de `fr.ts`. Voir « Insights automatiques (lot 19) » (**Opus, élevé**). L'affichage est le lot 19 bis (à faire).
   - **Fait** : moteur pur + historique (19 tests Rust : journaux R, P, F, G, S, V, B, M, E, X calculés à la main, seuils exactement atteints, zéro trade, échantillons trop petits, deux comptes indépendants, insight qui disparaît, masquage / aggravation / nouvel épisode, migration v11) ; faux backend vérifié sur les mêmes journaux (`mockInsights.test.ts`). Seul changement dans un fichier existant du moteur : `alerts::as_of` passe en `pub(crate)`.
+
+- [x] Lot 20 — Infrastructure IA optionnelle (réglages, clé dans le coffre Windows, client HTTPS isolé, consentement) et analyse de screenshot d'un trade (3.5.4) : `pulse-core/src/ai/`, crates `pulse-ai` et `pulse-vault`, **migration v11** (à renuméroter à la fusion si besoin), Paramètres > IA, carte d'analyse dans le détail d'un trade ; voir « IA optionnelle (lot 20) » (**Opus, élevé**)
 
 
 ### Étapes 4 et 5 (suite)
@@ -515,3 +518,69 @@ Un insight n'apparaît jamais pour un écart insignifiant : seuils ci-dessus (20
 - Mises en avant sur les **tags** setup et session seulement (pas d'actif, de jour ni d'heure ; pas de session déduite de l'heure).
 - La dérive du risque ignore les trades sans stop loss (risque en % indéfini) ; la hausse des frais est en argent par trade (elle suit aussi une hausse de taille).
 - Aucune notification : les insights ne sont calculés qu'à la demande. Aucun lien avec l'IA (lot 20) : si le coach IA les cite un jour, il doit reprendre ces chiffres, jamais les recalculer.
+
+## IA optionnelle (lot 20) — sécurité et confidentialité
+
+Décisions prises **avant** d'écrire le code ; elles valent aussi pour le futur coach IA (3.5.5).
+
+**Principe** : Pulse reste 100 % local. L'IA est une option **désactivée par défaut**, déclenchée **à la demande uniquement**, jamais en tâche de fond. Aucune télémétrie, aucune mise à jour, aucun autre appel réseau dans l'application.
+
+### Où vit quoi
+| Crate | Rôle | Réseau |
+|---|---|---|
+| `pulse-core` (`ai/`) | réglages (`ai.*` de la table `settings`), **liste exacte** de ce qui est envoyé pour un trade, texte de la demande (prompt), stockage des commentaires | **aucun** (reste testable partout, sans dépendance UI ni réseau) |
+| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles ; `service.rs` = l'enchaînement en trois temps (préparer depuis la base → envoyer sans verrou sur la base → enregistrer), testé avec un faux fournisseur et un coffre en mémoire | **le seul code réseau de l'application** |
+| `crates/pulse-vault` | clé API dans le **Gestionnaire d'identifiants Windows** (`keyring-core` + `windows-native-keyring-store`, compilés **seulement sous Windows**) ; ailleurs, le coffre répond « indisponible » | aucun |
+| `src-tauri` | commandes fines qui assemblent les trois (ajoutées en fin de `lib.rs`) | via `pulse-ai` |
+
+Pourquoi un crate à part pour le réseau : `pulse-core` garde zéro dépendance réseau (règle du projet) ; `pulse-ai` se teste sous Linux contre un **faux serveur local** (jamais le vrai service) ; `src-tauri` ne contient que la colle.
+
+### Désactivation
+- Réglage `ai.enabled` : ligne absente = **désactivée**. Interrupteur dans Paramètres > IA.
+- Les deux seules commandes qui peuvent ouvrir une connexion (`test_ai_connection`, `analyze_screenshot`) vérifient `ai.enabled` **avant** de lire la clé ou de construire le client : désactivée → erreur `ai:disabled`, aucune connexion.
+- Tout couper : éteindre l'interrupteur (effet immédiat) ; « Supprimer la clé » l'efface du coffre ; chaque commentaire se supprime. Sous Windows, l'entrée est aussi visible (et supprimable) dans le Gestionnaire d'identifiants : identifiant générique `anthropic-api-key.Pulse`.
+
+### Clé API
+- Stockée **uniquement** dans le coffre Windows (persistance « Local » : ne suit pas un profil itinérant). **Jamais** dans la base, les réglages, les sauvegardes, les exports, les journaux (`eprintln!`), les messages d'erreur ni l'interface : aucune commande ne la renvoie ; l'interface sait seulement si une clé est enregistrée.
+- En mémoire : type `ApiKey` dont le contenu est effacé à la libération (`zeroize`) et dont `Debug` affiche `ApiKey(***)` ; lue dans le coffre juste avant l'appel, jamais gardée.
+- Saisie masquée ; « Remplacer », « Supprimer », « Tester la connexion ». Contrôle de forme minimal (non vide, sans espace, ≤ 256 caractères) : aucun message ne répète la clé.
+- **Coffre indisponible** (hors Windows, ou refus du système) → erreur `ai:vaultUnavailable` affichée clairement ; **jamais** de repli vers un fichier, la base ou une variable d'environnement.
+
+### Ce qui est envoyé (analyse de screenshot, 3.5.4) — et rien d'autre
+- **Vers** : Anthropic, API Messages (`https://api.anthropic.com/v1/messages`), en HTTPS, avec la clé de l'utilisateur (coût facturé sur son compte Anthropic, données soumises à la politique d'Anthropic).
+- **Contenu** : l'image du screenshot du trade (fichier tel qu'enregistré), la **thèse**, le **sens** (achat / vente), l'**actif** (symbole et nom), et les **niveaux** saisis s'il y en a : prix d'entrée, stop loss prévu, take profit prévu. La liste exacte, avec les valeurs, est calculée par `pulse-core` (`ai::screenshot_context`) et montrée **telle quelle** dans la confirmation avant chaque envoi ; elle est recopiée dans le commentaire (« Envoyé : … »).
+- **Jamais envoyé** : compte (nom, courtier, capital, devise), taille, frais, P&L, résultat, R, émotions, notes post-mortem, règles, checklist, journal, dates, autres trades, statistiques, scores, alertes, chemins de fichiers, **anciens commentaires de l'IA** (un commentaire n'est jamais renvoyé à l'IA : une relance repart du trade seul).
+- **Test de connexion** : `GET /v1/models/{modèle}` ; n'envoie aucune donnée de trading, vérifie la clé et l'accès au modèle.
+
+### Consentement
+- Avant le **premier** envoi : fenêtre d'explication (quoi, vers qui, coût, pas de conseil, rien d'automatique) avec une case à cocher ; l'instant est enregistré (`ai.consent_at`).
+- Puis **à chaque** envoi d'image : confirmation listant ce qui part, vers qui, et rappelant que rien n'est envoyé automatiquement. **Aucune** option « Ne plus demander ».
+- Garde côté Rust : `analyze_screenshot` refuse sans `confirmed = true` et sans `ai.consent_at` (`ai:consentRequired`).
+
+### Le commentaire de l'IA
+- C'est un **commentaire**, jamais une donnée de trading : aucune statistique, aucun score, aucune alerte, aucun objectif ne le lit.
+- Table `ai_screenshot_notes` (**migration v12**, renumérotée à la fusion (la v11 est le journal des insights)) : rattachée au trade, **supprimée avec le trade** (clé étrangère en cascade), consultable et supprimable. Garde le modèle qui a répondu, le fournisseur et la liste de ce qui a été envoyé.
+- **Exclue** de l'export CSV (qui ne lit que les trades) ; **incluse** dans la sauvegarde (copie complète de la base) ; jamais renvoyée à l'IA.
+- Interface : étiquette « Généré par IA » et avertissement « ce n'est pas un conseil » ; texte affiché comme du texte (jamais interprété comme du HTML).
+
+### Fournisseur et modèle (identifiants pris dans la documentation du skill `claude-api`, aucun deviné)
+- Défaut : `claude-opus-5-5`. Choix proposés : `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-4-5` ; un autre identifiant peut être saisi (forme `claude-…` vérifiée, l'API dira s'il n'existe pas).
+- Requête : non diffusée en continu, `max_tokens` 16000, ni `thinking` ni `temperature` (valeurs par défaut du modèle), en-tête `anthropic-version: 2023-06-01`. Pour `claude-opus-5-5` et `claude-sonnet-5-5` : repli côté Anthropic en cas de refus de sécurité (`fallbacks: "default"`, bêta `server-side-fallback-2026-07-01`) ; le modèle qui a réellement répondu est enregistré.
+- Délais : connexion 15 s ; test 30 s ; analyse 180 s.
+- Image : PNG, JPEG, WebP ou GIF ; au plus 10 Mo une fois encodée en base64 (limite de l'API), donc ≈ 7,5 Mo de fichier : au-delà, refus **avant** l'envoi (`ai:imageTooLarge`).
+- Erreurs (codes `ai:…` traduits par l'interface, sans aucun contenu de la requête ni de la réponse) : `disabled`, `consentRequired`, `noKey`, `vaultUnavailable`, `noScreenshot`, `imageTooLarge`, `invalidKey` (401), `forbidden` (403), `billing` (402), `modelNotFound` (404), `rateLimited` (429), `overloaded` (529), `serverError` (5xx), `rejected` (autre 400), `offline` (connexion impossible), `timeout`, `refused` (refus du modèle), `truncated` (réponse coupée), `unexpectedResponse`.
+
+### Faux backend (navigateur)
+Réponse simulée, fournisseur `simulation`, texte commençant par « [Simulation] », **aucun appel réseau** ; badge « Simulation » dans l'interface.
+
+### Interface et code (lot 20)
+- **Commandes** (fin de `src-tauri/src/lib.rs`, état `AiState` = coffre + fournisseur) : `get_ai_status`, `set_ai_settings`, `record_ai_consent`, `save_ai_key`, `delete_ai_key`, `test_ai_connection` et `analyze_screenshot` (**asynchrones**, appel réseau hors du fil principal, base non verrouillée pendant l'appel), `preview_screenshot_analysis` (ce qui partirait), `list_screenshot_notes`, `delete_screenshot_note`. Aucune ne renvoie la clé.
+- **TypeScript** : types `src/types/ai.ts` ; `api.ts` (bloc « Lot 20 » en fin d'objet) ; faux backend `src/lib/mockAi.ts` (+ `mockAi` en fin de `mockBackend.ts`, testé par `mockAi.test.ts`, miroir des règles de Rust) ; affichage pur `src/lib/aiView.ts` (découpage du texte de l'IA en titres / puces / paragraphes affichés comme du texte, codes d'erreur, tailles) ; textes `src/i18n/fr.ai.ts` (clé `ai` de `fr`).
+- **Composants** : `AiSettingsPanel` (Paramètres > IA, ancre `/settings#ia`) ; `ScreenshotAiCard` (détail d'un trade, sous le screenshot : une ligne discrète si l'IA est éteinte et sans commentaire ; sinon bouton « Analyser le screenshot » / « Relancer l'analyse », dernier commentaire, anciens repliés, suppression confirmée) ; `AiSendDialog` (confirmation à chaque envoi, rendue dans `<body>` par un portail — une carte en verre à `backdrop-filter` enfermerait une boîte `fixed` —, pied collant : rappel + boutons toujours visibles, « Envoyer » grisé tant que la case de première utilisation n'est pas cochée).
+- **Captures** : `docs/captures/lot20-*.png` (1440×900 et 1920×1080), faux backend ; le script vérifie aussi qu'aucune requête ne sort de `localhost` et que la clé ne reste pas dans le champ.
+
+### Non testé (lot 20)
+- **Aucun appel réel à l'API d'Anthropic** : le client est testé contre un faux serveur local (requête, en-têtes, corps, codes d'erreur, délais) ; la forme de la requête suit la documentation du skill `claude-api`, mais la réponse réelle, le repli `fallbacks: "default"` et la qualité du commentaire n'ont pas été essayés.
+- **Coffre Windows** : le code propre à Windows compile et passe clippy pour `x86_64-pc-windows-msvc` (aussi vérifié en CI), mais n'a jamais tourné sur un vrai Windows (écriture, relecture, suppression, entrée visible dans le Gestionnaire d'identifiants).
+- `pulse-ai` (ring / rustls) n'a pas pu être compilé pour Windows depuis Linux (partie C de `ring`) : il le sera par `build-windows.yml`.
+- Proxy d'entreprise, pare-feu, certificats d'inspection TLS : non essayés (racines Mozilla embarquées, pas le magasin de certificats Windows).
