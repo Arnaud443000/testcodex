@@ -58,7 +58,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étape 2 — Le « pourquoi » et l'analyse comportementale (lots en cours)
 - [x] Lot 10 — Trades manqués (saisie, liste, modification), journal quotidien, rappel natif du journal, note de qualité d'exécution (auto + manuelle), mode confiance (conviction × résultat) : `pulse-core` (`journal.rs`, `execution_quality.rs`, `confidence.rs`, `reminder.rs`, `period.rs`, `missed_trades::update`), migration v5, page Journal (**Sonnet, moyen**)
-- [ ] Lot 11 — Objectifs mensuels et mode replay d'un trade, sans données de marché externes : `goals.rs`, `replay.rs` (**Sonnet, moyen**)
+- [x] Lot 11 — Objectifs mensuels et mode replay d'un trade, sans données de marché externes : `goals.rs`, `replay.rs` (**Sonnet, moyen**)
 
 ### Étapes 2 à 5 (reste)
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : score de discipline, détection de patterns comportementaux, alertes à seuils, coach IA. Le reste : Sonnet, moyen.
@@ -113,3 +113,13 @@ Code : `crates/pulse-core/src/stats/` (`pnl.rs` par trade, `summary.rs` agrégat
 - Thème **sombre uniquement** en v2.0 ; réglage « Réduire les effets » prévu (charte 7).
 - Police Inter embarquée. Pas de mobile.
 - Repoussé en fin de projet : alerte news économiques, carte de trade partageable, export PDF.
+
+## Journal, confiance, objectifs, replay (lots 10 et 11)
+
+- **Migration v5** : `journal_entries` (une entrée par jour local `AAAA-MM-JJ`, tous comptes confondus ; un journal entièrement vide est supprimé, jamais stocké) et `goals` (unique par mois + métrique, cible décimale en texte). Les réglages du rappel utilisent la table `settings` existante (`reminder.enabled`, `reminder.time`, `reminder.last_sent_day`).
+- **Trades manqués** : table déjà en v2 ; `missed_trades::update` ajouté. Ils ne produisent jamais de P&L et n'entrent dans aucune statistique de performance.
+- **Qualité d'exécution** (`execution_quality.rs`) : score 0–100 = moyenne des composantes disponibles (checklist cochée / totale, plan suivi oui 100 / en partie 50 / non 0, règles respectées / cochées) ; la note manuelle 1–5 l'emporte (étoile n = (n − 1) × 25) ; « bien exécuté » à partir de 70. Le rapport croise gagnant / perdant × bien / mal exécuté ; les breakevens sont comptés à part.
+- **Confiance** (`confidence.rs`) : groupes de conviction faible 1–3, moyenne 4–7, forte 8–10 ; corrélation de Pearson conviction × R (au moins 3 paires) ; verdict seulement à partir de 10 trades avec R (|r| ≥ 0,3 = prédictive ou inverse). Compare aussi la conviction des trades manqués et des trades pris.
+- **Rappel** (`reminder.rs`, boucle d'une minute dans `src-tauri`) : une fois par jour local, après l'heure réglée (20:00 par défaut, activé par défaut), s'il y a eu au moins un trade **entré** dans la journée et qu'il reste du travail (pas de journal, ou trade de saisie rapide incomplet : thèse ou émotions manquantes). Le clic sur la notification n'est pas fiable sous Windows : une bannière dans l'application prend le relais (`get_reminder_pending`). Aucune icône de zone de notification : la notification n'apparaît que si Pulse est ouvert (même réduit).
+- **Objectifs** (`goals.rs`) : métriques `net_pnl`, `win_rate` (cible en %), `profit_factor`, `expectancy_r`, `execution_quality` (1–5), `max_drawdown` (plafond). Un trade compte dans le mois local où il est clôturé. Statuts : atteint / en cours / manqué (mois fini, cible non atteinte) / dépassé (plafond franchi) / pas de données (aucun trade clôturé). Le **score de discipline** n'est pas encore une métrique : à ajouter avec le lot 8.
+- **Replay** (`replay.rs`) : filtre l'historique par note manuelle (à revoir 1–2 ★, bonnes 4–5 ★, sans note), résultat, actif, capture, notes ; « l'échelle des niveaux » d'un trade exprime chaque niveau saisi (stop, objectif, sortie, prix après sortie) en R de prix, frais exclus. Aucune donnée de marché externe.

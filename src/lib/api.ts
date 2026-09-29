@@ -25,7 +25,9 @@ import type {
   ReminderDue,
   ReminderSettings,
 } from '../types/journal'
-import { mock, mockJournal } from './mockBackend'
+import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
+import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
+import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
@@ -168,4 +170,18 @@ export const api = {
   /** Le rappel a déjà été envoyé aujourd'hui et il reste du travail : sert à la bannière dans l'application. */
   getReminderPending: (tzOffsetMin: number): Promise<ReminderDue | null> =>
     inTauri ? invoke('get_reminder_pending', { tzOffsetMin }) : mockJournal.getReminderPending(tzOffsetMin),
+
+  // --- Lot 11 : objectifs mensuels et replay ---
+  listGoals: (month: string): Promise<Goal[]> => (inTauri ? invoke('list_goals', { month }) : mockGoalsReplay.listGoals(month)),
+  /** Crée l'objectif d'un mois et d'une métrique, ou change sa cible. */
+  setGoal: (goal: NewGoal): Promise<Goal> => (inTauri ? invoke('set_goal', { goal }) : mockGoalsReplay.setGoal(goal)),
+  deleteGoal: (id: number): Promise<void> => (inTauri ? invoke('delete_goal', { id }) : mockGoalsReplay.deleteGoal(id)),
+  /** Reporte les objectifs d'un mois sur un autre (sans écraser ceux qui existent déjà). */
+  copyGoals: (from: string, to: string): Promise<Goal[]> => (inTauri ? invoke('copy_goals', { from, to }) : mockGoalsReplay.copyGoals(from, to)),
+  getGoalProgress: (query: ProgressQuery): Promise<GoalProgress[]> =>
+    inTauri ? invoke('get_goal_progress', { query }) : mockGoalsReplay.getGoalProgress(query),
+
+  listReplay: (filter?: ReplayFilter): Promise<ReplayItem[]> =>
+    inTauri ? invoke('list_replay', { filter: filter ?? null }) : mockGoalsReplay.listReplay(filter),
+  getReplayCard: (id: number): Promise<ReplayCard> => (inTauri ? invoke('get_replay_card', { id }) : mockGoalsReplay.getReplayCard(id)),
 }

@@ -18,7 +18,10 @@ import type {
 import type { CalendarQuery, DashboardQuery } from '../types/stats'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import { ASSET_CATALOG } from './assetCatalog'
+import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
 import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
+import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
+import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
 import type { DayOverview, JournalEntry, MissedTrade, MissedTradeData, PeriodQuery, ReminderDue, ReminderSettings } from '../types/journal'
 
 /**
@@ -536,5 +539,61 @@ export const mockJournal = {
     if (!reminderSettings.enabled || minutes < h * 60 + m) return null
     reminderLastSent = dayOf(Date.now(), tz)
     return reminderLastSent ? pendingWork(tz) : null
+  },
+}
+
+// --- Lot 11 : objectifs mensuels et replay ---
+const goals: Goal[] = []
+let nextGoalId = 1
+
+export const mockGoalsReplay = {
+  listGoals: async (month: string): Promise<Goal[]> => {
+    if (!isMonth(month)) throw invalid(`invalid month "${month}" (expected YYYY-MM)`)
+    return goals.filter((g) => g.month === month)
+  },
+  setGoal: async (n: NewGoal): Promise<Goal> => {
+    checkGoal(n.month, n.metric, n.target)
+    const existing = goals.find((g) => g.month === n.month && g.metric === n.metric)
+    if (existing) {
+      existing.target = n.target
+      return { ...existing }
+    }
+    const g = { id: nextGoalId++, month: n.month, metric: n.metric, target: n.target }
+    goals.push(g)
+    return { ...g }
+  },
+  deleteGoal: async (gid: number): Promise<void> => {
+    const i = goals.findIndex((g) => g.id === gid)
+    if (i < 0) throw new Error(`not found: goal ${gid}`)
+    goals.splice(i, 1)
+  },
+  copyGoals: async (from: string, to: string): Promise<Goal[]> => {
+    if (!isMonth(from) || !isMonth(to)) throw invalid('invalid month (expected YYYY-MM)')
+    for (const g of goals.filter((x) => x.month === from)) {
+      if (!goals.some((x) => x.month === to && x.metric === g.metric)) goals.push({ id: nextGoalId++, month: to, metric: g.metric, target: g.target })
+    }
+    return goals.filter((g) => g.month === to)
+  },
+  getGoalProgress: async (q: ProgressQuery): Promise<GoalProgress[]> => {
+    if (!isMonth(q.month)) throw invalid(`invalid month "${q.month}" (expected YYYY-MM)`)
+    const list = goals.filter((g) => g.month === q.month).sort((a, b) => a.id - b.id)
+    if (list.length === 0) return []
+    const [year, month] = q.month.split('-').map(Number)
+    const cal = mockCalendar(ledgerOf(q.accountIds), { accountIds: q.accountIds, year, month, tzOffsetMin: q.tzOffsetMin })
+    const from = Date.UTC(year, month - 1, 1) - q.tzOffsetMin * 60_000
+    const to = Date.UTC(year, month, 1) - q.tzOffsetMin * 60_000
+    const quality = mockQualityReport(viewsOf(q.accountIds), { accountIds: q.accountIds, from, to })
+    return mockProgress(list, cal.summary, cal.currency, quality.averageStars, q.month, q.today)
+  },
+  listReplay: async (filter?: ReplayFilter | null): Promise<ReplayItem[]> =>
+    viewsOf(filter?.accountIds)
+      .filter((v) => replayPasses(v, filter ?? {}))
+      .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
+      .map(replayItem),
+  getReplayCard: async (tid: number): Promise<ReplayCard> => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    const v = view(t)
+    return { trade: v, levels: mockLadder(v) }
   },
 }

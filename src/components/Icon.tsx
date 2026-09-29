@@ -63,6 +63,12 @@ const PATHS = {
   right: <path d="M9 6l6 6-6 6" />,
   sortUp: <path d="M7 14l5-5 5 5" />,
   sortDown: <path d="M7 10l5 5 5-5" />,
+  replay: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 8.5l5 3.5-5 3.5z" />
+    </>
+  ),
 } as const
 
 export type IconName = keyof typeof PATHS

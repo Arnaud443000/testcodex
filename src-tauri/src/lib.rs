@@ -9,6 +9,8 @@ use pulse_core::reminder::{self, ReminderSettings};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::export;
+use pulse_core::goals::{self, Goal, GoalProgress, NewGoal, ProgressQuery};
+use pulse_core::replay::{self, ReplayCard, ReplayFilter, ReplayItem};
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
 use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
@@ -373,6 +375,51 @@ fn spawn_reminder_loop(app: tauri::AppHandle) {
     });
 }
 
+// --- Lot 11: monthly goals and trade replay ---
+
+#[tauri::command]
+fn list_goals(state: State<AppState>, month: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::list(&conn, &month).map_err(err)
+}
+
+/// Creates the goal of a month and metric, or changes its target.
+#[tauri::command]
+fn set_goal(state: State<AppState>, goal: NewGoal) -> Result<Goal, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::set(&conn, &goal).map_err(err)
+}
+
+#[tauri::command]
+fn delete_goal(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::delete(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn copy_goals(state: State<AppState>, from: String, to: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::copy_month(&conn, &from, &to).map_err(err)
+}
+
+#[tauri::command]
+fn get_goal_progress(state: State<AppState>, query: ProgressQuery) -> Result<Vec<GoalProgress>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::progress(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn list_replay(state: State<AppState>, filter: Option<ReplayFilter>) -> Result<Vec<ReplayItem>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::list(&conn, &filter.unwrap_or_default()).map_err(err)
+}
+
+#[tauri::command]
+fn get_replay_card(state: State<AppState>, id: i64) -> Result<ReplayCard, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::card(&conn, id).map_err(err)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -432,7 +479,14 @@ pub fn run() {
             get_confidence_report,
             get_reminder_settings,
             set_reminder_settings,
-            get_reminder_pending
+            get_reminder_pending,
+            list_goals,
+            set_goal,
+            delete_goal,
+            copy_goals,
+            get_goal_progress,
+            list_replay,
+            get_replay_card
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");

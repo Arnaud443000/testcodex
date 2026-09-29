@@ -26,6 +26,9 @@ pub mod execution_quality;
 pub mod journal;
 pub mod period;
 pub mod reminder;
+// Lot 11.
+pub mod goals;
+pub mod replay;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

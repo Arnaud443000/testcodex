@@ -12,6 +12,7 @@ export const NAV: { to: string; key: keyof Messages['nav']; icon: IconName }[] =
   { to: '/behavior', key: 'behavior', icon: 'behavior' },
   { to: '/journal', key: 'journal', icon: 'journal' },
   { to: '/goals', key: 'goals', icon: 'goals' },
+  { to: '/replay', key: 'replay', icon: 'replay' },
   { to: '/settings', key: 'settings', icon: 'settings' },
 ]
 
