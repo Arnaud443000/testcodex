@@ -231,7 +231,7 @@ Quatre analyses dans `crates/pulse-core/src/stats/analyses.rs`, toutes calculée
 
 ### Système contre discrétionnaire (3.3.17) — `get_execution_report`
 - **Classement d'un trade = son champ existant `execution_type`** (colonne présente depuis la migration v2, saisie par le contrôle « Discrétionnaire / Système » du formulaire de trade). C'est le plus simple : c'est un attribut du trade (le cahier autorise « Stratégie ou Trade »), il ne casse aucune donnée et n'impose pas de choisir une stratégie d'abord.
-- **`NULL` = « Non classé »** : jamais deviné, jamais rangé d'office dans une des deux catégories (les trades saisis avant le lot ou en saisie rapide restent non classés). Le rapport a toujours trois blocs : `system`, `discretionary`, `unclassified` (un `Summary` vide, sans trade, si le bloc n'a pas de trade), plus `unclassifiedCount`.
+- **`NULL` = « Non classé »** : jamais deviné, jamais rangé d'office dans une des deux catégories (les trades saisis avant le lot ou en saisie rapide restent non classés). Le rapport a toujours trois blocs : `system`, `discretionary`, `unclassified` (un `Summary` vide, sans trade, si le bloc n'a pas de trade). Chaque bloc porte `summary` et `lowSample`.
 - **Écarts** (système − discrétionnaire) : `winRateDelta` (en points de fraction : 0,10 = +10 points), `expectancyRDelta`, `avgNetPnlDelta` (Decimal). `None` si `comparable = false` ou si l'une des deux valeurs est indéfinie. Les non classés n'entrent jamais dans l'écart.
 - Le bloc « Non classé » n'est mis en avant dans l'interface que s'il contient des trades, avec un rappel de comment les classer.
 
