@@ -259,6 +259,8 @@ pub const MIGRATIONS: &[&str] = &[
     DROP TABLE tag_renames;",
     // v4 — instrument full names + built-in asset catalog (generated, see catalog/).
     include_str!("../catalog/v4_asset_catalog.sql"),
+    // v5 — archiving an account: it keeps its history but leaves selectors and default totals.
+    "ALTER TABLE accounts ADD COLUMN archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1));",
 ];
 
 pub fn latest_version() -> u32 {
@@ -479,7 +481,7 @@ mod tests {
         )
         .unwrap();
 
-        migrate(&mut conn).unwrap();
+        migrate_to(&mut conn, 4).unwrap();
         assert_eq!(current_version(&conn).unwrap(), 4);
 
         let row = |key: &str| -> (i64, String, String, String, String) {
@@ -509,5 +511,26 @@ mod tests {
         migrate(&mut fresh).unwrap();
         migrate(&mut fresh).unwrap();
         assert_eq!(fresh.query_row("SELECT COUNT(*) FROM instruments", [], |r| r.get::<_, i64>(0)).unwrap() as usize, catalog_rows);
+    }
+
+    #[test]
+    fn v5_adds_archived_flag_and_keeps_existing_accounts_active() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 4).unwrap();
+        conn.execute_batch(
+            "INSERT INTO accounts (id, name, kind, initial_capital) VALUES (1, 'Main', 'personal', '1234.50');
+             INSERT INTO cash_flows (account_id, kind, amount, occurred_at, tz_offset_min, note)
+                VALUES (1, 'deposit', '100', 0, 0, '');",
+        )
+        .unwrap();
+        let id = 1;
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let a = accounts::get(&conn, id).unwrap();
+        assert!(!a.archived && a.has_history);
+        assert_eq!(a.initial_capital.to_string(), "1234.50");
+        assert_eq!(crate::cash_flows::list(&conn, &[id]).unwrap().len(), 1);
+        assert!(conn.execute("UPDATE accounts SET archived = 2", []).is_err(), "CHECK refuses other values");
     }
 }

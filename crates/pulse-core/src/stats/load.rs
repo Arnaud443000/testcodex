@@ -9,11 +9,11 @@ use crate::cash_flows;
 use rusqlite::Connection;
 use std::collections::HashMap;
 
-/// Source data of the given accounts (all accounts when empty). Refuses to
+/// Source data of the given accounts (all active accounts when empty). Refuses to
 /// mix currencies: a consolidated view needs accounts in the same currency.
 pub fn load(conn: &Connection, account_ids: &[i64]) -> Result<Ledger> {
     let accounts: Vec<Account> = if account_ids.is_empty() {
-        accounts::list(conn)?
+        accounts::list_active(conn)?
     } else {
         account_ids.iter().map(|&id| accounts::get(conn, id)).collect::<Result<_>>()?
     };

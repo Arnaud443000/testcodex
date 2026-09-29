@@ -1,4 +1,4 @@
-use pulse_core::accounts::{self, Account, NewAccount};
+use pulse_core::accounts::{self, Account, AccountUpdate, NewAccount};
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
@@ -295,8 +295,24 @@ pub fn run() {
             inspect_backup,
             restore_backup,
             save_screenshot,
-            read_screenshot
+            read_screenshot,
+            update_account,
+            set_account_archived
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
+}
+
+/// Edits an account (currency locked once it has history).
+#[tauri::command]
+fn update_account(state: State<AppState>, id: i64, account: AccountUpdate) -> Result<Account, String> {
+    let conn = state.db.lock().map_err(err)?;
+    accounts::update(&conn, id, &account).map_err(err)
+}
+
+/// Archives or restores an account; its history is kept.
+#[tauri::command]
+fn set_account_archived(state: State<AppState>, id: i64, archived: bool) -> Result<Account, String> {
+    let conn = state.db.lock().map_err(err)?;
+    accounts::set_archived(&conn, id, archived).map_err(err)
 }

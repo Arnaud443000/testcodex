@@ -51,7 +51,9 @@ pub struct NewCashFlow {
 }
 
 pub fn create(conn: &Connection, new: &NewCashFlow) -> Result<CashFlow> {
-    accounts::get(conn, new.account_id)?;
+    if accounts::get(conn, new.account_id)?.archived {
+        return Err(crate::error::CoreError::Invalid(accounts::ACCOUNT_ARCHIVED.into()));
+    }
     money::require_positive("amount", new.amount)?;
     check_tz_offset(new.tz_offset_min)?;
     conn.execute(
