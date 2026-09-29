@@ -1,6 +1,8 @@
 use pulse_core::accounts::{self, Account, NewAccount};
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
+use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
+use pulse_core::export;
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
 use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
@@ -11,6 +13,7 @@ use pulse_core::{db, migrations, rusqlite::Connection, screenshots};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{Manager, State};
 
 struct AppState {
@@ -220,8 +223,38 @@ fn read_screenshot(state: State<AppState>, path: String) -> Result<String, Strin
     screenshots::read_data_url(&state.data_dir, &path).map_err(err)
 }
 
+fn now_ms() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
+/// Writes every trade of the given accounts (all when empty) to a CSV file; returns the trade count.
+#[tauri::command]
+fn export_trades_csv(state: State<AppState>, account_ids: Vec<i64>, path: String) -> Result<usize, String> {
+    let conn = state.db.lock().map_err(err)?;
+    let filter = TradeFilter { account_ids, ..Default::default() };
+    export::write_trades_csv(&conn, &filter, std::path::Path::new(&path)).map_err(err)
+}
+
+#[tauri::command]
+fn create_backup(state: State<AppState>, dest_dir: String) -> Result<BackupInfo, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backup::create(&conn, &state.data_dir, std::path::Path::new(&dest_dir), now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn inspect_backup(folder: String) -> Result<BackupInfo, String> {
+    backup::inspect(std::path::Path::new(&folder)).map_err(err)
+}
+
+#[tauri::command]
+fn restore_backup(state: State<AppState>, folder: String, confirmed: bool) -> Result<RestoreResult, String> {
+    let mut conn = state.db.lock().map_err(err)?;
+    backup::restore(&mut conn, &state.data_dir, std::path::Path::new(&folder), confirmed, now_ms()).map_err(err)
+}
+
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let conn = db::open(&data_dir).map_err(err)?;
@@ -257,6 +290,10 @@ pub fn run() {
             get_dashboard,
             get_calendar,
             get_day_trades,
+            export_trades_csv,
+            create_backup,
+            inspect_backup,
+            restore_backup,
             save_screenshot,
             read_screenshot
         ])

@@ -1,3 +1,4 @@
+import type { BackupInfo, RestoreResult } from '../types/data'
 import type { Account, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
@@ -206,7 +207,51 @@ function ledgerOf(accountIds: number[]): MockLedger {
   }
 }
 
+// Sauvegardes du faux backend : instantanés en mémoire, indexés par « dossier ».
+type Snapshot = ReturnType<typeof snapshot>
+const backups = new Map<string, Snapshot>()
+let nextBackup = 1
+const snapshot = () =>
+  structuredClone({
+    accounts, tags, instruments, rules, checklist, cashFlows,
+    trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
+  })
+const infoOf = (path: string, s: Snapshot): BackupInfo => ({
+  path, schemaVersion: 3, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+})
+function replaceWith(s: Snapshot) {
+  const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
+  put(accounts, s.accounts); put(tags, s.tags); put(instruments, s.instruments)
+  put(rules, s.rules); put(checklist, s.checklist); put(cashFlows, s.cashFlows)
+  trades.clear(); s.trades.forEach(([k, v]) => trades.set(k, v))
+  screenshots.clear(); s.screenshots.forEach(([k, v]) => screenshots.set(k, v))
+  nextId = s.nextId; nextTradeId = s.nextTradeId
+}
+
 export const mock = {
+  pickFolder: async (): Promise<string | null> => '(dossier de démonstration)',
+  pickCsvPath: async (defaultName: string): Promise<string | null> => `(dossier de démonstration)/${defaultName}`,
+  exportTradesCsv: async (_path: string): Promise<number> => trades.size,
+  createBackup: async (destDir: string): Promise<BackupInfo> => {
+    const path = `${destDir}/pulse-backup-${nextBackup++}`
+    const s = snapshot()
+    backups.set(path, s)
+    return infoOf(path, s)
+  },
+  inspectBackup: async (folder: string): Promise<BackupInfo> => {
+    const s = backups.get(folder)
+    if (!s) throw invalid('this folder does not contain a pulse.db file')
+    return infoOf(folder, s)
+  },
+  restoreBackup: async (folder: string, confirmed: boolean): Promise<RestoreResult> => {
+    if (!confirmed) throw invalid('the restore was not confirmed')
+    const s = backups.get(folder)
+    if (!s) throw invalid('this folder does not contain a pulse.db file')
+    const safetyCopy = `(dossier de démonstration)/pulse-avant-restauration-${nextBackup++}.db`
+    backups.set(safetyCopy, snapshot())
+    replaceWith(structuredClone(s))
+    return { info: infoOf(folder, s), safetyCopy }
+  },
   appInfo: async () => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
   listAccounts: async (): Promise<Account[]> => [...accounts],
   deleteAccount: async (accountId: number): Promise<void> => {

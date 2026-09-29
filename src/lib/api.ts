@@ -11,6 +11,7 @@ import type {
   TradeFilter,
   TradeView,
 } from '../types/trade'
+import type { BackupInfo, RestoreResult } from '../types/data'
 import type { Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade } from '../types/stats'
 import { mock } from './mockBackend'
 
@@ -95,4 +96,27 @@ export const api = {
   /** Renvoie une URL `data:` affichable. */
   readScreenshot: (path: string): Promise<string> =>
     inTauri ? invoke('read_screenshot', { path }) : mock.readScreenshot(path),
+
+  /** Boîte de dialogue « choisir un dossier ». `null` si l'utilisateur annule. */
+  pickFolder: async (title: string): Promise<string | null> => {
+    if (!inTauri) return mock.pickFolder()
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const picked = await open({ directory: true, multiple: false, title })
+    return typeof picked === 'string' ? picked : null
+  },
+  /** Boîte de dialogue « enregistrer sous » pour un fichier CSV. */
+  pickCsvPath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return mock.pickCsvPath(defaultName)
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'CSV', extensions: ['csv'] }] })
+  },
+  /** Exporte les trades (tous les comptes si `accountIds` est vide) ; renvoie le nombre de trades écrits. */
+  exportTradesCsv: (path: string, accountIds: number[] = []): Promise<number> =>
+    inTauri ? invoke('export_trades_csv', { accountIds, path }) : mock.exportTradesCsv(path),
+  createBackup: (destDir: string): Promise<BackupInfo> =>
+    inTauri ? invoke('create_backup', { destDir }) : mock.createBackup(destDir),
+  inspectBackup: (folder: string): Promise<BackupInfo> =>
+    inTauri ? invoke('inspect_backup', { folder }) : mock.inspectBackup(folder),
+  restoreBackup: (folder: string, confirmed: boolean): Promise<RestoreResult> =>
+    inTauri ? invoke('restore_backup', { folder, confirmed }) : mock.restoreBackup(folder, confirmed),
 }

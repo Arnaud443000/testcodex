@@ -96,3 +96,24 @@ describe('mock du navigateur', () => {
     await expect(mock.saveScreenshot('data:text/plain;base64,AAAA')).rejects.toThrow(/unsupported/)
   })
 })
+
+describe('faux backend : export et sauvegarde', () => {
+  it('sauvegarde puis restaure : les données ajoutées après la sauvegarde disparaissent', async () => {
+    const before = (await mock.listTrades({})).length
+    const backup = await mock.createBackup('(dossier)')
+    expect(backup.trades).toBe(before)
+    await mock.createTrade({ ...base(), entryTime: 20 * H, exitTime: 21 * H })
+    expect((await mock.listTrades({})).length).toBe(before + 1)
+    await expect(mock.restoreBackup(backup.path, false)).rejects.toThrow('not confirmed')
+    expect((await mock.listTrades({})).length).toBe(before + 1)
+    const res = await mock.restoreBackup(backup.path, true)
+    expect(res.info.trades).toBe(before)
+    expect((await mock.listTrades({})).length).toBe(before)
+    expect((await mock.inspectBackup(res.safetyCopy)).trades).toBe(before + 1)
+  })
+
+  it('refuse un dossier qui n’est pas une sauvegarde', async () => {
+    await expect(mock.inspectBackup('(inconnu)')).rejects.toThrow()
+    expect(await mock.exportTradesCsv('x.csv')).toBe((await mock.listTrades({})).length)
+  })
+})
