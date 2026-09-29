@@ -526,6 +526,31 @@ export const fr = {
       delete: 'Supprimer',
     },
   },
+  // Comptes : modification, archivage (Paramètres).
+  accountAdmin: {
+    archivedOption: (name: string) => `${name} (archivé)`,
+    edit: 'Modifier',
+    save: 'Enregistrer',
+    cancel: 'Annuler',
+    currencyLocked: 'La devise ne peut plus être changée : ce compte contient déjà des trades, dépôts ou retraits.',
+    capitalWarning: (from: string, to: string, currency: string) =>
+      `Vous changez le capital initial de ${from} à ${to} ${currency}. Vos trades ne sont pas modifiés : les rendements en % (et le drawdown en %) sont recalculés à partir de ce nouveau capital, y compris pour le passé. Les montants (P&L) restent identiques.`,
+    capitalConfirm: 'Confirmer le changement de capital',
+    errCurrency: 'La devise est obligatoire (3 lettres, par exemple USD).',
+    errCurrencyLocked: 'La devise est verrouillée : ce compte a de l’historique.',
+    errSave: (detail: string) => `Impossible de modifier le compte : ${detail}`,
+    archive: 'Archiver',
+    archiveHelp: 'Le compte disparaît des sélecteurs et des totaux, mais garde tout son historique.',
+    restore: 'Désarchiver',
+    view: 'Consulter les trades',
+    errArchive: (detail: string) => `Impossible de modifier l’archivage : ${detail}`,
+    archivedTitle: 'Comptes archivés',
+    archivedIntro: 'Ces comptes ne comptent plus dans le tableau de bord, le calendrier ni les statistiques par défaut. Leur historique reste intact.',
+    archivedBadge: 'Archivé',
+    hasHistory: 'Historique conservé',
+    hint: 'Un compte qui contient des trades, dépôts ou retraits ne peut pas être supprimé : archivez-le.',
+    errArchived: 'Ce compte est archivé : désarchivez-le pour y ajouter des données.',
+  },
 }
 
 export type Messages = typeof fr

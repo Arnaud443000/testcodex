@@ -15,7 +15,7 @@ import type { Calendar, DayTrade } from '../types/stats'
 
 export function CalendarPage() {
   const t = useT()
-  const { accounts, loading, selectedId } = useAccounts()
+  const { accounts, allAccounts, loading, selectedId } = useAccounts()
   const now = new Date()
   const [ym, setYm] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 })
   const [data, setData] = useState<Calendar | null>(null)
@@ -23,7 +23,7 @@ export function CalendarPage() {
   const [day, setDay] = useState<string | null>(null)
   const [dayTrades, setDayTrades] = useState<DayTrade[] | null>(null)
 
-  const chosen = useMemo(() => (selectedId === null ? accounts : accounts.filter((a) => a.id === selectedId)), [accounts, selectedId])
+  const chosen = useMemo(() => (selectedId === null ? accounts : allAccounts.filter((a) => a.id === selectedId)), [accounts, allAccounts, selectedId])
   const accountIds = useMemo(() => (selectedId === null ? [] : [selectedId]), [selectedId])
   const mixed = chosen.some((a) => a.currency !== chosen[0].currency)
   const ready = !loading && chosen.length > 0 && !mixed

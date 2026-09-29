@@ -5,7 +5,8 @@ import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
 
 export function TopBar() {
-  const { accounts, selectedId, select } = useAccounts()
+  const { accounts, allAccounts, selectedId, select } = useAccounts()
+  const viewedArchived = allAccounts.find((a) => a.id === selectedId && a.archived)
   const t = useT()
   const navigate = useNavigate()
   const { period, setPeriod } = usePeriod()
@@ -28,6 +29,9 @@ export function TopBar() {
             {accounts.map((a) => (
               <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
             ))}
+            {viewedArchived && (
+              <option value={viewedArchived.id} className="bg-bg">{t.accountAdmin.archivedOption(viewedArchived.name)}</option>
+            )}
           </select>
         </span>
         <span className="pointer-events-none absolute right-3"><Icon name="chevron" size={16} /></span>

@@ -28,7 +28,7 @@ export function TradeFormPage() {
   const editId = params.id ? Number(params.id) : null
   const [search, setSearch] = useSearchParams()
   const quick = search.get('mode') === 'quick'
-  const { accounts, loading: accountsLoading, selectedId } = useAccounts()
+  const { accounts, allAccounts, loading: accountsLoading, selectedId } = useAccounts()
   const ref = useReferenceData()
 
   const [form, setForm] = useState<TradeForm | null>(null)
@@ -49,7 +49,7 @@ export function TradeFormPage() {
   useEffect(() => {
     if (ref.loading || accountsLoading || form) return
     if (editId === null) {
-      setForm(emptyForm(selectedId ?? accounts[0]?.id ?? null, Date.now()))
+      setForm(emptyForm(accounts.find((a) => a.id === selectedId)?.id ?? accounts[0]?.id ?? null, Date.now()))
       return
     }
     api
@@ -62,7 +62,7 @@ export function TradeFormPage() {
     () => (form ? buildTradeData(form, { checklistItems: ref.checklist, quick }) : { data: null, errors: {} }),
     [form, ref.checklist, quick],
   )
-  const account = accounts.find((a) => a.id === form?.accountId)
+  const account = allAccounts.find((a) => a.id === form?.accountId)
   const instrument = ref.instruments.find((i) => i.id === form?.instrumentId)
 
   // Aperçu en direct : demandé à pulse-core (jamais recalculé ici), avec un léger délai de frappe.
@@ -200,8 +200,8 @@ export function TradeFormPage() {
         </Field>
         <Field label={t.form.fields.account} htmlFor="f-account" error={errorText('account')}>
           <SelectBox id="f-account" value={form.accountId ?? ''} onChange={(v) => set('accountId', v === '' ? null : Number(v))}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
+            {(account?.archived ? [...accounts, account] : accounts).map((a) => (
+              <option key={a.id} value={a.id} className="bg-bg">{a.archived ? t.accountAdmin.archivedOption(a.name) : a.name}</option>
             ))}
           </SelectBox>
         </Field>

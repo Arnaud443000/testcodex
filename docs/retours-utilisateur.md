@@ -32,5 +32,10 @@ Registre des retours après essai de l'application installée. Chaque retour est
 | 10 | L'aperçu du formulaire (`trade_view::preview`) exprime le risque en % du **capital courant**, alors que le rapport de risque du lot 8 utilise le **solde à l'entrée** : pour un ancien trade modifié, les deux pourcentages peuvent différer. | À trancher au lot 9 (garder « courant » pour un nouveau trade, « à l'entrée » pour un trade existant ?) |
 
 ## À faire plus tard (idées issues de ces retours)
-- Modifier un compte existant (nom, courtier, capital initial) — aujourd'hui seul « supprimer + recréer » existe, et seulement pour un compte vide.
-- Archiver un compte qui a de l'historique, au lieu de le laisser impossible à retirer.
+- ~~Modifier un compte existant~~ — **fait** (voir « Comptes » ci-dessous).
+- ~~Archiver un compte qui a de l'historique~~ — **fait** (voir « Comptes » ci-dessous).
+
+## Comptes : modification et archivage (lot Paramètres, migration v5 provisoire)
+- **Modifier** (`accounts::update`) : nom, type, courtier, capital initial ; la **devise** est verrouillée (`currency_locked`) dès que le compte a un trade, un dépôt/retrait ou un trade manqué. Changer le capital d'un compte avec historique demande une **confirmation** expliquant que les rendements en % sont recalculés (rien n'est stocké : recalcul depuis les données sources ; les montants P&L ne changent pas).
+- **Archiver / désarchiver** (`accounts::set_archived`, colonne `archived`, migration v5) : un compte archivé sort des sélecteurs, du dashboard, du calendrier, des stats, de la liste des trades et de l'export par défaut (une liste d'identifiants vide = comptes actifs) ; il reste lisible en le nommant explicitement (Paramètres > Comptes archivés > « Consulter les trades »). Refus d'ajouter un trade ou un dépôt/retrait à un compte archivé (`account_archived`). Suppression toujours refusée s'il a de l'historique.
+- Tests : Rust (`accounts::edit_tests`, `migrations::v5_…`), TypeScript (`mockAccounts.test.ts`). Non testé : rendu sur un vrai Windows, parcours cliqué complet.

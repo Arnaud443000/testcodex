@@ -220,6 +220,9 @@ pub struct TradeFilter {
 
 pub fn create(conn: &Connection, data: &TradeData) -> Result<Trade> {
     let v = validate(conn, data)?;
+    if accounts::get(conn, data.account_id)?.archived {
+        return invalid(accounts::ACCOUNT_ARCHIVED);
+    }
     let tx = conn.unchecked_transaction()?;
     tx.execute(
         &format!("INSERT INTO trades ({COLUMNS}) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24)"),

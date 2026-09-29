@@ -1,5 +1,5 @@
 import type { BackupInfo, RestoreResult } from '../types/data'
-import type { Account, CashFlow, NewAccount, NewCashFlow } from '../types/account'
+import type { Account, AccountUpdate, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
   ChecklistItem,
@@ -190,9 +190,13 @@ function view(t: TradeData & { id: number; createdAt: string; updatedAt: string 
   }
 }
 
-/** Comptes sélectionnés (tous si vide), clôturés uniquement ; refuse de mélanger les devises comme pulse-core. */
+const accountHasHistory = (accountId: number) =>
+  [...trades.values()].some((t) => t.accountId === accountId) || cashFlows.some((f) => f.accountId === accountId)
+const withHistory = (a: Account): Account => ({ ...a, hasHistory: accountHasHistory(a.id) })
+
+/** Comptes sélectionnés (tous les comptes actifs si vide), clôturés uniquement ; refuse de mélanger les devises comme pulse-core. */
 function ledgerOf(accountIds: number[]): MockLedger {
-  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
   if (chosen.length === 0) return { currency: null, initialCapital: '0', capitalMoves: [], closed: [], openCount: 0 }
   const other = chosen.find((a) => a.currency !== chosen[0].currency)
   if (other) throw invalid(`accounts in different currencies (${chosen[0].currency} and ${other.currency}) cannot be combined`)
@@ -239,7 +243,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 4, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 5, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
 })
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
@@ -275,7 +279,7 @@ export const mock = {
     return { info: infoOf(folder, s), safetyCopy }
   },
   appInfo: async () => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
-  listAccounts: async (): Promise<Account[]> => [...accounts],
+  listAccounts: async (): Promise<Account[]> => accounts.map(withHistory),
   deleteAccount: async (accountId: number): Promise<void> => {
     if ([...trades.values()].some((t) => t.accountId === accountId)) throw invalid('account_in_use')
     if (cashFlows.some((f) => f.accountId === accountId)) throw invalid('account_in_use')
@@ -287,9 +291,25 @@ export const mock = {
     if (!/^\d+(\.\d+)?$/.test(a.initialCapital.trim())) {
       throw new Error(`invalid input: initial capital is not a valid number: "${a.initialCapital}"`)
     }
-    const acc = { ...a, name: a.name.trim(), initialCapital: a.initialCapital.trim(), id: id() }
+    const acc = { ...a, name: a.name.trim(), initialCapital: a.initialCapital.trim(), id: id(), archived: false, hasHistory: false }
     accounts.push(acc)
     return acc
+  },
+  updateAccount: async (accountId: number, u: AccountUpdate): Promise<Account> => {
+    const acc = accounts.find((a) => a.id === accountId)
+    if (!acc) throw new Error(`not found: account ${accountId}`)
+    if (!u.name.trim()) throw invalid('account name is required')
+    if (!u.currency.trim()) throw invalid('currency is required')
+    if (!/^\d+(\.\d+)?$/.test(u.initialCapital.trim())) throw invalid(`initial capital is not a valid number: "${u.initialCapital}"`)
+    if (accountHasHistory(accountId) && u.currency.trim() !== acc.currency) throw invalid('currency_locked')
+    Object.assign(acc, { name: u.name.trim(), kind: u.kind, broker: u.broker.trim(), currency: u.currency.trim(), initialCapital: u.initialCapital.trim() })
+    return withHistory(acc)
+  },
+  setAccountArchived: async (accountId: number, archived: boolean): Promise<Account> => {
+    const acc = accounts.find((a) => a.id === accountId)
+    if (!acc) throw new Error(`not found: account ${accountId}`)
+    acc.archived = archived
+    return withHistory(acc)
   },
   listInstruments: async (): Promise<Instrument[]> => [...instruments].sort((a, b) => a.symbol.localeCompare(b.symbol)),
   createInstrument: async (n: NewInstrument): Promise<Instrument> => {
@@ -350,7 +370,9 @@ export const mock = {
   listCashFlows: async (accountId: number): Promise<CashFlow[]> =>
     cashFlows.filter((f) => f.accountId === accountId).sort((a, b) => a.occurredAt - b.occurredAt || a.id - b.id),
   createCashFlow: async (n: NewCashFlow): Promise<CashFlow> => {
-    if (!accounts.some((a) => a.id === n.accountId)) throw new Error(`not found: account ${n.accountId}`)
+    const target = accounts.find((a) => a.id === n.accountId)
+    if (!target) throw new Error(`not found: account ${n.accountId}`)
+    if (target.archived) throw invalid('account_archived')
     if (!/^\d+(\.\d+)?$/.test(n.amount) || sign(parse(n.amount)) <= 0) throw invalid('amount must be greater than zero')
     const f = { ...n, note: n.note.trim(), id: id() }
     cashFlows.push(f)
@@ -363,7 +385,7 @@ export const mock = {
   },
   listTrades: async (filter?: TradeFilter | null): Promise<TradeView[]> =>
     [...trades.values()]
-      .filter((t) => !filter?.accountIds?.length || filter.accountIds.includes(t.accountId))
+      .filter((t) => (filter?.accountIds?.length ? filter.accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
       .filter((t) => filter?.from == null || t.entryTime >= filter.from)
       .filter((t) => filter?.to == null || t.entryTime < filter.to)
       .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
@@ -375,6 +397,7 @@ export const mock = {
   },
   createTrade: async (d: TradeData): Promise<TradeView> => {
     const multiplier = validate(d)
+    if (accounts.find((a) => a.id === d.accountId)?.archived) throw invalid('account_archived')
     const now = new Date().toISOString()
     const t = { ...d, multiplier, id: nextTradeId++, createdAt: now, updatedAt: now }
     trades.set(t.id, t)
