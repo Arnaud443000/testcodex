@@ -28,6 +28,7 @@ npm ci
 npm run typecheck && npm test && npm run build     # interface
 cargo test -p pulse-core                           # cœur Rust
 cargo test -p pulse-ai -p pulse-vault              # IA : réseau (faux serveur local) et coffre (lot 20)
+cargo test -p pulse-lock                           # verrou : chiffrement en Rust pur (lot 22)
 cargo check -p pulse-app                           # coque Tauri (libs WebKit requises sous Linux)
 npm run dev                                        # interface seule dans un navigateur
 ```
@@ -90,6 +91,8 @@ Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparai
 - [x] Lot 20 — Infrastructure IA optionnelle (réglages, clé dans le coffre Windows, client HTTPS isolé, consentement) et analyse de screenshot d'un trade (3.5.4) : `pulse-core/src/ai/`, crates `pulse-ai` et `pulse-vault`, **migration v11** (à renuméroter à la fusion si besoin), Paramètres > IA, carte d'analyse dans le détail d'un trade ; voir « IA optionnelle (lot 20) » (**Opus, élevé**)
 
 - [x] Lot 21 — Coach IA conversationnel (3.5.5), optionnel, à la demande : outils locaux en lecture seule (`pulse-core/src/coach/`), boucle d'outils dans `pulse-ai`, historique local (migration v13, à renuméroter à la fusion), page « Coach » ; voir « Coach IA (lot 21) » (**Opus, élevé**)
+
+- [ ] Lot 22 — Verrouillage par mot de passe et chiffrement de la base (3.7.13), optionnel, **désactivé par défaut** : crate `pulse-lock` (Rust pur), module `pulse-core/src/lock/`, écran de déverrouillage, Paramètres > Sécurité ; **aucune migration** ; voir « Verrouillage (lot 22) » (**Opus, élevé**)
 
 
 ### Étapes 4 et 5 (suite)
@@ -661,3 +664,77 @@ Réponses simulées (fournisseur `simulation`, texte commençant par « [Simulat
 - L'application installée sous Windows (commandes vérifiées par `cargo check -p pulse-app` seulement) et le coffre sur un vrai Windows.
 - Le contrôle des chiffres est une heuristique : il peut laisser passer un chiffre inventé qui tombe par hasard sur une valeur fournie, et signaler un chiffre légitime écrit autrement (par exemple une durée convertie).
 
+
+## Verrouillage (lot 22) — décisions
+
+Décisions prises **avant** d'écrire le code (cahier 3.7.13 : « désactivé par défaut ; lorsqu'il est activé, la base locale est chiffrée avec une clé dérivée du mot de passe ; un mot de passe perdu n'est pas récupérable »).
+
+**Principe** : option **désactivée par défaut**. Tant qu'elle n'est pas activée, **rien ne change** : même fichier `pulse.db`, même ouverture (`db::open`, mode WAL), même moteur SQLite, mêmes sauvegardes. Le code du verrou n'intervient que si le fichier chiffré existe ou si l'utilisateur active l'option.
+
+### Choix du chiffrement (comparaison)
+
+| Option | Pour | Contre |
+|---|---|---|
+| **SQLCipher** via `rusqlite` (`bundled-sqlcipher-vendored-openssl`) | standard reconnu, chiffrement page par page, durabilité de SQLite intacte (WAL, transactions), changement de clé par `PRAGMA rekey` ; licences BSD (SQLCipher) + Apache-2.0 (OpenSSL) compatibles | remplace le moteur SQLite de **tous** les utilisateurs, même sans verrou ; compile **OpenSSL depuis les sources** (Perl + nmake sous Windows, plusieurs minutes de plus à chaque build propre, ~2 à 3 Mo de plus dans l'exe) ; **impossible à compiler pour Windows depuis Linux** (le `Configure` d'OpenSSL pour MSVC exige les outils Windows) donc invérifiable avant la CI ; risque réel de casser `build-windows.yml` et la CI Linux (`cargo test -p pulse-core` compilerait OpenSSL) |
+| SQLite3 Multiple Ciphers (`sqlite3mc-src`) | chiffrement dans le C de SQLite, sans OpenSSL | non intégré à `rusqlite` : il faudrait lier `libsqlite3-sys` à une bibliothèque externe (bricolage fragile), crate récente, remplace aussi le moteur de tous |
+| **Retenu : enveloppe chiffrée du fichier entier, en Rust pur** (`argon2` 0.6 et `chacha20poly1305` 0.11 de RustCrypto, `getrandom`, `zeroize`) | **aucune nouvelle dépendance C** ; moteur SQLite et chemin sans verrou **inchangés** ; compile pour `x86_64-pc-windows-msvc` et se **vérifie depuis Linux** (`cargo check --target`, ajouté à la CI comme pour `pulse-vault`) ; licences MIT / Apache-2.0 ; quelques centaines de Ko | la base déverrouillée vit **en mémoire** (`sqlite3_deserialize`, fonction `serialize` de `rusqlite`, déjà dans le SQLite embarqué) et **chaque modification réécrit tout le fichier chiffré** (écriture atomique) : coût proportionnel à la taille (quelques ms pour quelques Mo ; les captures sont des fichiers à part) ; format propre à Pulse (primitives standard, en-tête authentifié) ; base limitée à 1 Go en mode chiffré (plafond de la base en mémoire de SQLite) |
+
+Plan B si un jour la réécriture complète devenait trop lente (base de centaines de Mo) : passer à SQLCipher **dans un lot à part**, avec une vraie compilation Windows vérifiée en CI avant fusion ; le format de l'enveloppe est versionné pour permettre cette conversion.
+
+### Ce qui est chiffré, ce qui ne l'est pas
+
+- **Chiffré** : la base entière (`pulse.db` devient `pulse.db.enc` ; commentaires IA et conversations du coach compris, puisqu'ils sont dans la base) ; **chaque capture d'écran** (`screenshots/*`, chiffrée en place, même nom) ; les **sauvegardes manuelles** d'une base chiffrée (dossier `pulse-backup-…` contenant `pulse.db.enc` et les captures chiffrées) ; la **copie avant migration** et la **copie avant restauration** (`backups/*.db.enc`) ; à l'activation, en option (cochée par défaut), les copies **en clair déjà présentes** dans `backups/` du dossier de données (chiffrées, relues, puis l'original en clair supprimé).
+- **Pas chiffré** : l'**en-tête** du fichier chiffré (format, paramètres Argon2id, sel : non secrets par construction) ; le fichier d'état `pulse-lock.json` (nombre d'essais manqués, étape d'une activation / désactivation en cours ; aucun secret, aucune donnée de trading) ; les **exports CSV** et les **exports de configuration de dashboard** (fichiers en clair choisis par l'utilisateur ; l'interface le rappelle quand le verrou est actif) ; les sauvegardes en clair faites **avant** l'activation hors du dossier de données (Pulse ne sait pas où elles sont : l'interface le dit) ; le stockage local de la WebView (préférences d'affichage : dates de dernière visite, jamais de donnée de trading ni de mot de passe) ; le **coffre de la clé API** (lot 20, inchangé : Gestionnaire d'identifiants Windows, indépendant du verrou).
+- Taille des fichiers, nombre de captures et dates de modification restent visibles.
+
+### Clés et format
+
+- **Clé de données** (DEK) : 256 bits aléatoires (`getrandom`, générateur du système) créés à l'activation. Elle chiffre la base et les captures.
+- **Clé de mot de passe** (KEK) = **Argon2id**(mot de passe en UTF-8 **tel quel** — majuscules, accents et espaces comptent —, sel aléatoire de 16 octets ; m = 64 Mio, t = 3, p = 1 ; 32 octets). Paramètres de la 2ᵉ recommandation de la RFC 9106 avec p = 1 (le calcul n'est pas parallélisé) ; ordre de grandeur : une fraction de seconde sur un PC récent (non mesuré sur la machine de l'utilisateur).
+- La DEK est stockée **chiffrée par la KEK** (XChaCha20-Poly1305) dans l'en-tête ; le corps (image SQLite) est chiffré par la DEK (XChaCha20-Poly1305, nonce aléatoire de 24 octets **à chaque écriture**, tout l'en-tête en données associées authentifiées : un en-tête modifié est refusé). Sel et paramètres sont **dans l'en-tête** : chaque fichier (base, sauvegarde, copie) se suffit à lui-même et se rouvre avec le mot de passe en vigueur quand il a été écrit.
+- **Jamais stockés** : le mot de passe, la KEK, la DEK en clair (ni en base, ni dans un fichier, ni dans un journal, ni côté interface / `localStorage`).
+- En-tête de la base (`PULSEENC`, version 1) : magie 8 o, version 1 o, type 1 o (base), algorithme 1 o (Argon2id), m (Kio), t, p (3 × u32 LE), sel 16 o, nonce d'emballage 24 o, DEK emballée 48 o, nonce du corps 24 o, puis le corps chiffré (+ 16 o d'étiquette). Capture (`PULSEIMG`, version 1) : magie, version, nonce 24 o, contenu chiffré par la DEK. Un fichier qui commence par `SQLite format 3` est une base en clair.
+- **Pourquoi une DEK emballée** : changer le mot de passe ne réécrit que la base (nouvel en-tête), pas les captures. Limite assumée : la DEK ne change pas avec le mot de passe ; quelqu'un qui connaissait l'ancien mot de passe **et** a gardé une ancienne copie du fichier pourrait lire les nouveaux fichiers. Pour une nouvelle clé : désactiver puis réactiver.
+- En mémoire : mot de passe, KEK, DEK et image déchiffrée sont dans des types effacés à la libération (`zeroize`) ; aucun `Debug` ne les affiche.
+
+### Parcours (Paramètres > Sécurité, ancre `/settings#securite`)
+
+- **Activer** : mot de passe saisi deux fois (champs masqués), **au moins 8 caractères** (au plus 1024 octets), **aucune** règle de composition ni jauge de « force » (ce serait une fausse promesse ; conseil affiché : une phrase de plusieurs mots). **Avertissement obligatoire** : « Mot de passe perdu = données irrécupérables. Aucune récupération, aucune porte dérobée » + case « J'ai compris » ; sans la case, le bouton reste grisé **et** `pulse-core` refuse (`confirmed = false` → `lock:notConfirmed`).
+- **Verrouiller maintenant** (bouton dans Paramètres et dans la barre latérale) : écrit l'état chiffré (s'il ne peut pas l'écrire, il **refuse** de verrouiller pour ne rien perdre), ferme la base en mémoire, oublie la clé, affiche l'écran de déverrouillage.
+- **Inactivité** : réglage `lock.idle_minutes` (table `settings`, donc dans la base chiffrée ; absent = **désactivé**, valeurs 1 à 1440, l'interface propose 5, 10, 15, 30, 60 min). L'activité = clavier, souris, défilement dans la fenêtre, signalés par l'interface au plus toutes les 30 s ; les appels automatiques (alertes, insights) ne comptent pas. La coque vérifie toutes les 15 s. Sans verrou activé, le réglage n'est pas proposé.
+- **Déverrouiller** : au lancement si `pulse.db.enc` existe, la base **n'est pas ouverte** tant que le mot de passe n'est pas donné.
+- **Changer le mot de passe** : ancien + nouveau (deux fois) ; nouveau sel, nouvelle KEK, même DEK ; écriture atomique.
+- **Désactiver** : mot de passe demandé ; la base redevient un `pulse.db` en clair (et les captures), les sauvegardes chiffrées **restent chiffrées** (restaurables avec leur mot de passe).
+- **Mot de passe perdu** : données irrécupérables. Aucune porte dérobée, aucune question secrète, aucun fichier de secours, aucune « réinitialisation » qui garderait les données.
+
+### Essais répétés et erreurs
+
+- Délai **côté application** après des erreurs de mot de passe : 3 essais sans délai, puis 5 s, 10 s, 20 s, 40 s, 80 s, 160 s, puis 5 min au plus à chaque nouvel échec ; remis à zéro par un succès ; **jamais d'effacement des données**. Compteur gardé dans `pulse-lock.json` (survit au redémarrage). Le déverrouillage, la désactivation, le changement de mot de passe et le mot de passe d'une sauvegarde chiffrée partagent ce compteur. C'est un frein devant le clavier, pas une protection contre une copie du fichier (seuls Argon2id et la longueur du mot de passe ralentissent une attaque hors ligne).
+- Erreurs à **codes traduisibles** (`lock:<code>`, traduits par l'interface, jamais de secret dans un message, un `eprintln!` ou une panique) : `locked` (base verrouillée), `wrongPassword`, `retryLater:<ms>` (délai en cours), `notEncrypted`, `alreadyEncrypted`, `corrupt` (fichier chiffré abîmé ou tronqué), `unsupportedVersion`, `passwordTooShort`, `passwordTooLong`, `notConfirmed`, `persistFailed` (écriture impossible, données gardées en mémoire), `inconsistentFiles` (`pulse.db` et `pulse.db.enc` présents sans transition inscrite), `backupPasswordRequired`, `invalidIdle`, `io`.
+
+### Activation et désactivation : atomiques, reprises au démarrage
+
+Règle unique au démarrage : **si `pulse.db` existe, il fait foi** (il n'est jamais créé que complet, par renommage). Sinon, si `pulse.db.enc` existe, mode chiffré.
+
+- **Activation** : (1) transition `enable` inscrite dans `pulse-lock.json` ; (2) image cohérente de la base ouverte (`serialize`), chiffrée dans `pulse.db.enc.tmp` + `fsync` ; (3) **relue depuis le disque et déchiffrée par le vrai chemin de déverrouillage** (avec le mot de passe), ouverte en mémoire : `integrity_check`, même version de schéma, **même nombre de lignes dans chaque table** — sinon le temporaire est supprimé et `pulse.db` n'a jamais été touché ; (4) renommage en `pulse.db.enc` ; (5) fermeture de la base en clair, suppression de `pulse.db`, `-wal`, `-shm` = **point de bascule** ; (6) captures chiffrées une à une (temporaire + renommage ; le format est détecté à la lecture, un mélange reste lisible), copies de `backups/` si demandé ; (7) transition effacée. Jusqu'à (5), `pulse.db` **est** la copie de sécurité ; après vérification, garder une copie en clair annulerait le chiffrement.
+- **Désactivation** : (1) transition `disable` ; (2) captures déchiffrées en place ; (3) `VACUUM INTO pulse.db.tmp`, relu et vérifié (intégrité, schéma, lignes) ; (4) renommage en `pulse.db` = bascule ; (5) suppression de `pulse.db.enc` ; (6) transition effacée.
+- **Reprise** : `pulse.db` présent + transition inscrite → un `pulse.db.enc` restant est supprimé, transition effacée ; `pulse.db` et `pulse.db.enc` présents **sans** transition → rien n'est touché, `pulse.db` s'ouvre comme avant et l'interface signale le fichier en trop (`inconsistentFiles` en avertissement) ; mode chiffré avec une transition inscrite → après déverrouillage, les captures encore en clair sont chiffrées, puis la transition est effacée.
+- Test obligatoire : un échec simulé à chaque étape laisse une base qui s'ouvre avec toutes ses données.
+
+### Effets sur le reste
+
+- **Écriture** en mode chiffré : après chaque commande qui a modifié la base (`total_changes` de SQLite, plus un marquage explicite après migration et restauration), image complète → chiffrée → `pulse.db.enc.tmp` → `fsync` → renommage. Une coupure pendant l'écriture laisse l'ancien fichier intact ; on perd au plus la commande en cours. Si l'écriture échoue (disque plein…), les données **restent en mémoire**, la coque émet un événement et l'interface affiche un bandeau critique avec « Réessayer » ; fermer la fenêtre dans cet état demande une confirmation.
+- **Sauvegarde manuelle** : base chiffrée → sauvegarde chiffrée (même en-tête, donc le mot de passe en vigueur au moment de la sauvegarde) ; jamais de copie en clair.
+- **Restauration** : une sauvegarde chiffrée demande **son** mot de passe (celui du moment où elle a été faite) ; déchiffrée et migrée **en mémoire** (aucun fichier temporaire en clair), puis rechiffrée avec la clé courante (verrou actif) ou écrite en clair (verrou inactif : l'interface prévient). Une sauvegarde en clair se restaure dans une base chiffrée (elle est chiffrée au passage). La copie de sécurité avant restauration est chiffrée si le verrou est actif.
+- **Export CSV** : inchangé, **en clair** (c'est son but) ; rappel dans Paramètres > Données quand le verrou est actif.
+- **Sauvegarde automatique avant migration** : copie octet pour octet de `pulse.db.enc` (donc chiffrée) dans `backups/pulse-pre-migration-vN.db.enc`, puis migration en mémoire et écriture chiffrée. Les migrations v1 à v13 sont testées sur une base chiffrée.
+- **Fichiers temporaires** : en mode chiffré, aucun fichier en clair écrit par Pulse (base en mémoire, `temp_store = MEMORY`, temporaires `*.tmp` chiffrés), sauf lors de la désactivation qui l'écrit volontairement.
+- **Arrière-plan** : verrouillé, rien ne lit la base — rappel du journal, alertes, insights, IA : toute commande qui lit la base répond `lock:locked` ; la boucle du rappel saute son tour.
+- **Coffre de la clé API** : inchangé.
+
+### Limites honnêtes
+
+- Le verrou protège les fichiers **au repos** : PC partagé, disque volé, copie des fichiers. Il ne protège **pas** contre un PC déjà compromis (enregistreur de frappe, logiciel espion, administrateur malveillant) ni contre quelqu'un qui utilise la session pendant que Pulse est déverrouillé.
+- La **mémoire d'un Pulse déverrouillé contient les données en clair** (base SQLite en mémoire, pages affichées par la WebView). `zeroize` efface nos propres copies (mot de passe reçu, clés, image déchiffrée), pas la mémoire interne de SQLite ni celle de la WebView, ni la chaîne JavaScript du mot de passe saisi. Le fichier d'échange ou d'hibernation de Windows peut en contenir des morceaux.
+- Supprimer `pulse.db` n'est pas un effacement sécurisé : d'anciens secteurs (surtout sur SSD) peuvent subsister ; les sauvegardes en clair faites avant l'activation ailleurs que dans le dossier de données restent en clair.
+- Le délai après erreurs ne freine que l'écran de Pulse.
