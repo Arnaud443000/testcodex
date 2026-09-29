@@ -418,8 +418,8 @@ export function TradeFormPage() {
         }
       />
 
-      <div className={`grid items-start gap-5 ${quick ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : 'xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_340px]'}`}>
-        <div className={`grid items-start gap-5 ${quick ? '' : '2xl:col-span-2 2xl:grid-cols-2'}`}>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid items-start gap-5">
           <div className="flex flex-col gap-5">
             {basics}
             {prices}
