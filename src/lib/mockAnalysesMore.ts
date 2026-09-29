@@ -1,6 +1,6 @@
 import type { Decimal } from '../types/money'
 import type { TradeView } from '../types/trade'
-import type { Comparison, OpportunityReport, OpportunityTrade, StatsQuery, YearComparison, YearComparisonQuery } from '../types/stats'
+import type { Comparison, DurationGroup, DurationReport, OpportunityReport, OpportunityTrade, StatsQuery, YearComparison, YearComparisonQuery } from '../types/stats'
 import { summary as summaryOf } from './mockAnalyses'
 import { localDay, ratio, toDec, toScaled } from './mockStats'
 import type { BehaviorInput } from './mockBehavior'
@@ -148,5 +148,45 @@ export function mockYearComparison(input: BehaviorInput, q: YearComparisonQuery)
     ...base, available: true, from, to, previousFrom, previousTo, current, currentEmpty: current.tradeCount === 0,
     currentLowSample: current.tradeCount < MIN_SAMPLE, previous, previousEmpty, previousLowSample: previous.tradeCount < MIN_SAMPLE,
     previousReason: previousEmpty ? (firstEntry !== null && firstEntry >= previousTo ? 'historyTooShort' : 'noTrades') : null, comparison,
+  }
+}
+
+// --- temps en position (3.3.20) ----------------------------------------------------------
+
+function durationGroup(ms: number[]): DurationGroup {
+  const sorted = [...ms].sort((a, b) => a - b)
+  const n = sorted.length
+  return {
+    tradeCount: n,
+    avgMs: n ? sorted.reduce((a, v) => a + v, 0) / n : null,
+    medianMs: n ? (n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2) : null,
+    lowSample: n < MIN_SAMPLE,
+  }
+}
+
+export function mockDurations(input: BehaviorInput, q: StatsQuery): DurationReport {
+  const list = selectedClosed(input, q)
+  const win: number[] = []
+  const loss: number[] = []
+  const flat: number[] = []
+  let invalid = 0
+  for (const t of list) {
+    const held = t.exitTime - t.entryTime
+    if (held < 0) {
+      invalid++
+      continue
+    }
+    ;(t.figures.outcome === 'win' ? win : t.figures.outcome === 'loss' ? loss : flat).push(held)
+  }
+  const open = input.trades.filter((t) => t.exitTime == null && (q.direction == null || t.direction === q.direction) &&
+    (!q.instrumentIds?.length || q.instrumentIds.includes(t.instrumentId)) && (q.tagIds ?? []).every((id) => t.tagIds.includes(id))).length
+  const winners = durationGroup(win)
+  const losers = durationGroup(loss)
+  const comparable = !winners.lowSample && !losers.lowSample
+  const quotient = (a: number | null, b: number | null) => (comparable && a !== null && b !== null && b > 0 ? a / b : null)
+  return {
+    tradeCount: list.length, measuredCount: list.length - invalid, openTradeCount: open, invalidCount: invalid, minSample: MIN_SAMPLE,
+    winners, losers, breakevens: durationGroup(flat), comparable,
+    avgRatio: quotient(winners.avgMs, losers.avgMs), medianRatio: quotient(winners.medianMs, losers.medianMs),
   }
 }

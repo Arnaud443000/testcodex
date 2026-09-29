@@ -655,3 +655,98 @@ fn the_leap_day_maps_to_the_28th_and_deposits_never_count() {
     // A deposit is not performance: no trade, no figure.
     assert_eq!((r.current.trade_count, r.current.net_pnl), (0, d("0")));
 }
+
+// --- time in position (3.3.20) ---------------------------------------------------
+//
+// Journal M — capital 10 000, multiplier 1, size 1, no fees, long trades entered at 10:00 on day (# − 1),
+// exit after the holding time below. The exit price sets the outcome (100 → 110 win, 100 → 90 loss, 100 → 100 flat).
+//
+// | #  | outcome | held (min) |
+// |----|---------|-----------|
+// | 1–5   | win  | 60, 120, 30, 240, 90  → mean 540 / 5 = 108, median 90 |
+// | 6–10  | loss | 20, 40, 10, 50, 30    → mean 150 / 5 = 30, median 30  |
+// | 11    | flat | 100                    → alone: mean = median = 100    |
+// | 12    | open (no exit)                                                  |
+// | 13    | loss, exit 10 min BEFORE entry → invalid, excluded              |
+// Ratio of means 108 / 30 = 3.6, of medians 90 / 30 = 3.
+
+const MIN_MS: f64 = 60_000.0;
+
+fn held(id: i64, exit_price: Option<&str>, minutes: i64) -> TradeFacts {
+    let mut t = trade(id, Long, "100", exit_price, "1", None, "0", id - 1);
+    if exit_price.is_some() {
+        t.exit_time = Some(t.entry_time + minutes * 60_000);
+    }
+    t
+}
+
+fn journal_m() -> Vec<TradeFacts> {
+    let mut v = Vec::new();
+    for (i, m) in [60, 120, 30, 240, 90].into_iter().enumerate() {
+        v.push(held(i as i64 + 1, Some("110"), m));
+    }
+    for (i, m) in [20, 40, 10, 50, 30].into_iter().enumerate() {
+        v.push(held(i as i64 + 6, Some("90"), m));
+    }
+    v.push(held(11, Some("100"), 100));
+    v.push(held(12, None, 0));
+    v.push(held(13, Some("90"), -10));
+    v
+}
+
+#[test]
+fn durations_journal_m() {
+    let r = durations(&ledger("10000", journal_m(), vec![]), &all()).unwrap();
+    assert_eq!((r.trade_count, r.measured_count, r.open_trade_count, r.invalid_count), (12, 11, 1, 1));
+    assert_eq!((r.winners.trade_count, r.losers.trade_count, r.breakevens.trade_count), (5, 5, 1));
+    approx(r.winners.avg_ms.map(|v| v / MIN_MS), 108.0);
+    approx(r.winners.median_ms.map(|v| v / MIN_MS), 90.0);
+    approx(r.losers.avg_ms.map(|v| v / MIN_MS), 30.0);
+    approx(r.losers.median_ms.map(|v| v / MIN_MS), 30.0);
+    assert!(r.comparable && !r.winners.low_sample && !r.losers.low_sample);
+    approx(r.avg_ratio, 3.6);
+    approx(r.median_ratio, 3.0);
+    // The breakeven is shown but never enters the ratio.
+    approx(r.breakevens.avg_ms.map(|v| v / MIN_MS), 100.0);
+    assert!(r.breakevens.low_sample);
+}
+
+#[test]
+fn durations_small_samples_have_no_ratio() {
+    // Only trades 1–3 (three winners, no loser) fall before day 3.
+    let q = StatsQuery { to: Some(SEP_1 + 3 * DAY), ..all() };
+    let r = durations(&ledger("10000", journal_m(), vec![]), &q).unwrap();
+    assert_eq!((r.winners.trade_count, r.losers.trade_count, r.comparable), (3, 0, false));
+    approx(r.winners.avg_ms.map(|v| v / MIN_MS), 70.0); // (60 + 120 + 30) / 3
+    approx(r.winners.median_ms.map(|v| v / MIN_MS), 60.0);
+    assert_eq!((r.losers.avg_ms, r.losers.median_ms, r.avg_ratio, r.median_ratio), (None, None, None, None));
+    assert!(r.winners.low_sample && r.losers.low_sample);
+}
+
+#[test]
+fn durations_of_one_trade_zero_trades_and_zero_length_losers() {
+    let one = durations(&ledger("10000", vec![held(1, Some("110"), 45)], vec![]), &all()).unwrap();
+    assert_eq!((one.trade_count, one.winners.trade_count, one.comparable, one.avg_ratio), (1, 1, false, None));
+    approx(one.winners.avg_ms.map(|v| v / MIN_MS), 45.0);
+    approx(one.winners.median_ms.map(|v| v / MIN_MS), 45.0);
+
+    let none = durations(&ledger("10000", vec![], vec![]), &all()).unwrap();
+    assert_eq!((none.trade_count, none.measured_count, none.open_trade_count), (0, 0, 0));
+    assert_eq!((none.winners.avg_ms, none.losers.median_ms, none.avg_ratio), (None, None, None));
+
+    // Five winners and five losers closed at the very instant of entry (0 min): the ratio would divide by zero.
+    let mut v: Vec<_> = (1..=5).map(|i| held(i, Some("110"), 10)).collect();
+    v.extend((6..=10).map(|i| held(i, Some("90"), 0)));
+    let z = durations(&ledger("10000", v, vec![]), &all()).unwrap();
+    assert!(z.comparable);
+    assert_eq!((z.avg_ratio, z.median_ratio), (None, None));
+    approx(z.losers.avg_ms, 0.0);
+}
+
+#[test]
+fn durations_count_open_trades_matching_the_filters_only() {
+    let mut v = journal_m();
+    v[11].position.direction = Short; // the open trade 12 becomes a short
+    let q = StatsQuery { direction: Some(Long), ..all() };
+    assert_eq!(durations(&ledger("10000", v, vec![]), &q).unwrap().open_trade_count, 0);
+}

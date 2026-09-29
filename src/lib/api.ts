@@ -317,11 +317,14 @@ export const api = {
   /** Même période un an plus tôt, avec les écarts du tableau de bord (3.3.19). */
   getYearComparison: (query: YearComparisonQuery): Promise<YearComparison> =>
     inTauri ? invoke('get_year_comparison', { query }) : mockAnalysesMore.getYearComparison(query),
+  /** Durée moyenne et médiane des gagnants contre les perdants (3.3.20). */
+  getDurationReport: (query: StatsQuery): Promise<DurationReport> =>
+    inTauri ? invoke('get_duration_report', { query }) : mockAnalysesMore.getDurationReport(query),
   // (fin lot 16)
 }
 
 
 import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
 import { mockAlerts } from './mockBackend'
-import type { OpportunityReport, YearComparison, YearComparisonQuery } from '../types/stats'
+import type { DurationReport, OpportunityReport, YearComparison, YearComparisonQuery } from '../types/stats'
 import { mockAnalysesMore } from './mockBackend'

@@ -154,3 +154,56 @@ describe('faux backend : comparaison avec l’an dernier (journal L)', () => {
     expect([r.current.tradeCount, r.current.netPnl]).toEqual([0, '0'])
   })
 })
+
+/**
+ * Journal M (temps en position) — capital 10 000, multiplicateur 1, taille 1, sans frais, longs entrés à 10:00 le jour (# − 1).
+ * L'issue vient du prix de sortie (100 → 110 gagnant, 100 → 90 perdant, 100 → 100 à plat).
+ * | 1–5  | gagnants | 60, 120, 30, 240, 90 min → moyenne 108, médiane 90 |
+ * | 6–10 | perdants | 20, 40, 10, 50, 30 min   → moyenne 30, médiane 30  |
+ * | 11   | à plat   | 100 min                                             |
+ * | 12   | ouvert (sans sortie)                                            |
+ * Ratio des moyennes 108 / 30 = 3,6 ; des médianes 90 / 30 = 3. (La sortie avant l'entrée du test Rust est refusée dès la saisie par le faux backend.)
+ */
+describe('faux backend : temps en position (journal M)', () => {
+  let acc = 0
+  let ins = 0
+  const add = async (n: number, exit: string | null, minutes: number, account = acc) => {
+    const entry = SEP_1 + (n - 1) * DAY + 10 * HOUR
+    await mock.createTrade({
+      accountId: account, instrumentId: ins, direction: 'long', size: '1', multiplier: '1', entryPrice: '100', exitPrice: exit,
+      entryTime: entry, exitTime: exit === null ? null : entry + minutes * 60_000, tzOffsetMin: 0, plannedSl: null, fees: '0', thesis: '',
+      postMortem: '', tagIds: [], emotions: [], ruleChecks: [], checklist: [], executionType: null,
+    } as TradeData)
+  }
+  const mins = (v: number | null) => (v === null ? null : v / 60_000)
+
+  beforeAll(async () => {
+    acc = (await mock.createAccount({ name: 'M', kind: 'personal', broker: '', currency: 'USD', initialCapital: '10000' })).id
+    ins = (await mock.listInstruments())[0].id
+    for (const [i, m] of [60, 120, 30, 240, 90].entries()) await add(i + 1, '110', m)
+    for (const [i, m] of [20, 40, 10, 50, 30].entries()) await add(i + 6, '90', m)
+    await add(11, '100', 100)
+    await add(12, null, 0)
+  })
+
+  it('journal M complet', async () => {
+    const r = await mockAnalysesMore.getDurationReport({ accountIds: [acc] })
+    expect([r.tradeCount, r.measuredCount, r.openTradeCount, r.invalidCount]).toEqual([11, 11, 1, 0])
+    expect([r.winners.tradeCount, r.losers.tradeCount, r.breakevens.tradeCount]).toEqual([5, 5, 1])
+    expect([mins(r.winners.avgMs), mins(r.winners.medianMs), mins(r.losers.avgMs), mins(r.losers.medianMs)]).toEqual([108, 90, 30, 30])
+    expect([r.comparable, r.avgRatio, r.medianRatio]).toEqual([true, 3.6, 3])
+    expect([mins(r.breakevens.avgMs), r.breakevens.lowSample]).toEqual([100, true])
+  })
+
+  it('petits échantillons : pas de ratio ; un seul trade ; aucun trade', async () => {
+    const r = await mockAnalysesMore.getDurationReport({ accountIds: [acc], to: SEP_1 + 3 * DAY })
+    expect([r.winners.tradeCount, r.losers.tradeCount, r.comparable, mins(r.winners.avgMs), mins(r.winners.medianMs)]).toEqual([3, 0, false, 70, 60])
+    expect([r.losers.avgMs, r.losers.medianMs, r.avgRatio, r.medianRatio]).toEqual([null, null, null, null])
+    const solo = (await mock.createAccount({ name: 'M2', kind: 'personal', broker: '', currency: 'USD', initialCapital: '10' })).id
+    await add(1, '110', 45, solo)
+    const one = await mockAnalysesMore.getDurationReport({ accountIds: [solo] })
+    expect([one.tradeCount, one.winners.tradeCount, mins(one.winners.medianMs), one.avgRatio]).toEqual([1, 1, 45, null])
+    const none = await mockAnalysesMore.getDurationReport({ accountIds: [acc], from: SEP_1 + 100 * DAY })
+    expect([none.tradeCount, none.winners.avgMs, none.avgRatio]).toEqual([0, null, null])
+  })
+})

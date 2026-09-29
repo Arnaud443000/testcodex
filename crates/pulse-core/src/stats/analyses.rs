@@ -4,11 +4,12 @@
 //! counted where they close, net PnL as reference, deposits and withdrawals
 //! never involved, `None` when undefined.
 
-use super::pnl::{checked, ratio};
+use super::pnl::{Outcome, checked, ratio};
 use super::segments::{SegmentBy, groups};
 use super::summary::{Summary, analyze};
 use super::dashboard::{Comparison, Period, compare};
-use super::{Ledger, StatsQuery, compute, load, replay, time};
+use super::{Ledger, StatsQuery, compute, load, matches, replay, time};
+use super::distribution::median;
 use crate::error::Result;
 use crate::instruments::AssetClass;
 use crate::money::Decimal;
@@ -531,4 +532,90 @@ pub fn year_comparison(ledger: &Ledger, q: &YearComparisonQuery) -> Result<YearC
 
 pub fn year_comparison_report(conn: &Connection, q: &YearComparisonQuery) -> Result<YearComparison> {
     year_comparison(&load(conn, &q.account_ids)?, q)
+}
+
+// --- time in position (3.3.20) ----------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DurationGroup {
+    pub trade_count: usize,
+    /// Mean holding time in milliseconds; `None` for an empty group.
+    pub avg_ms: Option<f64>,
+    pub median_ms: Option<f64>,
+    pub low_sample: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DurationReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades measured (closed, exit not before entry).
+    pub measured_count: usize,
+    /// Open trades passing the filters: no exit time, so no duration.
+    pub open_trade_count: usize,
+    /// Exit before entry (inconsistent data): excluded.
+    pub invalid_count: usize,
+    pub min_sample: usize,
+    pub winners: DurationGroup,
+    pub losers: DurationGroup,
+    /// Shown apart, never part of the ratio.
+    pub breakevens: DurationGroup,
+    /// Both winners and losers reach `min_sample`.
+    pub comparable: bool,
+    /// Mean winner duration / mean loser duration; `None` unless `comparable` and the loser mean is not zero.
+    pub avg_ratio: Option<f64>,
+    pub median_ratio: Option<f64>,
+}
+
+fn duration_group(mut ms: Vec<i64>) -> DurationGroup {
+    let n = ms.len();
+    ms.sort_unstable();
+    DurationGroup {
+        trade_count: n,
+        avg_ms: (n > 0).then(|| ms.iter().map(|&v| v as i128).sum::<i128>() as f64 / n as f64),
+        median_ms: median(ms.iter().map(|&v| v as f64).collect()),
+        low_sample: n < MIN_SAMPLE,
+    }
+}
+
+pub fn durations(ledger: &Ledger, query: &StatsQuery) -> Result<DurationReport> {
+    let replay = replay(ledger)?;
+    let selected = replay.selected(query);
+    let (mut win, mut loss, mut flat) = (Vec::new(), Vec::new(), Vec::new());
+    let mut invalid = 0;
+    for c in &selected {
+        let held = c.exit_time - c.facts.entry_time;
+        if held < 0 {
+            invalid += 1;
+            continue;
+        }
+        match c.figures.outcome {
+            Outcome::Win => win.push(held),
+            Outcome::Loss => loss.push(held),
+            Outcome::Breakeven => flat.push(held),
+        }
+    }
+    let open_trade_count = ledger.trades.iter().filter(|t| t.exit_time.is_none() && matches(t, query)).count();
+    let (winners, losers, breakevens) = (duration_group(win), duration_group(loss), duration_group(flat));
+    let comparable = !winners.low_sample && !losers.low_sample;
+    let quotient = |a: Option<f64>, b: Option<f64>| if comparable { a.zip(b).filter(|(_, b)| *b > 0.0).map(|(a, b)| a / b) } else { None };
+    Ok(DurationReport {
+        trade_count: selected.len(),
+        measured_count: selected.len() - invalid,
+        open_trade_count,
+        invalid_count: invalid,
+        min_sample: MIN_SAMPLE,
+        avg_ratio: quotient(winners.avg_ms, losers.avg_ms),
+        median_ratio: quotient(winners.median_ms, losers.median_ms),
+        comparable,
+        winners,
+        losers,
+        breakevens,
+    })
+}
+
+pub fn duration_report(conn: &Connection, query: &StatsQuery) -> Result<DurationReport> {
+    durations(&load(conn, &query.account_ids)?, query)
 }

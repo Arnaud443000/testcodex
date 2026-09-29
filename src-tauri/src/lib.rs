@@ -623,6 +623,7 @@ pub fn run() {
             get_execution_report,
             get_opportunity_report,
             get_year_comparison,
+            get_duration_report,
             list_widget_catalog,
             list_dashboard_layouts,
             get_dashboard_layout,
@@ -821,4 +822,10 @@ fn get_opportunity_report(state: State<AppState>, query: StatsQuery) -> Result<p
 fn get_year_comparison(state: State<AppState>, query: pulse_core::stats::analyses::YearComparisonQuery) -> Result<pulse_core::stats::analyses::YearComparison, String> {
     let conn = state.db.lock().map_err(err)?;
     pulse_core::stats::analyses::year_comparison_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_duration_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::analyses::DurationReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::duration_report(&conn, &query).map_err(err)
 }

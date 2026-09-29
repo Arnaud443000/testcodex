@@ -371,3 +371,29 @@ export interface YearComparison {
   previousReason: PreviousEmptyReason | null
   comparison: Comparison | null
 }
+
+export interface DurationGroup {
+  tradeCount: number
+  /** Durée moyenne en millisecondes ; null pour un groupe vide. */
+  avgMs: number | null
+  medianMs: number | null
+  lowSample: boolean
+}
+
+/** Temps en position (3.3.20) : gagnants contre perdants. Le ratio n'est chiffré qu'avec assez de trades des deux côtés. */
+export interface DurationReport {
+  tradeCount: number
+  measuredCount: number
+  /** Trades ouverts (sans heure de sortie) : exclus. */
+  openTradeCount: number
+  /** Sortie avant l'entrée (données incohérentes) : exclus. */
+  invalidCount: number
+  minSample: number
+  winners: DurationGroup
+  losers: DurationGroup
+  breakevens: DurationGroup
+  comparable: boolean
+  /** Durée moyenne des gagnants / durée moyenne des perdants. */
+  avgRatio: number | null
+  medianRatio: number | null
+}

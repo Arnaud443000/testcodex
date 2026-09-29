@@ -5,6 +5,7 @@ export const frAnalysesMore = {
   tabs: {
     opportunity: 'Coût d’opportunité',
     year: 'Année précédente',
+    duration: 'Temps en position',
   },
   loading: 'Calcul en cours…',
   opportunity: {
@@ -75,5 +76,32 @@ export const frAnalysesMore = {
     currentEmptyText: 'Élargissez la période dans la barre du haut ou saisissez un trade.',
     drawdownHint: 'Un écart positif signifie un creux plus profond que l’an dernier.',
     caution: 'Deux périodes ne se ressemblent jamais : marchés, taille des positions et nombre de trades ont pu changer. C’est un constat, pas une explication.',
+  },
+  duration: {
+    intro: 'Combien de temps vos trades gagnants et perdants restent ouverts, de l’entrée à la sortie. Seuls les trades clôturés comptent.',
+    winnersTitle: 'Trades gagnants',
+    losersTitle: 'Trades perdants',
+    breakevenTitle: 'Trades à plat',
+    average: (v: string) => `Durée moyenne : ${v}`,
+    median: (v: string) => `Durée médiane : ${v}`,
+    noneInGroup: 'Aucun trade dans ce groupe',
+    breakevenLine: (count: number, avg: string) => `${count} ${count > 1 ? 'trades' : 'trade'} à plat, durée moyenne ${avg} : affichés à part, hors du ratio.`,
+    ratioTitle: 'Gagnants contre perdants',
+    ratioSubtitle: 'Durée moyenne des gagnants divisée par celle des perdants',
+    ratioAverage: 'Sur la durée moyenne',
+    ratioMedian: 'Sur la durée médiane',
+    ratioSentence: (ratio: string) => `Vos gagnants durent en moyenne ${ratio} fois la durée de vos perdants.`,
+    ratioMedianSentence: (ratio: string) => `En médiane : ${ratio} fois.`,
+    ratioNote: 'Ce ratio décrit vos habitudes de tenue ; il ne dit pas si c’est bien ou mal, et un ratio supérieur à 1 n’est pas un objectif en soi.',
+    notComparable: (min: number) => `Trop peu de trades pour chiffrer le ratio : il en faut au moins ${min} gagnants et ${min} perdants sur la période.`,
+    undefinedRatio: 'Ratio non défini : la durée moyenne des perdants est nulle.',
+    excluded: (open: number, invalid: number) => {
+      const parts = []
+      if (open > 0) parts.push(`${open} ${open > 1 ? 'trades ouverts' : 'trade ouvert'} (sans heure de sortie)`)
+      if (invalid > 0) parts.push(`${invalid} ${invalid > 1 ? 'trades' : 'trade'} dont la sortie précède l’entrée`)
+      return `Exclus du calcul : ${parts.join(' et ')}.`
+    },
+    emptyTitle: 'Rien à mesurer pour l’instant',
+    emptyText: 'Aucun trade clôturé sur cette période : la durée se mesure entre l’heure d’entrée et l’heure de sortie.',
   },
 }
