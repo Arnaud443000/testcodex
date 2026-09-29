@@ -1,13 +1,28 @@
 //! Pulse core: local SQLite storage and business logic, independent of the UI
 //! shell so it can be unit-tested on any platform.
 
+mod util;
+
 pub mod accounts;
+pub mod cash_flows;
+pub mod checklist;
 pub mod db;
 pub mod error;
+pub mod instruments;
 pub mod migrations;
+pub mod missed_trades;
+pub mod money;
+pub mod rules;
+pub mod stats;
+pub mod tags;
+pub mod trades;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
+pub use money::Decimal;
+
+#[cfg(test)]
+mod test_support;
 
 #[cfg(test)]
 mod tests {
@@ -20,7 +35,7 @@ mod tests {
             kind: kind.into(),
             broker: "".into(),
             currency: "USD".into(),
-            initial_capital: 10_000.0,
+            initial_capital: Decimal::from(10_000),
         }
     }
 
@@ -46,7 +61,7 @@ mod tests {
         let all = accounts::list(&conn).unwrap();
         assert_eq!(all.len(), 2);
         assert_eq!(all[0].name, "Main account");
-        assert_eq!(all[0].initial_capital, 10_000.0);
+        assert_eq!(all[0].initial_capital.to_string(), "10000");
     }
 
     #[test]
@@ -55,7 +70,7 @@ mod tests {
         assert!(accounts::create(&conn, &new_account("   ", "personal")).is_err());
         assert!(accounts::create(&conn, &new_account("X", "weird")).is_err());
         let mut neg = new_account("X", "demo");
-        neg.initial_capital = -1.0;
+        neg.initial_capital = Decimal::NEGATIVE_ONE;
         assert!(accounts::create(&conn, &neg).is_err());
         assert!(accounts::list(&conn).unwrap().is_empty());
     }
@@ -82,6 +97,25 @@ mod tests {
             Err(CoreError::SchemaTooNew { found: 999, .. }) => {}
             other => panic!("expected SchemaTooNew, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn upgrading_a_v1_file_backs_it_up_then_keeps_the_accounts() {
+        let dir = tempfile::tempdir().unwrap();
+        {
+            let mut conn = rusqlite::Connection::open(dir.path().join(db::DB_FILE)).unwrap();
+            migrations::migrate_to(&mut conn, 1).unwrap();
+            conn.execute(
+                "INSERT INTO accounts (name, kind, initial_capital) VALUES ('Main', 'personal', 12345.67)",
+                [],
+            )
+            .unwrap();
+        }
+        let conn = db::open(dir.path()).unwrap();
+        assert_eq!(accounts::list(&conn).unwrap()[0].initial_capital.to_string(), "12345.67");
+        let backup = rusqlite::Connection::open(dir.path().join("backups").join("pulse-pre-migration-v1.db")).unwrap();
+        let v: u32 = backup.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+        assert_eq!(v, 1, "the backup is the untouched v1 database");
     }
 
     #[test]

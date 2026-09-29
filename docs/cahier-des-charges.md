@@ -653,7 +653,7 @@ Tout le périmètre est conservé, mais construit par étapes : **chaque étape 
 
 Ce glossaire garantit que chaque métrique est implémentée de façon identique partout où elle apparaît dans l'application.
 
-- **R-multiple** : résultat d'un trade exprimé en multiple du risque initial. `R = (Prix de sortie − Prix d'entrée) × sens / (Prix d'entrée − SL prévu)`. Nécessite un SL prévu renseigné (3.1.2).
+- **R-multiple** : résultat d'un trade exprimé en multiple du risque initial. `R = PnL net / risque initial`, où le risque initial = `|Prix d'entrée − SL prévu| × taille × multiplicateur`. Sans frais, cela revient à `(Prix de sortie − Prix d'entrée) × sens / |Prix d'entrée − SL prévu|` (la valeur absolue au dénominateur est nécessaire : sans elle, le signe est faux pour un short). Nécessite un SL prévu renseigné et du bon côté de l'entrée (3.1.2) ; sinon le R est indéfini. *(Correction v2.0 issue du lot 3.)*
 - **Expectancy (espérance en R)** : `(Win rate × R moyen des gains) − (Taux de perte × R moyen des pertes)`. Indique le gain moyen attendu par trade, en unités de risque.
 - **Profit factor** : `Somme des gains / Somme des pertes (en valeur absolue)` sur la période considérée.
 - **Win rate** : `Nombre de trades gagnants / Nombre total de trades clôturés`.

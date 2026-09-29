@@ -3,7 +3,7 @@ import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
-import { formatAmount } from '../lib/format'
+import { formatDecimal } from '../lib/format'
 import type { AccountKind, AppInfo } from '../types/account'
 
 function AccountForm() {
@@ -20,9 +20,10 @@ function AccountForm() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    const capitalValue = capital.trim() === '' ? 0 : Number(capital.replace(',', '.'))
+    // Le capital voyage sous forme de chaîne décimale exacte (jamais un nombre JS) : "10 000,50" → "10000.50".
+    const capitalValue = capital.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.') || '0'
     if (!name.trim()) return setError(t.settings.errNameRequired)
-    if (!Number.isFinite(capitalValue) || capitalValue < 0) return setError(t.settings.errCapital)
+    if (!/^\d+(\.\d+)?$/.test(capitalValue)) return setError(t.settings.errCapital)
     setBusy(true)
     try {
       await create({ name, kind, broker, currency, initialCapital: capitalValue })
@@ -93,7 +94,7 @@ export function SettingsPage() {
               <li key={a.id} className="flex items-center justify-between py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
                 <span className="font-medium">{a.name}</span>
                 <span className="text-tx2">
-                  {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatAmount(a.initialCapital, a.currency)}
+                  {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
                 </span>
               </li>
             ))}
