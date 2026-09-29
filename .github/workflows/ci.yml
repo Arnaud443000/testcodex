@@ -21,3 +21,6 @@ jobs:
       - run: npm run build
       # The core crate has no UI dependency, so it is tested on Linux without WebKit.
       - run: cargo test -p pulse-core
+      # Lot 20: the network crate is tested against a fake local server; the key vault is checked for Windows.
+      - run: cargo test -p pulse-ai -p pulse-vault
+      - run: rustup target add x86_64-pc-windows-msvc && cargo check -p pulse-vault --target x86_64-pc-windows-msvc --all-targets
