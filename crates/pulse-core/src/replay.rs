@@ -112,7 +112,7 @@ fn passes(v: &TradeView, f: &ReplayFilter) -> bool {
 
 /// The trades to browse, most recent entry first.
 pub fn list(conn: &Connection, f: &ReplayFilter) -> Result<Vec<ReplayItem>> {
-    let filter = TradeFilter { account_ids: f.account_ids.clone(), from: None, to: None };
+    let filter = TradeFilter { account_ids: f.account_ids.clone(), from: None, to: None, mistake: None };
     Ok(trade_view::list(conn, &filter)?.iter().filter(|v| passes(v, f)).map(item).collect())
 }
 

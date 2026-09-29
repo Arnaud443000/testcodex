@@ -216,6 +216,26 @@ pub struct TradeFilter {
     pub from: Option<i64>,
     #[serde(default)]
     pub to: Option<i64>,
+    /// Only the trades carrying this mistake (a mistake tag, or a rule ticked "not respected").
+    #[serde(default)]
+    pub mistake: Option<MistakeFilter>,
+}
+
+/// Where a recurring mistake comes from (same two sources as `behavior::MistakeReport`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MistakeFilterSource {
+    /// A tag (normally of kind `mistake`) put on the trade.
+    Tag,
+    /// A personal rule ticked "not respected" on the trade.
+    Rule,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MistakeFilter {
+    pub source: MistakeFilterSource,
+    pub id: i64,
 }
 
 pub fn create(conn: &Connection, data: &TradeData) -> Result<Trade> {
@@ -280,6 +300,14 @@ pub fn list(conn: &Connection, filter: &TradeFilter) -> Result<Vec<Trade>> {
     }
     if let Some(to) = filter.to {
         cond.push(format!("entry_time < {to}"));
+    }
+    if let Some(m) = filter.mistake {
+        cond.push(match m.source {
+            MistakeFilterSource::Tag => format!("id IN (SELECT trade_id FROM trade_tags WHERE tag_id = {})", m.id),
+            MistakeFilterSource::Rule => {
+                format!("id IN (SELECT trade_id FROM trade_rule_checks WHERE rule_id = {} AND respected = 0)", m.id)
+            }
+        });
     }
     load(conn, &cond.join(" AND "))
 }
@@ -678,6 +706,41 @@ mod tests {
         assert_eq!(ids(TradeFilter { account_ids: vec![f.account], ..Default::default() }), [a2, a1]);
         assert_eq!(ids(TradeFilter::default()).len(), 3);
         assert_eq!(ids(TradeFilter { from: Some(100), to: Some(200), ..Default::default() }).len(), 2);
+    }
+
+    #[test]
+    fn filters_by_mistake_tag_or_broken_rule() {
+        let f = fixture();
+        let early = tags::create(&f.conn, TagKind::Mistake, "Early exit").unwrap();
+        let fomo = tags::create(&f.conn, TagKind::Mistake, "FOMO").unwrap();
+        let stop = rules::create(&f.conn, "Always set a stop").unwrap();
+        let mk = |t: i64, tag_ids: Vec<i64>, respected: Option<bool>| {
+            let data = TradeData {
+                entry_time: t,
+                exit_time: Some(t + 1000),
+                tag_ids,
+                rule_checks: respected.map(|r| vec![RuleCheck { rule_id: stop.id, respected: r }]).unwrap_or_default(),
+                ..closed_long(&f)
+            };
+            create(&f.conn, &data).unwrap().id
+        };
+        let a = mk(100, vec![early.id], Some(true)); // tag mistake, rule respected
+        let b = mk(200, vec![early.id, fomo.id], Some(false)); // two tags, rule broken
+        let c = mk(300, vec![], Some(false)); // rule broken only
+        let d = mk(400, vec![], None); // nothing
+        let ids = |m: Option<MistakeFilter>| {
+            list(&f.conn, &TradeFilter { mistake: m, ..Default::default() }).unwrap().into_iter().map(|t| t.id).collect::<Vec<_>>()
+        };
+        let tag = |id| Some(MistakeFilter { source: MistakeFilterSource::Tag, id });
+        let rule = |id| Some(MistakeFilter { source: MistakeFilterSource::Rule, id });
+        assert_eq!(ids(None), [d, c, b, a]);
+        assert_eq!(ids(tag(early.id)), [b, a]);
+        assert_eq!(ids(tag(fomo.id)), [b]);
+        assert_eq!(ids(rule(stop.id)), [c, b], "a ticked-and-respected rule is not a mistake");
+        assert!(ids(tag(9999)).is_empty());
+        // Combines with the other filters.
+        let both = TradeFilter { from: Some(150), mistake: tag(early.id), ..Default::default() };
+        assert_eq!(list(&f.conn, &both).unwrap().into_iter().map(|t| t.id).collect::<Vec<_>>(), [b]);
     }
 
     #[test]

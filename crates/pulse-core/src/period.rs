@@ -29,7 +29,7 @@ impl PeriodQuery {
 
 /// Closed trades (with their figures) whose exit falls in the period, most recent entry first.
 pub(crate) fn closed_trades(conn: &Connection, q: &PeriodQuery) -> Result<Vec<TradeView>> {
-    let filter = TradeFilter { account_ids: q.account_ids.clone(), from: None, to: None };
+    let filter = TradeFilter { account_ids: q.account_ids.clone(), from: None, to: None, mistake: None };
     Ok(trade_view::list(conn, &filter)?
         .into_iter()
         .filter(|v| v.figures.is_some() && v.trade.data.exit_time.is_some_and(|t| q.contains(t)))

@@ -140,7 +140,7 @@ pub struct DayOverview {
 /// The day's journal entry and the trades entered that day (local day of the entry instant).
 pub fn day_overview(conn: &Connection, account_ids: &[i64], day: &str) -> Result<DayOverview> {
     time::parse_day(day).ok_or_else(|| CoreError::Invalid(format!("invalid day {day:?}")))?;
-    let filter = TradeFilter { account_ids: account_ids.to_vec(), from: None, to: None };
+    let filter = TradeFilter { account_ids: account_ids.to_vec(), from: None, to: None, mistake: None };
     let mut trades: Vec<DayTradeLine> = trade_view::list(conn, &filter)?
         .into_iter()
         .filter(|v| time::day_key(v.trade.data.entry_time, v.trade.data.tz_offset_min) == day)

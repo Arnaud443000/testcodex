@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
@@ -8,6 +8,7 @@ import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
 import { formatDateTime, formatDuration, formatR } from '../lib/format'
+import { MISTAKE_PARAM, parseMistakeParam } from '../lib/mistakeFilter'
 import { useReferenceData } from '../lib/referenceData'
 import { NO_FILTERS, applyFilters, hasActiveFilters, isIncomplete, sortTrades, tagOfKind, type ListFilters, type SortDir, type SortKey } from '../lib/tradeList'
 import type { Outcome, TradeView } from '../types/trade'
@@ -20,19 +21,21 @@ export function TradesPage() {
   const [trades, setTrades] = useState<TradeView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<ListFilters>(NO_FILTERS)
+  const [params, setParams] = useSearchParams()
+  const mistake = useMemo(() => parseMistakeParam(params.get(MISTAKE_PARAM)), [params])
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'date', dir: 'desc' })
 
   useEffect(() => {
     let live = true
     setTrades(null)
     api
-      .listTrades(selectedId === null ? undefined : { accountIds: [selectedId] })
+      .listTrades({ ...(selectedId === null ? {} : { accountIds: [selectedId] }), mistake })
       .then((l) => live && setTrades(l))
       .catch((e) => live && setError(String(e)))
     return () => {
       live = false
     }
-  }, [selectedId])
+  }, [selectedId, mistake])
 
   const visible = useMemo(() => (trades ? sortTrades(applyFilters(trades, filters), sort.key, sort.dir) : []), [trades, filters, sort])
 
@@ -96,6 +99,25 @@ export function TradesPage() {
   return (
     <div className="flex flex-col gap-5">
       {header}
+      {mistake && (
+        <div className="nt nt-warn items-center justify-between" role="status">
+          <span>
+            <strong>
+              {mistake.source === 'tag'
+                ? t.trades.mistakeFilter.tag(ref.allTags.find((g) => g.id === mistake.id)?.name ?? t.trades.mistakeFilter.unknown)
+                : t.trades.mistakeFilter.rule(ref.allRules.find((r) => r.id === mistake.id)?.text ?? t.trades.mistakeFilter.unknown)}
+            </strong>{' '}
+            — {t.trades.mistakeFilter.allPeriods}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setParams((p) => { const n = new URLSearchParams(p); n.delete(MISTAKE_PARAM); return n })}
+          >
+            {t.trades.mistakeFilter.remove}
+          </button>
+        </div>
+      )}
       <section className="glass-card overflow-hidden">
         {trades === null ? (
           <p className="px-6 py-10 text-center text-sm text-tx2">{t.common.loading}</p>

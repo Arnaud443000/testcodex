@@ -178,6 +178,14 @@ export const fr = {
     emptyAction: 'Enregistrer mon premier trade',
     noMatchTitle: 'Aucun trade ne correspond',
     noMatchText: 'Aucun trade ne correspond à ces filtres. Modifiez-les ou réinitialisez-les pour tout revoir.',
+    mistakeFilter: {
+      label: 'Erreur',
+      tag: (name: string) => `Erreur : ${name}`,
+      rule: (text: string) => `Règle non respectée : ${text}`,
+      unknown: 'Erreur inconnue',
+      allPeriods: 'Toutes périodes confondues (la période choisie en haut ne s’applique pas ici).',
+      remove: 'Retirer ce filtre',
+    },
     resetFilters: 'Réinitialiser les filtres',
     filters: {
       asset: 'Actif',
@@ -1065,6 +1073,8 @@ export const fr = {
       ruleBroken: (rule: string) => `Règle non respectée : ${rule}`,
       detail: (count: number, share: string) => `${count} ${count > 1 ? 'trades' : 'trade'} · ${share} des trades`,
       empty: 'Aucune erreur enregistrée sur cette période : ni étiquette d’erreur, ni règle non respectée.',
+      seeTrades: 'Voir les trades',
+      seeTradesAria: (label: string) => `Voir les trades concernés par : ${label}`,
       summary: (withMistake: number, total: number) => `Sur ${total} ${total > 1 ? 'trades' : 'trade'}, ${withMistake} ${withMistake > 1 ? 'portent' : 'porte'} au moins une erreur. Le coût est la somme des pertes.`,
     },
     rules: {

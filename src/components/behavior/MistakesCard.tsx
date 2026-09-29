@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { signOf } from '../../lib/decimal'
 import { formatRatioPercent } from '../../lib/format'
 import { formatLoss } from '../../lib/behaviorFormat'
+import { mistakeLink } from '../../lib/mistakeFilter'
 import type { MistakeReport } from '../../types/behavior'
 import { Card, EmptyLine, Note, Segmented } from './parts'
 
@@ -46,7 +48,17 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                   <span className="block break-words text-sm font-medium leading-snug" title={m.source === 'rule' ? t.ruleBroken(m.label) : m.label}>
                     {m.source === 'rule' ? t.ruleBroken(m.label) : m.label}
                   </span>
-                  <span className="block text-xs text-tx3 tabular-nums">{t.detail(m.tradeCount, formatRatioPercent(m.share, 0))}</span>
+                  <span className="block text-xs text-tx3 tabular-nums">
+                    {t.detail(m.tradeCount, formatRatioPercent(m.share, 0))}
+                    {' · '}
+                    <Link
+                      to={mistakeLink({ source: m.source === 'rule' ? 'rule' : 'tag', id: m.id })}
+                      className="text-tx-accent underline underline-offset-2"
+                      aria-label={t.seeTradesAria(m.source === 'rule' ? t.ruleBroken(m.label) : m.label)}
+                    >
+                      {t.seeTrades}
+                    </Link>
+                  </span>
                 </span>
                 <b className={`whitespace-nowrap tabular-nums ${signOf(m.cost) > 0 ? 'text-loss' : 'text-neutral'}`}>{formatLoss(m.cost, currency)}</b>
               </li>

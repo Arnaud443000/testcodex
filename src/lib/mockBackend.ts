@@ -394,6 +394,11 @@ export const mock = {
       .filter((t) => (filter?.accountIds?.length ? filter.accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
       .filter((t) => filter?.from == null || t.entryTime >= filter.from)
       .filter((t) => filter?.to == null || t.entryTime < filter.to)
+      .filter((t) => {
+        const m = filter?.mistake
+        if (!m) return true
+        return m.source === 'tag' ? t.tagIds.includes(m.id) : t.ruleChecks.some((c) => c.ruleId === m.id && !c.respected)
+      })
       .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
       .map(view),
   getTrade: async (tid: number): Promise<TradeView> => {

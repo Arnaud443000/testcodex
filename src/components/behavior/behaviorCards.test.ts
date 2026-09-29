@@ -63,6 +63,7 @@ describe('états vides de la page Comportement', () => {
       byCount: [], byCost: [{ source: 'rule', id: 1, label: 'Stop posé', tradeCount: 2, share: 0.2, netPnl: '-50', cost: '50', expectancyR: null, tradeIds: [1, 2] }],
     }
     const out = html(createElement(MistakesCard, { report, currency: 'USD' }))
+    expect(out).toContain('href="/trades?mistake=rule:1"')
     expect(out).toContain('−50,00')
     expect(out).toContain('Règle non respectée : Stop posé')
     expect(out).toContain('Sur 10 trades, 2 portent au moins une erreur')
