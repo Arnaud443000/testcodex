@@ -35,3 +35,19 @@ export function usePeriod(): PeriodCtx {
 
 /** Décalage UTC de l'utilisateur en minutes (Paris l'été : +120), tel que pulse-core l'attend. */
 export const localTzOffsetMin = (): number => -new Date().getTimezoneOffset()
+
+const PERIOD_DAYS: Record<PeriodKey, number | null> = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, '1Y': 365, ALL: null }
+const DAY_MS = 86_400_000
+
+/**
+ * Bornes `[from, to)` en ms UTC d'une période, pour les rapports qui prennent un `StatsQuery`.
+ * Même définition que le tableau de bord (jours locaux se terminant aujourd'hui, minuit local
+ * de demain exclu) ; « Tout » n'a pas de borne. Pur calendrier : aucune statistique ici.
+ */
+export function periodRange(period: PeriodKey, nowMs: number, tzOffsetMin: number): { from: number | null; to: number | null } {
+  const days = PERIOD_DAYS[period]
+  if (days === null) return { from: null, to: null }
+  const today = Math.floor((nowMs + tzOffsetMin * 60_000) / DAY_MS)
+  const midnight = (day: number) => day * DAY_MS - tzOffsetMin * 60_000
+  return { from: midnight(today + 1 - days), to: midnight(today + 1) }
+}

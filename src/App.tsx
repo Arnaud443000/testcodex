@@ -5,6 +5,7 @@ import { useT } from './i18n'
 import { AccountsProvider } from './lib/accounts'
 import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
+import { BehaviorPage } from './pages/BehaviorPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { GoalsPage } from './pages/GoalsPage'
@@ -38,7 +39,7 @@ export default function App() {
                 <Route path="/trades/:id/edit" element={<TradeFormPage key="edit" />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/analytics" element={<PlaceholderPage title={t.pages.analytics.title} subtitle={t.pages.analytics.subtitle} step={1} />} />
-                <Route path="/behavior" element={<PlaceholderPage title={t.pages.behavior.title} subtitle={t.pages.behavior.subtitle} step={2} />} />
+                <Route path="/behavior" element={<BehaviorPage />} />
                 <Route path="/journal" element={<JournalPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/replay" element={<ReplayPage />} />
