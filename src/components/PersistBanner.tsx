@@ -55,3 +55,18 @@ export function PersistBanner() {
     </div>
   )
 }
+
+/**
+ * Lot 22 : deux bases trouvées au démarrage (pulse.db et pulse.db.enc) sans opération en cours. Pulse a
+ * ouvert pulse.db comme avant et n'a rien supprimé : on le dit, pour que l'utilisateur vérifie le dossier.
+ */
+export function LockWarningBanner() {
+  const t = useT()
+  const { status } = useLock()
+  if (!status?.warning) return null
+  return (
+    <div className="mb-5" data-testid="lock-warning-banner">
+      <Notice level="warn">{lockErrorText(t, status.warning)}</Notice>
+    </div>
+  )
+}

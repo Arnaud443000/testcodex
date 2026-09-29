@@ -24,7 +24,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { CoachPage } from './pages/CoachPage'
 import { LockProvider, useLock } from './lib/lock'
 import { LockScreen, LockSplash } from './components/LockScreen'
-import { PersistBanner } from './components/PersistBanner'
+import { LockWarningBanner, PersistBanner } from './components/PersistBanner'
 import type { ReactNode } from 'react'
 
 /**
@@ -55,6 +55,7 @@ export default function App() {
               {/* Largeur max du contenu : au-delà, les grilles s’étireraient et les cartes se déséquilibreraient. */}
               <div className="mx-auto w-full max-w-[1480px]">
               <PersistBanner />
+              <LockWarningBanner />
               <AlertBanner />
               <ReminderBanner />
               <Routes>

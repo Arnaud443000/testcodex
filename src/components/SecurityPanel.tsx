@@ -159,6 +159,11 @@ export function SecurityPanel() {
         <span className={`badge shrink-0 ${status.enabled ? 'badge-gain' : 'badge-neutral'}`}>{status.enabled ? s.on : s.off}</span>
       </div>
 
+      {status.warning && (
+        <div className="mb-4">
+          <Notice level="warn">{lockErrorText(t, status.warning)}</Notice>
+        </div>
+      )}
       <p className="mb-4 text-sm">{status.enabled ? s.onState : s.offState}</p>
       <div className="mb-5 grid grid-cols-2 gap-3">
         <InnerBlock title={s.protectsTitle} tone="ok">{s.protects}</InnerBlock>
