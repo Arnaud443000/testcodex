@@ -8,6 +8,7 @@ pub mod cash_flows;
 pub mod checklist;
 pub mod db;
 pub mod error;
+pub mod export;
 pub mod instruments;
 pub mod migrations;
 pub mod missed_trades;
