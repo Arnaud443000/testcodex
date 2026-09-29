@@ -4,6 +4,7 @@ import { DisciplineCard } from '../behavior/DisciplineCard'
 import { EmotionsCard, type Moment } from '../behavior/EmotionsCard'
 import { FactorsCard } from '../behavior/FactorsCard'
 import { HesitationCard } from '../behavior/HesitationCard'
+import { InsightsWidgetCard } from '../insights/InsightsWidgetCard'
 import { MistakesCard } from '../behavior/MistakesCard'
 import { FirstTradeCard, PlanCard } from '../behavior/PlanCard'
 import { RulesCard } from '../behavior/RulesCard'
@@ -334,6 +335,22 @@ function GoalsWidget({ scope }: WidgetProps) {
   )
 }
 
+/**
+ * Insights (lot 19 bis) : fenêtres fixes du moteur, donc ni période ni « rien sur cette période ». Le widget suit le
+ * compte ; les devises mélangées ne le concernent pas (chaque compte est évalué seul, chaque insight porte sa devise).
+ */
+function InsightsWidget({ scope }: WidgetProps) {
+  const t = useT().dashboardBuilder
+  const title = useTitle('insights')
+  const { data, error } = useCached(scope.accountMissing ? null : `insights|${JSON.stringify(scope.accountIds)}|${scope.tzOffsetMin}`, () =>
+    api.getInsights(scope.accountIds, scope.tzOffsetMin),
+  )
+  if (scope.accountMissing) return <Message title={title}>{t.accountGone}</Message>
+  if (error) return <Failed title={title} detail={error} />
+  if (!data) return <Pending title={title} />
+  return <InsightsWidgetCard title={title} insights={data} />
+}
+
 /** Correspondance `kind` → composant. La bibliothèque de pulse-core décide de ce qui peut être enregistré. */
 export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   net_pnl_equity: NetPnlEquity,
@@ -356,4 +373,5 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   rules: Rules,
   hesitation: Hesitation,
   factors: Factors,
+  insights: InsightsWidget,
 }

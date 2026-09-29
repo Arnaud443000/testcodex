@@ -32,6 +32,7 @@ export const frDashboardBuilder = {
     rules: widget('Règles personnelles', 'Le respect de vos règles, règle par règle.'),
     hesitation: widget('Hésitation', 'Trades manqués et hésitations détectées.'),
     factors: widget('Facteurs externes', 'Sommeil, fatigue, humeur du journal contre qualité des trades.'),
+    insights: widget('Insights', 'Les tendances, points forts et suggestions à retenir (20 derniers trades, 90 derniers jours).'),
   } as Record<string, { title: string; description: string }>,
   /** Libellés des modes d’affichage, par widget. */
   modes: {

@@ -29,6 +29,17 @@ fn library_has_unique_kinds_and_sane_sizes() {
 }
 
 #[test]
+fn the_insights_widget_is_in_the_library_without_a_period_of_its_own() {
+    // The insights engine (lot 19) works on fixed windows, so the widget follows the account but never a period.
+    let d = catalog().into_iter().find(|d| d.kind == "insights").expect("insights widget");
+    assert_eq!((d.category.as_str(), d.period, d.account, d.modes.len()), ("behavior", false, true, 0));
+    let conn = db::open_in_memory().unwrap();
+    validate(&conn, &[widget("insights", "insights", 0, 0, d.default_w, d.default_h)]).unwrap();
+    // Smaller than its minimum is refused, like every other widget.
+    assert!(is_invalid(validate(&conn, &[widget("insights", "insights", 0, 0, d.min_w - 1, d.min_h)])));
+}
+
+#[test]
 fn every_preset_is_a_valid_layout_using_known_widgets() {
     let conn = db::open_in_memory().unwrap();
     for key in PRESET_KEYS {
