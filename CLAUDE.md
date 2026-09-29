@@ -185,7 +185,7 @@ Score d'un trade = `100 × Σ(poids × valeur) / Σ(poids)` sur les **seules com
 
 ## Journal, confiance, objectifs, replay (lots 10 et 11)
 
-- **Migration v5** : `journal_entries` (une entrée par jour local `AAAA-MM-JJ`, tous comptes confondus ; un journal entièrement vide est supprimé, jamais stocké) et `goals` (unique par mois + métrique, cible décimale en texte). Les réglages du rappel utilisent la table `settings` existante (`reminder.enabled`, `reminder.time`, `reminder.last_sent_day`).
+- **Migration v6** (la v5 est l'archivage des comptes) : `journal_entries` (une entrée par jour local `AAAA-MM-JJ`, tous comptes confondus ; un journal entièrement vide est supprimé, jamais stocké) et `goals` (unique par mois + métrique, cible décimale en texte). Les réglages du rappel utilisent la table `settings` existante (`reminder.enabled`, `reminder.time`, `reminder.last_sent_day`).
 - **Trades manqués** : table déjà en v2 ; `missed_trades::update` ajouté. Ils ne produisent jamais de P&L et n'entrent dans aucune statistique de performance.
 - **Qualité d'exécution** (`execution_quality.rs`) : score 0–100 = moyenne des composantes disponibles (checklist cochée / totale, plan suivi oui 100 / en partie 50 / non 0, règles respectées / cochées) ; la note manuelle 1–5 l'emporte (étoile n = (n − 1) × 25) ; « bien exécuté » à partir de 70. Le rapport croise gagnant / perdant × bien / mal exécuté ; les breakevens sont comptés à part.
 - **Confiance** (`confidence.rs`) : groupes de conviction faible 1–3, moyenne 4–7, forte 8–10 ; corrélation de Pearson conviction × R (au moins 3 paires) ; verdict seulement à partir de 10 trades avec R (|r| ≥ 0,3 = prédictive ou inverse). Compare aussi la conviction des trades manqués et des trades pris.

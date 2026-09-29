@@ -5,6 +5,7 @@ Registre des retours après essai de l'application installée. Chaque retour est
 ## Appréciation générale
 - 29/09/2026 — L'utilisateur aime l'interface actuelle (style A+D). **Ne pas la remettre en cause** ; les retours ci-dessous portent sur des défauts précis.
 - 29/09/2026 — Build 7 (étape 1, lots 1 à 7) installé et testé par l'utilisateur : « tout marche proprement ». Le retour 8 (dashboard) est levé.
+- 29/09/2026 — Build 10 (lots 1 à 11, lot 9 partiel) installé après désactivation de Smart App Control ; essai avec des trades de test : « ça rend bien, beaucoup de données très intéressantes ». Installeur non signé bloqué par Smart App Control : signature de code à envisager si distribution.
 
 ## Bugs et manques
 
