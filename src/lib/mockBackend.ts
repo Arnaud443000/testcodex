@@ -780,3 +780,11 @@ export const mockComparisons = {
   getRiskBenchmark: async (q: StatsQuery) => comparisons.mockRiskBenchmark(behaviorInput(q.accountIds), q),
   getExposureReport: async (q: StatsQuery) => comparisons.mockExposure(behaviorInput(q.accountIds), q),
 }
+// --- Lot 20 : IA optionnelle — SIMULATION, aucun appel réseau (voir mockAi.ts) ---
+import { createAiMock } from './mockAi'
+export const mockAi = createAiMock({
+  trade: (tid) => trades.get(tid),
+  instrument: (iid) => instruments.find((i) => i.id === iid),
+  screenshot: (path) => screenshots.get(path),
+  now: () => Date.now(),
+})

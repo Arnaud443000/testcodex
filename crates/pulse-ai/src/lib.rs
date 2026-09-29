@@ -1,11 +1,13 @@
 //! The only network code of Pulse (lot 20, see CLAUDE.md, "IA optionnelle"). It is called on
-//! demand only, by two Tauri commands that first check the AI option is turned on.
+//! demand only, by two Tauri commands that first check the AI option is turned on (`service`:
+//! prepare from the database, send without holding it, store the comment).
 //!
 //! A provider is one implementation of [`Provider`]; Claude (Anthropic Messages API) is the
 //! only one today. Errors are codes the interface translates: they never carry the key, the
 //! request or the response body.
 
 mod claude;
+pub mod service;
 
 pub use claude::{Claude, API_BASE, ANTHROPIC_VERSION, FALLBACK_BETA};
 pub use pulse_vault::ApiKey;

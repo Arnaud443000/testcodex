@@ -2765,8 +2765,10 @@ dependencies = [
 name = "pulse-ai"
 version = "0.1.0"
 dependencies = [
+ "pulse-core",
  "pulse-vault",
  "serde_json",
+ "tempfile",
  "ureq",
 ]
 
@@ -2775,13 +2777,16 @@ name = "pulse-app"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "pulse-ai",
  "pulse-core",
+ "pulse-vault",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-notification",
+ "zeroize",
 ]
 
 [[package]]
