@@ -1532,6 +1532,10 @@ export const fr = {
   analysesMore: frAnalysesMore,
   // Lot 17 : comparaisons et exposition
   comparisons: frComparisons,
+  // Lot 19 : insights automatiques (gabarits)
+  insights: frInsights,
 }
 
 export type Messages = typeof fr
+
+import { frInsights } from './fr.insights'

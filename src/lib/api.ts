@@ -369,6 +369,14 @@ export const api = {
     const picked = await open({ title, multiple: false, directory: false, filters: [{ name: 'Configuration Pulse (JSON)', extensions: ['json'] }] })
     return typeof picked === 'string' ? picked : null
   },
+  // --- Lot 19 : insights automatiques (déterministes, calculés localement, sans IA) ---
+  /** Insights de maintenant (comptes actifs si la liste est vide), chaque compte seul ; masqués omis sauf `includeDismissed`. */
+  getInsights: (accountIds: number[], tzOffsetMin: number, includeDismissed = false): Promise<Insight[]> =>
+    inTauri ? invoke('get_insights', { accountIds, tzOffsetMin, includeDismissed }) : mockInsights.getInsights(accountIds, tzOffsetMin, includeDismissed),
+  /** Masque un insight : il ne revient que si la situation s'aggrave ou dans un nouvel épisode. */
+  dismissInsight: (insightId: string): Promise<void> => (inTauri ? invoke('dismiss_insight', { insightId }) : mockInsights.dismissInsight(insightId)),
+  getInsightHistory: (accountIds: number[], limit?: number): Promise<InsightRecord[]> =>
+    inTauri ? invoke('get_insight_history', { accountIds, limit: limit ?? null }) : mockInsights.getInsightHistory(accountIds, limit),
 }
 
 
@@ -376,3 +384,5 @@ import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
 import { mockAlerts } from './mockBackend'
 import type { DurationReport, OpportunityReport, ScalingReport, YearComparison, YearComparisonQuery } from '../types/stats'
 import { mockAnalysesMore } from './mockBackend'
+import type { Insight, InsightRecord } from '../types/insights'
+import { mockInsights } from './mockBackend'

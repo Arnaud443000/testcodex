@@ -640,7 +640,10 @@ pub fn run() {
             resolve_dashboard_scope,
             duplicate_dashboard_layout,
             export_dashboard_config,
-            import_dashboard_config
+            import_dashboard_config,
+            get_insights,
+            dismiss_insight,
+            get_insight_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -907,4 +910,32 @@ fn export_dashboard_config(state: State<AppState>, key: String, path: String) ->
 fn import_dashboard_config(state: State<AppState>, path: String) -> Result<ImportResult, String> {
     let conn = state.db.lock().map_err(err)?;
     dashboards::import_config_file(&conn, std::path::Path::new(&path)).map_err(err)
+}
+
+// --- Lot 19 : insights automatiques (3.5.1 à 3.5.3), déterministes, sans IA ni réseau ---
+
+/// Insights de maintenant sur les comptes donnés (comptes actifs si la liste est vide), chaque compte seul ;
+/// les insights masqués sont omis sauf si `include_dismissed`.
+#[tauri::command]
+fn get_insights(
+    state: State<AppState>,
+    account_ids: Vec<i64>,
+    tz_offset_min: i32,
+    include_dismissed: Option<bool>,
+) -> Result<Vec<pulse_core::insights::Insight>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::insights::active_insights(&conn, &account_ids, now_ms(), tz_offset_min, include_dismissed.unwrap_or(false)).map_err(err)
+}
+
+/// Masque un insight : il ne revient que si la situation s'aggrave ou dans un nouvel épisode.
+#[tauri::command]
+fn dismiss_insight(state: State<AppState>, insight_id: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::insights::dismiss(&conn, &insight_id, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn get_insight_history(state: State<AppState>, account_ids: Vec<i64>, limit: Option<u32>) -> Result<Vec<pulse_core::insights::InsightRecord>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::insights::history(&conn, &account_ids, limit.unwrap_or(100)).map_err(err)
 }

@@ -457,12 +457,12 @@ fn costly_recurring_mistakes() {
     // Discipline (halves of 5): trades 4, 5, 10 score (0 + 10 + 10) / 45 = 44.44, the others 100:
     // (300 + 88.89) / 5 = 77.78 then (400 + 44.44) / 5 = 88.89 → +11.1 points (low priority, last).
     assert_eq!(keys(&v), ["costlyMistake.rule", "costlyMistake.tag", "disciplineTrend.up"]);
-    let InsightDetail::CostlyMistake { source, id, trade_count, cost, total_losses, share_of_losses, net_pnl, .. } = &v[0].detail else { panic!() };
+    let InsightDetail::CostlyMistake { mistake_source: source, mistake_id: id, trade_count, cost, total_losses, share_of_losses, net_pnl, .. } = &v[0].detail else { panic!() };
     assert_eq!((*source, *id, *trade_count, *cost, *total_losses, *net_pnl), (MistakeSource::Rule, 7, 3, dec("95"), dec("130"), dec("-95")));
     approx(share_of_losses.unwrap(), 95.0 / 130.0);
     assert_eq!((v[0].situation.as_str(), v[0].level, v[0].trade_ids.clone()), ("costlyMistake:1:rule:7", 3, vec![4, 5, 10]));
     assert_eq!(v[0].filter, Some(EvidenceFilter::Mistake { source: MistakeSource::Rule, id: 7 }));
-    let InsightDetail::CostlyMistake { id, cost, label, .. } = &v[1].detail else { panic!() };
+    let InsightDetail::CostlyMistake { mistake_id: id, cost, label, .. } = &v[1].detail else { panic!() };
     assert_eq!((*id, *cost, label.as_str(), v[1].situation.as_str()), (33, dec("75"), "M4", "costlyMistake:1:tag:33"));
 }
 
@@ -594,4 +594,20 @@ fn serialized_shape() {
     assert_eq!(json["olderAvgRisk"], "100");
     assert_eq!(json["period"]["basis"], "lastTrades");
     assert!(json.get("order").is_none());
+    // A mistake's own id and source never clash with the insight's `id` and `source`.
+    let m = run(&ledger(
+        (1..=3)
+            .map(|i| {
+                let mut t = trade(i, i - 3, "1", "90");
+                t.tags = vec![tag(30, TagKind::Mistake, "M")];
+                t
+            })
+            .collect(),
+    ));
+    let json = serde_json::to_string(&m[0]).unwrap();
+    // Once at the top level and once in the nested `filter`, never twice at the top level.
+    assert_eq!(json.matches("\"id\":").count(), 2, "{json}");
+    assert_eq!(json.matches("\"source\":").count(), 2, "{json}");
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!((v["id"].as_str(), v["source"].as_str(), v["mistakeId"].as_i64(), v["mistakeSource"].as_str()), (Some("costlyMistake:1:tag:30:3"), Some("mistakes"), Some(30), Some("tag")));
 }

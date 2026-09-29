@@ -47,8 +47,8 @@ fn mistakes(scope: &Scope, out: &mut Vec<Insight>) -> Result<()> {
             MistakeSource::Rule => ("costlyMistake.rule", "rule"),
         };
         let detail = InsightDetail::CostlyMistake {
-            source: m.source,
-            id: m.id,
+            mistake_source: m.source,
+            mistake_id: m.id,
             label: m.label.clone(),
             trade_count: m.trade_count,
             share_of_trades: m.share,

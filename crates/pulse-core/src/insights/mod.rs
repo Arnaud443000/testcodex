@@ -203,8 +203,9 @@ pub enum InsightDetail {
     OvertradingPattern { day_count: usize, limit: u32, days: Vec<String>, trade_count: usize, min_count: usize },
     /// 3.5.3: a recurring mistake that weighs on the losses.
     CostlyMistake {
-        source: MistakeSource,
-        id: i64,
+        /// `mistake_…`: `id` and `source` already name the insight's identity and report.
+        mistake_source: MistakeSource,
+        mistake_id: i64,
         label: String,
         trade_count: usize,
         /// Share of the window's closed trades.
