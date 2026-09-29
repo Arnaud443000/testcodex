@@ -766,7 +766,8 @@ pub fn run() {
             lock_cmds::set_lock_idle,
             lock_cmds::lock_touch,
             lock_cmds::retry_persist,
-            lock_cmds::quit_discarding_changes
+            lock_cmds::quit_discarding_changes,
+            export_period_pdf
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1365,3 +1366,32 @@ fn delete_all_coach_conversations(state: State<AppState>) -> Result<usize, Strin
     let conn = state.conn()?;
     pulse_core::coach::delete_all_conversations(&conn).map_err(err)
 }
+
+// --- Lot 23 : export PDF d'un bilan de période (3.7.3) ---
+
+/// Writes the period review of one account as a PDF to `path`. `overwrite` = false refuses an existing file
+/// (`pdf:fileExists`: the interface asks the user, then calls again with `overwrite = true`).
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn export_period_pdf(
+    state: State<AppState>,
+    account_ids: Vec<i64>,
+    from: Option<i64>,
+    to: Option<i64>,
+    include_account_name: bool,
+    tz_offset_min: i32,
+    path: String,
+    overwrite: bool,
+) -> Result<pulse_core::export_pdf::PdfExport, String> {
+    let conn = state.conn()?;
+    let opts = pulse_core::export_pdf::PdfOptions {
+        account_ids,
+        from,
+        to,
+        include_account_name,
+        generated_at: now_ms(),
+        tz_offset_min,
+    };
+    pulse_core::export_pdf::write_period_pdf(&conn, &opts, std::path::Path::new(&path), overwrite).map_err(err)
+}
+

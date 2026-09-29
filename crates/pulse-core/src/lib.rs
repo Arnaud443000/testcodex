@@ -11,6 +11,7 @@ pub mod checklist;
 pub mod db;
 pub mod error;
 pub mod export;
+pub mod export_pdf;
 pub mod instruments;
 pub mod migrations;
 pub mod missed_trades;

@@ -456,6 +456,26 @@ export const api = {
     const offs = await Promise.all([listen('pulse://locked', onLocked), listen('pulse://persist-failed', onPersistFailed)])
     return () => offs.forEach((off) => off())
   },
+  // --- Lot 23 : export PDF d'un bilan de période (simulation dans le navigateur : aucun fichier) ---
+  /** Boîte de dialogue « enregistrer sous » pour un fichier PDF. */
+  pickPdfPath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return `(dossier de démonstration)/${defaultName}`
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+  },
+  /** `overwrite = false` : un fichier existant est refusé (`pdf:fileExists`), l'interface demande alors confirmation. */
+  exportPeriodPdf: (req: PdfExportRequest, path: string, overwrite = false): Promise<PdfExport> =>
+    inTauri
+      ? invoke('export_period_pdf', {
+          accountIds: [req.accountId],
+          from: req.from,
+          to: req.to,
+          includeAccountName: req.includeAccountName,
+          tzOffsetMin: req.tzOffsetMin,
+          path,
+          overwrite,
+        })
+      : mockPdf.exportPeriodPdf(req, path, overwrite),
   isBrowserPreview: !inTauri,
 }
 
@@ -473,3 +493,6 @@ import { mockCoach } from './mockBackend'
 import type { LockStatus } from '../types/lock'
 import { mockLock } from './mockBackend'
 import { isLockedError } from './lockView'
+
+import type { PdfExport, PdfExportRequest } from '../types/pdf'
+import { mockPdf } from './mockBackend'
