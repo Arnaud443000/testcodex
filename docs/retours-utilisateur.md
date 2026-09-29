@@ -103,3 +103,13 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - **Clé API de l'IA** : créer une clé API Anthropic (facturée à l'usage, distincte de l'abonnement Claude) et faire le **vrai test** de l'analyse de screenshot (lot 20) et du coach IA (lot 21) sur un vrai Windows, avec le coffre Windows. D'ici là, tout est développé et testé avec un faux serveur ; aucun appel réel n'est fait. Ne pas demander la clé avant.
 - **Signature de l'installeur** (Smart App Control) : à envisager seulement si Pulse est distribué à d'autres personnes.
 - **Import CSV du broker** : repoussé, nécessite un vrai export du broker de l'utilisateur.
+
+## Lot 19 (moteur des insights automatiques) — points à vérifier
+- **Pas encore d'écran** : le moteur est prêt (tendances, meilleur / plus faible setup et session, suggestions) ; l'affichage viendra au lot 19 bis. Tout est calculé sur votre PC, **sans IA ni connexion**, et chaque phrase est un modèle rempli avec les chiffres de Pulse.
+- **Choix à confirmer** : tendances sur vos **20 derniers trades** (10 récents contre 10 précédents) ; le reste sur les **90 derniers jours**. Seuils : risque par trade ±20 %, discipline ±10 points, respect du plan −25 points, règle −25 points (10 coches minimum), frais +25 %, taille après une perte +20 %, au moins 2 revanches ou 2 jours de surtrading, « meilleur setup » seulement avec 10 trades par setup et 0,25 R d'écart, erreur « coûteuse » à partir de 3 trades et 10 % de vos pertes.
+- **Masquer un insight** : il ne revient que si la situation s'aggrave (palier supérieur) ou si elle n'a plus été vue depuis 14 jours (nouvel épisode).
+- Les émotions comparées sont celles déclarées **avant** d'entrer (celles d'après dépendent du résultat). Les mises en avant de session utilisent le tag de session du trade, pas l'heure.
+- **Migration v11** (historique des insights) : sauvegarde automatique avant migration comme d'habitude ; testée en Rust sur une base en mémoire avec des données existantes, **pas** sur votre vraie base. À renuméroter si une autre branche (lot 20) ajoute aussi une v11.
+- Signalé, non corrigé : le faux backend du navigateur annonce toujours une version de schéma 10 dans ses sauvegardes simulées (`mockBackend.ts`, `infoOf`) ; sans effet sur l'application réelle. Aucun bug trouvé dans les formules existantes.
+- **Non testé** : l'application installée sous Windows (commandes Tauri vérifiées par compilation seulement, `cargo check -p pulse-app`).
+

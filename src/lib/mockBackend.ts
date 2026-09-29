@@ -780,3 +780,18 @@ export const mockComparisons = {
   getRiskBenchmark: async (q: StatsQuery) => comparisons.mockRiskBenchmark(behaviorInput(q.accountIds), q),
   getExposureReport: async (q: StatsQuery) => comparisons.mockExposure(behaviorInput(q.accountIds), q),
 }
+
+// --- Lot 19 : insights automatiques (chaque compte évalué seul, comme pulse-core) ---
+import * as insights from './mockInsights'
+const insightLog = insights.createInsightLog()
+export const mockInsights = {
+  getInsights: async (accountIds: number[], tzOffsetMin: number, includeDismissed = false, now = Date.now()) => {
+    const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
+    const found = insights.sortInsights(
+      chosen.flatMap((a) => insights.mockEvaluateInsights(behaviorInput([a.id]), [...journalEntries.values()], now, tzOffsetMin)),
+    )
+    return insightLog.record(found, now, includeDismissed)
+  },
+  dismissInsight: async (insightId: string, now = Date.now()) => insightLog.dismiss(insightId, now),
+  getInsightHistory: async (accountIds: number[], limit = 100) => insightLog.history(accountIds, limit),
+}
