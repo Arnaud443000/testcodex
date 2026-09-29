@@ -183,3 +183,13 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - **Aucune migration.** Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend, PNG générés relus un par un (gain, perte, à l'équilibre, sans capture, capture large et haute, symbole très long, R hors norme, trade ouvert, textes longs, carré) ; **pas** sur un vrai Windows / WebView2.
 - Constat sans rapport avec le lot, non corrigé : un fichier `fail.png` traîne à la racine du dépôt (suivi par git, présent avant ce lot).
 
+
+## Lot 27 (calculateur de taille de position) — points à vérifier
+- Nouvelle page « Calculateur » (barre latérale) : vous choisissez le compte, l'actif, le sens, l'entrée, le stop (et un take profit si vous voulez), puis un risque en % du solde **ou** en montant. La taille est **toujours arrondie vers le bas** : le risque réel ne dépasse jamais le risque voulu. Ce n'est pas un conseil : c'est un calcul.
+- **À vérifier avec votre courtier** : le pas de taille. Aucun champ « pas de taille » n'existe sur les actifs (cela demanderait une migration, non faite) ; j'ai pris un pas courant par classe d'actif (forex, indices, matières premières : 0,01 ; crypto : 0,0001 ; actions et futures : 1). Il est modifiable dans « Réglages avancés » du calculateur, mais pas enregistré : dites-moi si vous voulez un vrai champ par actif.
+- **Limites** : le multiplicateur d'une paire cotée dans une autre devise que celle du compte (USDJPY sur compte USD) reste approximatif ; les frais, le spread et le glissement ne sont pas inclus ; le solde ne compte que les trades clôturés.
+- Si le risque voulu est trop faible pour la plus petite taille, le calculateur **refuse** et vous dit combien la taille minimale risquerait : il ne propose jamais cette taille minimale en silence.
+- Si vous avez réglé un risque max (Paramètres > Seuils de discipline), un avertissement s'affiche quand le risque réel le dépasse (égalité exacte = respecté, comme au lot 17).
+- « Utiliser dans un nouveau trade » préremplit le formulaire (actif, sens, entrée, stop, take profit, multiplicateur, taille) sans rien enregistrer ; le formulaire a aussi un lien « Calculer la taille ».
+- Le compte, l'actif et le risque sont mémorisés sur ce PC ; jamais les prix.
+- Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2, ni le presse-papiers.

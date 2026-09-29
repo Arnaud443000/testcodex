@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { AssetPicker } from '../components/AssetPicker'
 import { Icon } from '../components/Icon'
@@ -17,6 +17,7 @@ import { formatDecimal } from '../lib/format'
 import { useReferenceData } from '../lib/referenceData'
 import { buildTradeData, emptyForm, formFromTrade, toggleEmotion, type FormErrorCode, type TradeForm } from '../lib/tradeForm'
 import type { AssetClass, EmotionMoment, Instrument, Preview, TagKind } from '../types/trade'
+import { applyTradePrefill, type SizingSeed, type TradePrefill } from '../lib/sizingForm'
 
 const ASSET_CLASSES: AssetClass[] = ['forex', 'index', 'crypto', 'stock', 'commodity', 'future', 'other']
 const MOMENTS: EmotionMoment[] = ['before', 'during', 'after']
@@ -27,6 +28,8 @@ export function TradeFormPage() {
   const params = useParams()
   const editId = params.id ? Number(params.id) : null
   const [search, setSearch] = useSearchParams()
+  const location = useLocation()
+  const [prefilled, setPrefilled] = useState(false)
   const quick = search.get('mode') === 'quick'
   const { accounts, allAccounts, loading: accountsLoading, selectedId } = useAccounts()
   const ref = useReferenceData()
@@ -49,7 +52,12 @@ export function TradeFormPage() {
   useEffect(() => {
     if (ref.loading || accountsLoading || form) return
     if (editId === null) {
-      setForm(emptyForm(accounts.find((a) => a.id === selectedId)?.id ?? accounts[0]?.id ?? null, Date.now()))
+      const blank = emptyForm(accounts.find((a) => a.id === selectedId)?.id ?? accounts[0]?.id ?? null, Date.now())
+      // Lot 27 : « Utiliser dans un nouveau trade » depuis le calculateur de position (rien n'est enregistré).
+      const prefill = (location.state as { tradePrefill?: TradePrefill } | null)?.tradePrefill
+      const usable = prefill && accounts.some((a) => a.id === prefill.accountId) && ref.instruments.some((i) => i.id === prefill.instrumentId)
+      setPrefilled(!!usable)
+      setForm(usable ? applyTradePrefill(blank, prefill) : blank)
       return
     }
     api
@@ -276,6 +284,17 @@ export function TradeFormPage() {
           />
         </Field>
         <p className="text-xs text-tx3 sm:col-span-2 sm:self-end sm:pb-3">{t.form.multiplierHelp}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Link
+          to="/sizing"
+          state={{ sizingSeed: { accountId: form.accountId, instrumentId: form.instrumentId, direction: form.direction, entry: form.entryPrice, stop: form.plannedSl, takeProfit: form.plannedTp, multiplier: form.multiplier } satisfies SizingSeed }}
+          className="btn-link"
+          title={t.sizing.linkHint}
+        >
+          {t.sizing.link}
+        </Link>
+        {prefilled && <span className="text-xs text-tx-accent">{t.sizing.prefilled}</span>}
       </div>
     </StepCard>
   )

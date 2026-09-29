@@ -22,6 +22,7 @@ export const fr = {
     replay: 'Replay',
     settings: 'Paramètres',
     coach: 'Coach IA',
+    sizing: 'Calculateur',
   },
   sidebar: {
     user: 'Trader',
@@ -1546,6 +1547,8 @@ export const fr = {
   pdf: frPdf,
   // Lot 24 : carte de trade
   tradeCard: frTradeCard,
+  // Lot 27 : calculateur de taille de position
+  sizing: frSizing,
 }
 
 export type Messages = typeof fr
@@ -1555,3 +1558,4 @@ import { frCoach } from './fr.coach'
 import { frLock } from './fr.lock'
 import { frPdf } from './fr.pdf'
 import { frTradeCard } from './fr.tradeCard'
+import { frSizing } from './fr.sizing'

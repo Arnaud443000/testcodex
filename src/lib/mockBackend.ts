@@ -929,3 +929,21 @@ export const mockTradeCard = createTradeCardMock({
   getTrade: (id) => mock.getTrade(id),
   balanceAtEntry: (t) => behavior.mockRisk(behaviorInput([t.accountId]), { accountIds: [t.accountId] }).trades.find((r) => r.tradeId === t.id)?.balanceAtEntry ?? null,
 })
+// --- Lot 27 : calculateur de taille de position (miroir de pulse-core/src/sizing.rs, voir mockSizing.ts) ---
+import { balanceOf, mockSize, toMockInput } from './mockSizing'
+import type { SizingOutcome, SizingRequest } from '../types/sizing'
+export const mockSizing = {
+  calculatePositionSize: async (req: SizingRequest): Promise<SizingOutcome> => {
+    const account = accounts.find((a) => a.id === req.accountId)
+    if (!account) throw new Error(`not found: account ${req.accountId}`)
+    const instrument = instruments.find((i) => i.id === req.instrumentId)
+    if (!instrument) throw new Error(`not found: instrument ${req.instrumentId}`)
+    const input = toMockInput(req, {
+      balance: balanceOf(ledgerOf([account.id])),
+      defaultMultiplier: instrument.defaultMultiplier,
+      assetClass: instrument.assetClass,
+      maxRiskPercent: behaviorSettings.maxRiskPercent,
+    })
+    return mockSize(input, account.currency)
+  },
+}

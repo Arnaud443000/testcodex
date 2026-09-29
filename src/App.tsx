@@ -22,6 +22,7 @@ import { TradeFormPage } from './pages/TradeFormPage'
 import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CoachPage } from './pages/CoachPage'
+import { SizingPage } from './pages/SizingPage'
 import { LockProvider, useLock } from './lib/lock'
 import { LockScreen, LockSplash } from './components/LockScreen'
 import { LockWarningBanner, PersistBanner } from './components/PersistBanner'
@@ -76,6 +77,7 @@ export default function App() {
                 <Route path="/alerts" element={<AlertHistoryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/coach" element={<CoachPage />} />
+                <Route path="/sizing" element={<SizingPage />} />
               </Routes>
               </div>
             </div>

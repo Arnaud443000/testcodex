@@ -476,6 +476,9 @@ export const api = {
           overwrite,
         })
       : mockPdf.exportPeriodPdf(req, path, overwrite),
+  // --- Lot 27 : calculateur de taille de position (un refus est une donnée : `status: 'refused'` + code traduisible) ---
+  calculatePositionSize: (request: SizingRequest): Promise<SizingOutcome> =>
+    inTauri ? invoke('calculate_position_size', { request }) : mockSizing.calculatePositionSize(request),
   isBrowserPreview: !inTauri,
 
   // --- Lot 24 : carte de trade (3.7.7) ---
@@ -512,3 +515,5 @@ import type { PdfExport, PdfExportRequest } from '../types/pdf'
 import { mockPdf } from './mockBackend'
 import type { TradeCardFigures } from '../types/tradeCard'
 import { mockTradeCard } from './mockBackend'
+import type { SizingOutcome, SizingRequest } from '../types/sizing'
+import { mockSizing } from './mockBackend'

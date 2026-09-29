@@ -757,6 +757,7 @@ pub fn run() {
             rename_coach_conversation,
             delete_coach_conversation,
             delete_all_coach_conversations,
+            calculate_position_size,
             lock_cmds::get_lock_status,
             lock_cmds::unlock_database,
             lock_cmds::enable_lock,
@@ -1412,4 +1413,10 @@ fn get_trade_card_figures(state: State<AppState>, trade_id: i64) -> Result<pulse
 fn save_trade_card_image(state: State<AppState>, path: String, image: String) -> Result<usize, String> {
     let _open = state.conn()?;
     pulse_core::stats::trade_card::write_png(std::path::Path::new(&path), &image).map_err(err)
+}
+// Lot 27: position-size calculator. A refusal (stop on the wrong side…) is data, not an error.
+#[tauri::command]
+fn calculate_position_size(state: State<AppState>, request: pulse_core::sizing::SizingRequest) -> Result<pulse_core::sizing::SizingOutcome, String> {
+    let conn = state.conn()?;
+    pulse_core::sizing::calculate(&conn, &request).map_err(err)
 }

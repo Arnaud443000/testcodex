@@ -95,6 +95,7 @@ Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparai
 - [x] Lot 22 — Verrouillage par mot de passe et chiffrement de la base (3.7.13), optionnel, **désactivé par défaut** : crate `pulse-lock` (Rust pur), module `pulse-core/src/lock/`, écran de déverrouillage, Paramètres > Sécurité ; **aucune migration** ; voir « Verrouillage (lot 22) » (**Opus, élevé**)
 - [x] Lot 23 — Export PDF d'un bilan de période (3.7.3), 100 % local, généré en Rust (`pulse-core/src/export_pdf/`, polices Inter embarquées), **aucune migration** ; voir « Export PDF (lot 23) » (**Sonnet, moyen**)
 
+- [x] Lot 27 — Calculateur de taille de position (« position sizing »), 100 % local, sans réseau : `pulse-core/src/sizing.rs` (Decimal, taille arrondie vers le bas au pas de l'actif, refus à codes traduisibles), commande `calculate_position_size`, page « Calculateur » (`/sizing`), passerelles avec le formulaire de trade ; **aucune migration** ; voir « Calculateur de position (lot 27) » (**Sonnet, moyen**)
 
 - [x] Lot 24 — Carte de trade partageable (3.7.7) : image PNG de synthèse d'un trade, 100 % locale, **vie privée par défaut** (ni capital, ni solde, ni compte, ni courtier, ni montant en argent). `pulse-core/src/stats/trade_card.rs` (R, rendement en %, P&L net sur demande, écriture du PNG), commandes `get_trade_card_figures` / `save_trade_card_image`, dessin par canvas dans l'interface (`lib/tradeCard.ts`, `lib/tradeCardRender.ts`, `components/TradeCardDialog.tsx`), bouton « Créer une carte » du détail d'un trade ; **aucune migration** ; voir « Carte de trade (lot 24) » (**Sonnet, moyen**)
 
@@ -830,3 +831,61 @@ Cahier 3.7.7 : une image de synthèse d'un trade destinée au partage, **génér
 - **Presse-papiers** : vérifié dans Chromium avec et sans permission ; **pas dans WebView2** (l'autorisation d'écrire une image dans le presse-papiers y est incertaine : le message de repli est prévu pour ce cas).
 - **`get_trade_card_figures` sur la vraie base** : testé sur des bases de test (journal à résultat connu, dépôt, trade ouvert, trade inconnu), jamais sur celle de l'utilisateur ; le faux backend ne fait pas foi pour le pourcentage (voir plus haut).
 - `cargo check -p pulse-app` passe ; la coque n'a pas été lancée.
+
+
+## Calculateur de position (lot 27) — interprétation
+
+Code : `crates/pulse-core/src/sizing.rs` (module pur, `Decimal` partout, aucun flottant sauf le ratio gain / risque qui est un ratio sans unité). Point d'entrée pur : `sizing::size(&SizingInput)` ; enveloppe SQLite : `sizing::calculate(conn, &SizingRequest)`. Commande Tauri : `calculate_position_size`. **Aucune migration.** C'est un **calcul**, jamais une recommandation : ni la taille ni le risque choisi ne sont conseillés, l'interface le dit.
+
+### Formule
+
+- **Solde de référence** = solde réel du compte **maintenant** (comme le lot 8) : capital initial + dépôts / retraits + PnL nets des trades clôturés (`stats::replay(...).final_balance`). Les trades ouverts n'y comptent pas, les frais non plus (voir limites).
+- **Risque voulu** : au choix un **pourcentage du solde** (`1.5` = 1,5 %, `> 0` et `≤ 100`, solde > 0 obligatoire) ou un **montant** (devise du compte, `> 0`). `risque voulu = % × solde / 100` en mode pourcentage.
+- **Risque par unité de taille** = `|entrée − stop| × multiplicateur` (le multiplicateur est celui de l'instrument, modifiable dans le calculateur ; même sens que « Argent, prix et temps »).
+- **Taille brute** = `risque voulu / risque par unité`.
+- **Taille retenue** = taille brute arrondie **vers le bas** au pas de taille (`floor(brute / pas) × pas`). Jamais vers le haut : le risque réel ne dépasse jamais le risque voulu. Garde-fou : si, malgré l'arrondi de la division (28 chiffres), le risque réel dépassait le risque voulu, on retire un pas.
+- **Risque réel** = `taille retenue × risque par unité` (exact) ; en % du solde = risque réel / solde × 100 (arrondi à 4 décimales à l'**affichage** de la sortie seulement ; la comparaison à la limite se fait sur les valeurs exactes) ; **écart** = risque voulu − risque réel (≥ 0, dû au seul arrondi).
+- **Take profit** (optionnel) : bon côté (au-dessus de l'entrée pour un long, en dessous pour un short) → gain potentiel = `taille retenue × |TP − entrée| × multiplicateur` et ratio gain / risque = `|TP − entrée| / |entrée − stop|` (même fonction que le reste de l'application, `pnl::planned_reward_risk`). **TP du mauvais côté ou égal à l'entrée : pas de ratio** (comme ailleurs), le résultat porte `takeProfitWrongSide = true` et l'interface l'écrit ; ce n'est pas un refus (le calcul de taille n'en dépend pas).
+- **Limite de risque max** (`behavior.max_risk_percent`, lot 8) : si elle est réglée et que le solde est > 0, `dépasse = risque réel × 100 > limite × solde`, **comparaison exacte en `Decimal`** (`risk::within_limit`, comme le lot 17) ; **égalité = respecté**. La limite en argent est renvoyée. Sans limite ou sans solde > 0 : pas de contrôle (jamais un avertissement « par défaut »). Le calcul reste fourni : c'est un avertissement, pas un refus.
+
+### Pas de taille (aucune migration : décision)
+
+Aucune colonne « pas de taille » n'existe sur `instruments` : ajouter un champ demanderait une migration (et toucher au catalogue de 106 actifs), donc **non fait** ; à décider avec l'utilisateur. À la place : un **pas par défaut par classe d'actif**, **modifiable dans le calculateur** (champ « Pas de taille » pré-rempli, jamais enregistré dans l'instrument) :
+
+| Classe | Pas par défaut | Raison |
+|---|---|---|
+| Forex (`forex`) | `0.01` | micro-lot sur un multiplicateur de 100 000 |
+| Indice (`index`) | `0.01` | CFD d'indice, taille en contrats |
+| Matière première (`commodity`) | `0.01` | CFD, taille en lots |
+| Crypto (`crypto`) | `0.0001` | ≈ quelques dollars pour un BTC ; beaucoup de courtiers exigent bien plus gros : à ajuster |
+| Action (`stock`) | `1` | actions entières |
+| Future (`future`) | `1` | contrats entiers |
+| Autre (`other`) | `0.01` | par prudence |
+
+Ces pas sont des valeurs **courantes, à vérifier auprès du courtier** (le minimum et le pas réels varient d'un courtier à l'autre) ; le résultat indique quel pas a servi et s'il est celui par défaut (`sizeStepIsDefault`).
+
+### Refus (codes d'erreur traduisibles)
+
+Le résultat est une donnée : `{status: "ok", …}` ou `{status: "refused", code, detail}` (pas d'exception : ce sont des saisies invalides). Les erreurs de base de données restent des erreurs de commande. Codes : `priceNotPositive` (entrée, stop ou TP ≤ 0), `stopEqualsEntry`, `stopWrongSide` (stop au-dessus de l'entrée pour un long, en dessous pour un short), `riskNotPositive` (risque ≤ 0), `riskPercentTooHigh` (> 100 %), `balanceNotPositive` (solde ≤ 0 en mode pourcentage), `multiplierNotPositive`, `stepNotPositive`, `sizeZero` (**le risque voulu est trop faible pour le pas minimum** ; `detail` = le risque qu'aurait la taille minimum, pour l'expliquer ; on ne propose jamais la taille minimum en silence), `overflow` (débordement de calcul, jamais un plantage). Ordre de contrôle : prix, sens du stop, risque, solde, multiplicateur, pas, taille.
+
+### Limites connues
+
+- **Multiplicateur approximatif** pour une paire dont la devise de cotation n'est pas celle du compte (USDJPY sur compte USD) : le multiplicateur saisi est une approximation (voir « Argent, prix et temps »), donc le risque réel aussi.
+- **Frais, spread et slippage non inclus** : la taille est calculée sur la distance au stop seule ; un stop touché coûtera un peu plus que le risque affiché.
+- Le solde ne tient pas compte des trades ouverts (PnL latent) ni d'un dépôt / retrait futur.
+- Pas de conversion de devise : le montant de risque est dans la devise du compte.
+- Pas de marge, effet de levier ni taille maximale du courtier : rien n'est vérifié contre ce que le courtier autorise.
+
+### Interface et code (lot 27)
+
+- **Rust** : `crates/pulse-core/src/sizing.rs` + `sizing/tests.rs` (17 tests : forex EURUSD, indice avec take profit, crypto à 8 décimales, short, % et montant qui donnent la même taille, arrondi vers le bas — risque réel strictement inférieur —, taille nulle, dépassement de limite, égalité exacte à la limite, arrondi qui « sauve » la limite, stop du mauvais côté, solde nul / négatif, très grands nombres, solde lu en base : capital + dépôt + PnL net des trades clôturés, trade ouvert ignoré). Commande `calculate_position_size` (fin de `src-tauri/src/lib.rs`). `Refusal` porte le code ; le résultat est `SizingOutcome` (`status: "ok" | "refused"`).
+- **TypeScript** : types `src/types/sizing.ts` ; `api.calculatePositionSize` (bloc « Lot 27 » en fin d'objet) ; faux backend `src/lib/mockSizing.ts` (BigInt exact, échelle 30 chiffres) + `mockSizing` en fin de `mockBackend.ts`, vérifié par `mockSizing.test.ts` sur les **mêmes cas** que Rust. Formulaire, contrôles de forme, mémoire et passerelles : `src/lib/sizingForm.ts` (testé). Textes : `src/i18n/fr.sizing.ts` (clé `sizing` de `fr`, plus `nav.sizing`).
+- **Interface** : `pages/SizingPage.tsx` (`/sizing`, entrée « Calculateur » de la barre latérale). Le calcul est demandé à pulse-core dès que la saisie est prête (250 ms de délai de frappe) : l'interface ne calcule **rien**, elle formate. Grande taille, risque réel, avertissements en texte **et** icône (« Attention : … »), détail du calcul, refus en encadré rouge avec le code (`data-code`). Compte, actif, mode et valeur du risque mémorisés dans `localStorage` (`pulse.sizing.v1`, jamais un prix). « Copier la taille » copie la chaîne exacte avec un point (`0.20`). « Utiliser dans un nouveau trade » ouvre `/trades/new` avec un état de navigation `tradePrefill` (compte, actif, sens, entrée, stop, TP, multiplicateur, taille) : **rien n'est enregistré**. Dans le formulaire de trade : lien « Calculer la taille » (état `sizingSeed`), seule modification de `TradeFormPage.tsx` (plus la lecture de `tradePrefill` à l'initialisation).
+- Captures : `docs/captures/lot27-*.png` (1440×900 et 1920×1080 : aucun compte, saisie incomplète, résultat, arrondi, dépassement de limite, taille nulle, stop du mauvais côté, saisie illisible, formulaire prérempli).
+
+### Non testé (lot 27)
+
+- Rendu sur un vrai Windows / WebView2 ; bouton « Copier la taille » (presse-papiers de WebView2) ; commande Tauri appelée pour de vrai (seulement `cargo check -p pulse-app` et le faux backend).
+- Les pas de taille par défaut ne sont **pas** ceux d'un courtier précis : à vérifier.
+- Le faux backend arrondit la division à l'échelle exacte (jamais d'écart d'arrondi) ; Rust, lui, retire un pas si sa division à 28 chiffres arrondissait vers le haut : cas non atteignable par un test à la main.
+- Signalé, non corrigé : dans le sélecteur d'actif (`AssetPicker`), le symbole et le nom complet se chevauchent visuellement quand la liste vient d'être ouverte puis fermée (visible aussi dans le formulaire de trade, hors périmètre du lot).
