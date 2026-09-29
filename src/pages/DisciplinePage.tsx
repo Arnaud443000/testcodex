@@ -148,7 +148,7 @@ export function DisciplinePage() {
       </Card>
 
       <Card title={d.perDay} span="xl:col-span-8">
-        <p className="mb-5 text-[13px] text-tx2">{d.perDayIntro}</p>
+        <p className="mb-5 text-[13px] text-tx2">{d.perDayIntro} {d.thresholdLine(report.quadrants.threshold)}</p>
         {report.days.length === 0 ? (
           <EmptyLine>{d.noTradesText}</EmptyLine>
         ) : (

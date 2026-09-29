@@ -27,9 +27,7 @@ export function DayBars({
             className="pointer-events-none absolute left-0 right-0 border-t border-dashed"
             style={{ bottom: `${threshold}%`, borderColor: 'rgba(167,157,242,.55)' }}
             aria-hidden="true"
-          >
-            <span className="absolute -top-4 right-0 text-[11px] text-tx3">{t.threshold(threshold)}</span>
-          </div>
+          />
           {days.map((d) => {
             const active = d.day === selected
             const phrase = d.score === null ? t.dayNoScore : t.dayScoreOf(formatScore(d.score))
@@ -41,7 +39,7 @@ export function DayBars({
                 aria-label={t.dayBarLabel(d.day, phrase, d.tradeCount)}
                 title={t.dayBarLabel(formatDayShort(d.day), phrase, d.tradeCount)}
                 onClick={() => onSelect(active ? null : d.day)}
-                className="group flex h-full min-w-[8px] flex-1 items-end justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-violet"
+                className="group flex h-full min-w-[8px] max-w-[64px] flex-1 items-end justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-violet"
               >
                 <span
                   className="block w-full rounded-t-[4px] transition group-hover:opacity-100"
@@ -58,7 +56,7 @@ export function DayBars({
         </div>
         <div className="mt-1.5 flex gap-1 text-[11px] tabular-nums text-tx3" aria-hidden="true">
           {days.map((d, i) => (
-            <span key={d.day} className="min-w-[8px] flex-1 overflow-visible whitespace-nowrap text-center">
+            <span key={d.day} className="min-w-[8px] max-w-[64px] flex-1 overflow-visible whitespace-nowrap text-center">
               {i % axisEvery === 0 ? formatDayShort(d.day) : ''}
             </span>
           ))}

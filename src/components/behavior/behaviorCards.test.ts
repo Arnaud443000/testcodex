@@ -115,7 +115,6 @@ describe('page Discipline', () => {
     expect(out).toContain('2026-09-28 : score 82 sur 100, 2 trades')
     expect(out).toContain('2026-09-29 : sans score, 1 trade')
     expect(out).toContain('aria-pressed="true"')
-    expect(out).toContain('Seuil « bien exécuté » : 70')
     expect(out).toContain('height:82.4%')
     expect(out).toContain('height:3px')
   })
