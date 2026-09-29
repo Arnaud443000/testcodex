@@ -2967,6 +2967,7 @@ dependencies = [
 name = "pulse-core"
 version = "0.1.0"
 dependencies = [
+ "pulse-lock",
  "rusqlite",
  "rust_decimal",
  "serde",
