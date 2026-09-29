@@ -15,11 +15,14 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 const mockAccounts: Account[] = []
 
 const mock = {
-  appInfo: async (): Promise<AppInfo> => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 1 }),
+  appInfo: async (): Promise<AppInfo> => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
   listAccounts: async (): Promise<Account[]> => [...mockAccounts],
   createAccount: async (a: NewAccount): Promise<Account> => {
     if (!a.name.trim()) throw new Error('invalid input: account name is required')
-    const acc = { ...a, name: a.name.trim(), id: mockAccounts.length + 1 }
+    if (!/^\d+(\.\d+)?$/.test(a.initialCapital.trim())) {
+      throw new Error(`invalid input: initial capital is not a valid number: "${a.initialCapital}"`)
+    }
+    const acc = { ...a, name: a.name.trim(), initialCapital: a.initialCapital.trim(), id: mockAccounts.length + 1 }
     mockAccounts.push(acc)
     return acc
   },

@@ -1,3 +1,5 @@
+import type { Decimal } from './money'
+
 export type AccountKind = 'personal' | 'prop' | 'demo'
 
 export interface Account {
@@ -6,7 +8,7 @@ export interface Account {
   kind: AccountKind
   broker: string
   currency: string
-  initialCapital: number
+  initialCapital: Decimal
 }
 
 export type NewAccount = Omit<Account, 'id'>

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
+import { formatDecimal } from '../lib/format'
 import type { AccountKind, AppInfo } from '../types/account'
 
 const KIND_LABEL: Record<AccountKind, string> = { personal: 'Personal', prop: 'Prop firm', demo: 'Demo' }
@@ -21,7 +22,7 @@ function AccountForm() {
     setError(null)
     setBusy(true)
     try {
-      await create({ name, kind, broker, currency, initialCapital: Number(capital) || 0 })
+      await create({ name, kind, broker, currency, initialCapital: capital.trim() || '0' })
       setName('')
       setBroker('')
       setCapital('')
@@ -88,7 +89,7 @@ export function SettingsPage() {
               <li key={a.id} className="flex items-center justify-between py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
                 <span className="font-medium">{a.name}</span>
                 <span className="text-tx2">
-                  {KIND_LABEL[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {a.initialCapital.toLocaleString('en-US')} {a.currency}
+                  {KIND_LABEL[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
                 </span>
               </li>
             ))}
