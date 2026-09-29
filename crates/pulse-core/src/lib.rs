@@ -36,6 +36,8 @@ pub mod alerts;
 
 // Lot 13.
 pub mod dashboards;
+// Lot 19.
+pub mod insights;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

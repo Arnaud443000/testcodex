@@ -122,8 +122,8 @@ pub struct Alert {
 }
 
 /// The ledger as it stood at `now`: later trades and flows do not exist yet,
-/// and a trade closed after `now` is still open.
-fn as_of(ledger: &Ledger, now: i64) -> Ledger {
+/// and a trade closed after `now` is still open. Also used by the insights (lot 19).
+pub(crate) fn as_of(ledger: &Ledger, now: i64) -> Ledger {
     let mut l = ledger.clone();
     l.trades.retain(|t| t.entry_time <= now);
     for t in &mut l.trades {

@@ -351,6 +351,26 @@ pub const MIGRATIONS: &[&str] = &[
     // `scope_account_id` (the dashboard is kept and reads the top bar again); `dashboards::resolve_scope` tells so.
     "ALTER TABLE dashboards ADD COLUMN scope TEXT NOT NULL DEFAULT 'follow' CHECK (scope IN ('follow','account','all'));
     ALTER TABLE dashboards ADD COLUMN scope_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;",
+    // v11 — automatic insights (spec 3.5): log of every insight shown, and of the ones the trader dismissed.
+    // An event log, not a cache: insights are always recomputed. `situation` = what it is about, `level` =
+    // coarse gravity, `episode` = a new one when the situation was not seen for 14 days (see `insights::log`).
+    // `payload` is the insight as first shown (JSON); deleting an account removes its history.
+    "CREATE TABLE insight_log (
+        insight_id    TEXT PRIMARY KEY CHECK (length(insight_id) > 0),
+        account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        situation     TEXT NOT NULL CHECK (length(situation) > 0),
+        level         INTEGER NOT NULL CHECK (level >= 0),
+        episode       INTEGER NOT NULL CHECK (episode >= 1),
+        kind          TEXT NOT NULL CHECK (length(kind) > 0),
+        category      TEXT NOT NULL CHECK (category IN ('trend','suggestion','highlight')),
+        priority      TEXT NOT NULL CHECK (priority IN ('high','medium','low')),
+        payload       TEXT NOT NULL,
+        first_seen_at INTEGER NOT NULL,
+        last_seen_at  INTEGER NOT NULL,
+        dismissed_at  INTEGER
+    );
+    CREATE INDEX insight_log_by_situation ON insight_log (situation, episode);
+    CREATE INDEX insight_log_by_account ON insight_log (account_id, first_seen_at);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -804,5 +824,50 @@ mod tests {
         let (scope, acc): (String, Option<i64>) =
             conn.query_row("SELECT scope, scope_account_id FROM dashboards WHERE id = 1", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!((scope.as_str(), acc), ("account", None), "the dashboard survives its account");
+    }
+
+    #[test]
+    fn v11_adds_the_insight_log_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 10).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let trade = trades::create(&conn, &trades::TradeData::new(a, eu, trades::Direction::Long, 1.into(), 1.into(), 0)).unwrap();
+        conn.execute("INSERT INTO alert_log (alert_id, account_id, kind, severity, payload, first_seen_at) VALUES ('x:1:1', ?1, 'x', 'warning', '{}', 0)", [a])
+            .unwrap();
+        conn.execute("INSERT INTO dashboards (name, scope, scope_account_id) VALUES ('Prop', 'account', ?1)", [a]).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+
+        migrate_to(&mut conn, 11).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 11);
+        // Existing data untouched.
+        assert_eq!(trades::get(&conn, trade.id).unwrap().data.account_id, a);
+        let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(count("SELECT COUNT(*) FROM alert_log"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM dashboards WHERE scope = 'account'"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM settings WHERE key = 'behavior.max_trades_per_day'"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM insight_log"), 0, "the history starts empty");
+
+        // Guards written straight to the schema.
+        let insert = |id: &str, account: i64, level: i64, episode: i64, category: &str, priority: &str| {
+            conn.execute(
+                "INSERT INTO insight_log (insight_id, account_id, situation, level, episode, kind, category, priority, payload, first_seen_at, last_seen_at)
+                 VALUES (?1, ?2, 'k:1:s', ?3, ?4, 'k', ?5, ?6, '{}', 0, 0)",
+                rusqlite::params![id, account, level, episode, category, priority],
+            )
+        };
+        assert!(insert("k:1:s:0#1", a, 0, 1, "trend", "high").is_ok());
+        assert!(insert("k:1:s:0#1", a, 0, 1, "trend", "high").is_err(), "one line per identity");
+        assert!(insert("k:1:s:1#1", a, -1, 1, "trend", "high").is_err());
+        assert!(insert("k:1:s:1#0", a, 1, 0, "trend", "high").is_err());
+        assert!(insert("k:1:s:2#1", a, 2, 1, "news", "high").is_err());
+        assert!(insert("k:1:s:3#1", a, 3, 1, "trend", "urgent").is_err());
+        assert!(insert("", a, 4, 1, "trend", "high").is_err());
+        assert!(insert("k:9:s:0#1", 999, 0, 1, "trend", "high").is_err(), "unknown account");
+        // Deleting the account removes its insight history.
+        conn.execute("DELETE FROM trades", []).unwrap();
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM insight_log"), 0);
     }
 }
