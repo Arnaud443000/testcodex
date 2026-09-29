@@ -42,6 +42,8 @@ pub mod insights;
 pub mod ai;
 // Lot 21 (coach IA : outils locaux, historique ; sans réseau ici).
 pub mod coach;
+// Lot 22 (verrouillage optionnel par mot de passe, chiffrement de la base et des captures).
+pub mod lock;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

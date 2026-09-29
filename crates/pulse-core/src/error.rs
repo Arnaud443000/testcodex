@@ -12,6 +12,9 @@ pub enum CoreError {
     NotFound(String),
     #[error("database is from a newer version of Pulse (schema {found}, supported {supported})")]
     SchemaTooNew { found: u32, supported: u32 },
+    /// Password lock (lot 22): displayed as its translatable code `lock:<code>`.
+    #[error("{0}")]
+    Lock(#[from] pulse_lock::LockError),
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;

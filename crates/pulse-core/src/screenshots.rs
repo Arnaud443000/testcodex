@@ -40,7 +40,12 @@ pub fn save_base64(data_dir: &Path, base64: &str) -> Result<String> {
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
     let name = format!("shot-{nanos}-{}.{ext}", COUNTER.fetch_add(1, Ordering::Relaxed));
     fs::create_dir_all(data_dir.join(DIR)).map_err(io)?;
-    fs::write(data_dir.join(DIR).join(&name), bytes).map_err(io)?;
+    // Lot 22: in an encrypted data folder, the file is written encrypted (never in plaintext).
+    let stored = match crate::lock::current_keys(data_dir) {
+        Some(keys) => pulse_lock::envelope::seal_blob(keys.data_key(), &bytes)?,
+        None => bytes,
+    };
+    fs::write(data_dir.join(DIR).join(&name), stored).map_err(io)?;
     Ok(format!("{DIR}/{name}"))
 }
 
@@ -60,10 +65,15 @@ pub fn read_image(data_dir: &Path, rel: &str) -> Result<(Vec<u8>, &'static str)>
     if !safe {
         return invalid("invalid screenshot path");
     }
-    let bytes = fs::read(data_dir.join(DIR).join(name)).map_err(|e| match e.kind() {
+    let mut bytes = fs::read(data_dir.join(DIR).join(name)).map_err(|e| match e.kind() {
         std::io::ErrorKind::NotFound => CoreError::NotFound(format!("screenshot {rel}")),
         _ => io(e),
     })?;
+    // Lot 22: an encrypted screenshot is readable only while its database is unlocked.
+    if pulse_lock::FileKind::of(&bytes) == pulse_lock::FileKind::EncryptedBlob {
+        let keys = crate::lock::current_keys(data_dir).ok_or(pulse_lock::LockError::Locked)?;
+        bytes = pulse_lock::envelope::open_blob(keys.data_key(), &bytes)?.to_vec();
+    }
     let mime = FORMATS
         .iter()
         .find(|(_, _, magic)| bytes.starts_with(magic))

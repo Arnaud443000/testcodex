@@ -33,6 +33,9 @@ pub enum LockError {
     /// The encrypted file could not be written; the data is still in memory.
     #[error("lock:persistFailed")]
     PersistFailed,
+    /// A copy written during activation or deactivation did not read back identical: nothing was switched.
+    #[error("lock:verifyFailed")]
+    VerifyFailed,
     /// Both `pulse.db` and `pulse.db.enc` exist and no operation explains it.
     #[error("lock:inconsistentFiles")]
     InconsistentFiles,
