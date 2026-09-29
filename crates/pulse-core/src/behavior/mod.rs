@@ -11,6 +11,9 @@ mod analysis;
 mod discipline;
 mod mistakes;
 mod patterns;
+mod factors;
+mod sequences;
+mod simulation;
 
 pub use analysis::{
     EmotionReport, FirstTradeReport, PlanReport, RankGroup, Streak, StreakReport, emotion_report, emotions, first_trade,
@@ -25,6 +28,15 @@ pub use discipline::{
     Component, ComponentKey, ComponentSummary, DayDiscipline, DisciplineReport, MIN_SCORED_TRADES, Quadrant, Quadrants,
     TradeDiscipline, WELL_EXECUTED_SCORE, WEIGHTS, discipline, discipline_report, score, trade_discipline,
 };
+pub use factors::{
+    Comparison, DISCIPLINE_GAP, EXPECTANCY_GAP_R, ExternalFactorReport, FACTORS, FactorKey, FactorReport, FactorSide, MIN_FACTOR_DAYS,
+    MIN_R_TRADES, Verdict, external_factor_report, external_factors,
+};
+pub use sequences::{
+    AfterLossesReport, MIN_SEQUENCE_TRADES, MIN_SIZE_CASES, SequenceGroup, SizeChangeCase, SizeChangeGroup, SizeChangeReport, after_losses,
+    after_losses_report, size_change, size_change_report,
+};
+pub use simulation::{PlanSimulation, Scenario, SimulatedResult, plan_simulation, plan_simulation_report};
 
 use crate::error::Result;
 use crate::money::Decimal;
@@ -102,10 +114,16 @@ impl<'a> Context<'a> {
     }
 
     /// The last trade of the same account closed at or before `t`'s entry.
-    fn previous(&self, t: &TradeFacts) -> Option<&Closed<'a>> {
-        let list = self.by_account.get(&t.account_id)?;
+    fn previous<'s>(&'s self, t: &'s TradeFacts) -> Option<&'s Closed<'a>> {
+        self.history(t).next()
+    }
+
+    /// The trades of `t`'s account closed at or before its entry, most recent
+    /// first (exit order, ties: id); `t` itself never counts.
+    fn history<'s>(&'s self, t: &'s TradeFacts) -> impl Iterator<Item = &'s Closed<'a>> + 's {
+        let list = self.by_account.get(&t.account_id).map(Vec::as_slice).unwrap_or_default();
         let n = list.partition_point(|&i| self.replay.closed[i].exit_time <= t.entry_time);
-        list[..n].iter().rev().map(|&i| &self.replay.closed[i]).find(|c| c.facts.id != t.id)
+        list[..n].iter().rev().map(|&i| &self.replay.closed[i]).filter(move |c| c.facts.id != t.id)
     }
 
     pub fn revenge(&self, t: &TradeFacts) -> Result<Option<Revenge>> {
@@ -114,14 +132,7 @@ impl<'a> Context<'a> {
         if p.figures.outcome != Outcome::Loss || gap_ms > i64::from(self.settings.revenge_window_min) * 60_000 {
             return Ok(None);
         }
-        let (basis, mine, theirs) = match (risk::initial_risk(t)?, p.figures.initial_risk) {
-            (Some(mine), Some(theirs)) => (ExposureBasis::Risk, mine, theirs),
-            _ if t.instrument_id == p.facts.instrument_id => {
-                let size = |f: &TradeFacts| checked(f.position.size.checked_mul(f.position.multiplier));
-                (ExposureBasis::Size, size(t)?, size(p.facts)?)
-            }
-            _ => return Ok(None),
-        };
+        let Some((basis, mine, theirs)) = exposures(t, p)? else { return Ok(None) };
         if mine < checked(theirs.checked_mul(self.settings.revenge_size_factor))? {
             return Ok(None);
         }
@@ -129,8 +140,25 @@ impl<'a> Context<'a> {
     }
 }
 
+/// Exposures of `t` and of the earlier trade `p`, on a common basis: initial
+/// risk when both have a planned stop, else size × multiplier on the same
+/// instrument; `None` when they cannot be compared.
+pub(crate) fn exposures(t: &TradeFacts, p: &Closed) -> Result<Option<(ExposureBasis, Decimal, Decimal)>> {
+    Ok(Some(match (risk::initial_risk(t)?, p.figures.initial_risk) {
+        (Some(mine), Some(theirs)) => (ExposureBasis::Risk, mine, theirs),
+        _ if t.instrument_id == p.facts.instrument_id => {
+            let size = |f: &TradeFacts| checked(f.position.size.checked_mul(f.position.multiplier));
+            (ExposureBasis::Size, size(t)?, size(p.facts)?)
+        }
+        _ => return Ok(None),
+    }))
+}
+
 #[cfg(test)]
 mod tests;
 
 #[cfg(test)]
 mod analysis_tests;
+
+#[cfg(test)]
+mod more_tests;

@@ -51,6 +51,8 @@ import type {
 import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
 import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
 import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
+import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
+import { mockBehaviorExtra } from './mockBackend'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
@@ -245,5 +247,19 @@ export const api = {
   listReplay: (filter?: ReplayFilter): Promise<ReplayItem[]> =>
     inTauri ? invoke('list_replay', { filter: filter ?? null }) : mockGoalsReplay.listReplay(filter),
   getReplayCard: (id: number): Promise<ReplayCard> => (inTauri ? invoke('get_replay_card', { id }) : mockGoalsReplay.getReplayCard(id)),
+
+  // --- Lot 8 bis : compléments de l'analyse comportementale (aucune causalité affirmée) ---
+  /** Facteurs du journal quotidien (sommeil, fatigue, heure tardive, humeur) : jours avec / sans. */
+  getExternalFactors: (query: StatsQuery): Promise<ExternalFactorReport> =>
+    inTauri ? invoke('get_external_factors', { query }) : mockBehaviorExtra.getExternalFactors(query),
+  /** Trades entrés après deux pertes consécutives du même compte, comparés aux autres. */
+  getAfterLosses: (query: StatsQuery): Promise<AfterLossesReport> =>
+    inTauri ? invoke('get_after_losses', { query }) : mockBehaviorExtra.getAfterLosses(query),
+  /** Variation d'exposition par rapport au trade précédent, selon son résultat. */
+  getSizeChange: (query: StatsQuery): Promise<SizeChangeReport> =>
+    inTauri ? invoke('get_size_change', { query }) : mockBehaviorExtra.getSizeChange(query),
+  /** Simulation sans les trades hors plan : à étiqueter comme une simulation, jamais un conseil. */
+  getPlanSimulation: (query: StatsQuery): Promise<PlanSimulation> =>
+    inTauri ? invoke('get_plan_simulation', { query }) : mockBehaviorExtra.getPlanSimulation(query),
 }
 

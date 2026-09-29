@@ -675,3 +675,11 @@ export const mockGoalsReplay = {
     return { trade: v, levels: mockLadder(v) }
   },
 }
+
+// --- Lot 8 bis : compléments de l'analyse comportementale ---
+export const mockBehaviorExtra = {
+  getExternalFactors: async (q: StatsQuery) => behavior.mockExternalFactors(behaviorInput(q.accountIds), q, [...journalEntries.values()]),
+  getAfterLosses: async (q: StatsQuery) => behavior.mockAfterLosses(behaviorInput(q.accountIds), q),
+  getSizeChange: async (q: StatsQuery) => behavior.mockSizeChange(behaviorInput(q.accountIds), q),
+  getPlanSimulation: async (q: StatsQuery) => behavior.mockPlanSimulation(behaviorInput(q.accountIds), q),
+}
