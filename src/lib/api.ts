@@ -456,6 +456,9 @@ export const api = {
     const offs = await Promise.all([listen('pulse://locked', onLocked), listen('pulse://persist-failed', onPersistFailed)])
     return () => offs.forEach((off) => off())
   },
+  // --- Lot 27 : calculateur de taille de position (un refus est une donnée : `status: 'refused'` + code traduisible) ---
+  calculatePositionSize: (request: SizingRequest): Promise<SizingOutcome> =>
+    inTauri ? invoke('calculate_position_size', { request }) : mockSizing.calculatePositionSize(request),
   isBrowserPreview: !inTauri,
 }
 
@@ -473,3 +476,6 @@ import { mockCoach } from './mockBackend'
 import type { LockStatus } from '../types/lock'
 import { mockLock } from './mockBackend'
 import { isLockedError } from './lockView'
+
+import type { SizingOutcome, SizingRequest } from '../types/sizing'
+import { mockSizing } from './mockBackend'
