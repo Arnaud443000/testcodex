@@ -98,11 +98,7 @@ impl<'a> Context<'a> {
     /// Real balance of the trade's account at its entry; the trade's own PnL
     /// never counts, even when it closed at the instant it opened.
     pub fn balance_at_entry(&self, t: &TradeFacts) -> Result<Decimal> {
-        let balance = self.balances.at_entry(t);
-        match self.closed(t.id) {
-            Some(c) if c.exit_time <= t.entry_time => checked(balance.checked_sub(c.figures.net_pnl)),
-            _ => Ok(balance),
-        }
+        self.balances.at_entry(t, self.closed(t.id))
     }
 
     /// The last trade of the same account closed at or before `t`'s entry.

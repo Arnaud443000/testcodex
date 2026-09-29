@@ -4,10 +4,14 @@
 //! where that balance = initial capital + deposits/withdrawals dated at or
 //! before the entry + net PnL of the trades closed at or before the entry.
 
+use super::distribution::median;
 use super::pnl::{self, checked};
-use super::{Closed, Ledger, TradeFacts};
+use super::{Closed, Ledger, StatsQuery, TradeFacts, load, replay};
 use crate::error::Result;
 use crate::money::Decimal;
+use crate::settings::{self, BehaviorSettings};
+use rusqlite::Connection;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Balance of each account over time.
@@ -55,8 +59,15 @@ impl Balances {
         }
     }
 
-    pub fn at_entry(&self, t: &TradeFacts) -> Decimal {
-        self.at(t.account_id, t.entry_time)
+    /// Balance of the trade's account at its entry. `own` is the trade's
+    /// closed record, if any: its PnL never counts, even when it closed at the
+    /// instant it opened.
+    pub fn at_entry(&self, t: &TradeFacts, own: Option<&Closed>) -> Result<Decimal> {
+        let balance = self.at(t.account_id, t.entry_time);
+        match own {
+            Some(c) if c.exit_time <= t.entry_time => checked(balance.checked_sub(c.figures.net_pnl)),
+            _ => Ok(balance),
+        }
     }
 }
 
@@ -84,6 +95,82 @@ pub(crate) fn within_limit(risk: Option<Decimal>, balance: Decimal, max_percent:
     let lhs = checked(risk.checked_mul(Decimal::ONE_HUNDRED))?;
     let rhs = checked(max.checked_mul(balance))?;
     Ok(Some(lhs <= rhs))
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeRisk {
+    pub trade_id: i64,
+    pub entry_time: i64,
+    pub exit_time: i64,
+    /// `None` without a valid planned stop.
+    pub initial_risk: Option<Decimal>,
+    pub balance_at_entry: Decimal,
+    /// Initial risk / balance at entry (0.01 = 1 %).
+    pub risk_pct: Option<f64>,
+    /// `None` without a limit, a stop, or a positive balance.
+    pub within_limit: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RiskReport {
+    /// Closed trades of the period, in exit order.
+    pub trades: Vec<TradeRisk>,
+    pub trade_count: usize,
+    pub without_stop_count: usize,
+    pub avg_risk_pct: Option<f64>,
+    pub median_risk_pct: Option<f64>,
+    pub max_risk_pct: Option<f64>,
+    /// The user's limit, in percent (1.5 = 1.5 %).
+    pub max_risk_percent: Option<Decimal>,
+    /// Trades over the limit; `None` without a limit.
+    pub over_limit_count: Option<usize>,
+    /// Initial capital + flows + realized PnL of the selected accounts, now.
+    pub current_capital: Decimal,
+    /// The limit in money at the current capital.
+    pub limit_amount: Option<Decimal>,
+}
+
+pub fn risk(ledger: &Ledger, query: &StatsQuery, settings: &BehaviorSettings) -> Result<RiskReport> {
+    let r = replay(ledger)?;
+    let balances = Balances::new(ledger, &r.closed)?;
+    let max = settings.max_risk_percent;
+    let mut trades = Vec::new();
+    for c in r.selected(query) {
+        let initial_risk = c.figures.initial_risk;
+        let balance = balances.at_entry(c.facts, Some(c))?;
+        trades.push(TradeRisk {
+            trade_id: c.facts.id,
+            entry_time: c.facts.entry_time,
+            exit_time: c.exit_time,
+            initial_risk,
+            balance_at_entry: balance,
+            risk_pct: risk_fraction(initial_risk, balance),
+            within_limit: within_limit(initial_risk, balance, max)?,
+        });
+    }
+    let pcts: Vec<f64> = trades.iter().filter_map(|t| t.risk_pct).collect();
+    let limit_amount = match max {
+        Some(p) => Some(checked(p.checked_mul(r.final_balance).and_then(|v| v.checked_div(Decimal::ONE_HUNDRED)))?),
+        None => None,
+    };
+    Ok(RiskReport {
+        trade_count: trades.len(),
+        without_stop_count: trades.iter().filter(|t| t.initial_risk.is_none()).count(),
+        avg_risk_pct: (!pcts.is_empty()).then(|| pcts.iter().sum::<f64>() / pcts.len() as f64),
+        max_risk_pct: pcts.iter().copied().reduce(f64::max),
+        median_risk_pct: median(pcts),
+        max_risk_percent: max,
+        over_limit_count: max.map(|_| trades.iter().filter(|t| t.within_limit == Some(false)).count()),
+        current_capital: r.final_balance,
+        limit_amount,
+        trades,
+    })
+}
+
+pub fn risk_report(conn: &Connection, query: &StatsQuery) -> Result<RiskReport> {
+    risk(&load(conn, &query.account_ids)?, query, &settings::behavior(conn)?)
 }
 
 #[cfg(test)]

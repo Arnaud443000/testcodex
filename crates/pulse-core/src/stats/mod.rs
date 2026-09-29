@@ -13,9 +13,10 @@
 //! a deposit never shows up as performance.
 
 pub mod dashboard;
+pub mod distribution;
 mod load;
 pub mod pnl;
-pub(crate) mod risk;
+pub mod risk;
 pub(crate) mod segments;
 pub(crate) mod summary;
 pub mod time;
@@ -283,3 +284,5 @@ pub(crate) fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod extra_tests;
