@@ -1,29 +1,31 @@
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
+import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 
 export function DashboardPage() {
   const { accounts, loading } = useAccounts()
+  const t = useT()
   const hasAccount = accounts.length > 0
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Dashboard" subtitle="Your trading performance at a glance" />
+      <PageHeader title={t.dashboard.title} subtitle={t.dashboard.subtitle} />
       <section className="glass-card">
         {loading ? null : hasAccount ? (
           <EmptyState
-            title="No trades recorded yet"
-            action={<Link to="/trades" className="btn btn-primary">Add your first trade</Link>}
+            title={t.dashboard.noTradesTitle}
+            action={<Link to="/trades" className="btn btn-primary">{t.dashboard.addFirstTrade}</Link>}
           >
-            Once you log trades, your net P&amp;L, equity curve, discipline score and insights will appear here.
+            {t.dashboard.noTradesText}
           </EmptyState>
         ) : (
           <EmptyState
-            title="Welcome to Pulse"
-            action={<Link to="/settings" className="btn btn-primary">Create your first account</Link>}
+            title={t.dashboard.welcomeTitle}
+            action={<Link to="/settings" className="btn btn-primary">{t.dashboard.createFirstAccount}</Link>}
           >
-            Pulse keeps everything on this computer. Start by creating a trading account, then log your trades and the process behind them.
+            {t.dashboard.welcomeText}
           </EmptyState>
         )}
       </section>

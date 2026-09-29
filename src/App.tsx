@@ -1,12 +1,14 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { useT } from './i18n'
 import { AccountsProvider } from './lib/accounts'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
+  const t = useT()
   return (
     <AccountsProvider>
       <HashRouter>
@@ -17,12 +19,12 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-7 py-6">
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
-                <Route path="/trades" element={<PlaceholderPage title="Trades" subtitle="Every trade, with the process behind it" step={1} />} />
-                <Route path="/calendar" element={<PlaceholderPage title="Calendar" subtitle="P&L day by day" step={1} />} />
-                <Route path="/analytics" element={<PlaceholderPage title="Analytics" subtitle="Performance by setup, asset, day and hour" step={1} />} />
-                <Route path="/behavior" element={<PlaceholderPage title="Behavior" subtitle="What your process says about your results" step={2} />} />
-                <Route path="/journal" element={<PlaceholderPage title="Journal" subtitle="Daily reflection" step={2} />} />
-                <Route path="/goals" element={<PlaceholderPage title="Goals" subtitle="Monthly targets" step={2} />} />
+                <Route path="/trades" element={<PlaceholderPage title={t.pages.trades.title} subtitle={t.pages.trades.subtitle} step={1} />} />
+                <Route path="/calendar" element={<PlaceholderPage title={t.pages.calendar.title} subtitle={t.pages.calendar.subtitle} step={1} />} />
+                <Route path="/analytics" element={<PlaceholderPage title={t.pages.analytics.title} subtitle={t.pages.analytics.subtitle} step={1} />} />
+                <Route path="/behavior" element={<PlaceholderPage title={t.pages.behavior.title} subtitle={t.pages.behavior.subtitle} step={2} />} />
+                <Route path="/journal" element={<PlaceholderPage title={t.pages.journal.title} subtitle={t.pages.journal.subtitle} step={2} />} />
+                <Route path="/goals" element={<PlaceholderPage title={t.pages.goals.title} subtitle={t.pages.goals.subtitle} step={2} />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </div>
