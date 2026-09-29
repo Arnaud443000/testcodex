@@ -9,6 +9,7 @@ interface AccountsCtx {
   selectedId: number | null
   select: (id: number | null) => void
   create: (a: NewAccount) => Promise<Account>
+  remove: (id: number) => Promise<void>
 }
 
 const Ctx = createContext<AccountsCtx | null>(null)
@@ -31,9 +32,15 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     return acc
   }, [])
 
+  const remove = useCallback(async (id: number) => {
+    await api.deleteAccount(id)
+    setAccounts((prev) => prev.filter((a) => a.id !== id))
+    setSelectedId((cur) => (cur === id ? null : cur))
+  }, [])
+
   const value = useMemo(
-    () => ({ accounts, loading, selectedId, select: setSelectedId, create }),
-    [accounts, loading, selectedId, create],
+    () => ({ accounts, loading, selectedId, select: setSelectedId, create, remove }),
+    [accounts, loading, selectedId, create, remove],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

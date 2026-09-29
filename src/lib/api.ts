@@ -17,6 +17,10 @@ const mockAccounts: Account[] = []
 const mock = {
   appInfo: async (): Promise<AppInfo> => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
   listAccounts: async (): Promise<Account[]> => [...mockAccounts],
+  deleteAccount: async (id: number): Promise<void> => {
+    const i = mockAccounts.findIndex((a) => a.id === id)
+    if (i >= 0) mockAccounts.splice(i, 1)
+  },
   createAccount: async (a: NewAccount): Promise<Account> => {
     if (!a.name.trim()) throw new Error('invalid input: account name is required')
     if (!/^\d+(\.\d+)?$/.test(a.initialCapital.trim())) {
@@ -31,6 +35,7 @@ const mock = {
 export const api = {
   appInfo: (): Promise<AppInfo> => (inTauri ? invoke('app_info') : mock.appInfo()),
   listAccounts: (): Promise<Account[]> => (inTauri ? invoke('list_accounts') : mock.listAccounts()),
+  deleteAccount: (id: number): Promise<void> => (inTauri ? invoke('delete_account', { id }) : mock.deleteAccount(id)),
   createAccount: (account: NewAccount): Promise<Account> =>
     inTauri ? invoke('create_account', { account }) : mock.createAccount(account),
 }

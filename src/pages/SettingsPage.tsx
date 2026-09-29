@@ -3,8 +3,9 @@ import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
+import { parseDecimalInput } from '../lib/decimal'
 import { formatDecimal } from '../lib/format'
-import type { AccountKind, AppInfo } from '../types/account'
+import type { Account, AccountKind, AppInfo } from '../types/account'
 
 function AccountForm() {
   const { create } = useAccounts()
@@ -21,9 +22,9 @@ function AccountForm() {
     e.preventDefault()
     setError(null)
     // Le capital voyage sous forme de chaîne décimale exacte (jamais un nombre JS) : "10 000,50" → "10000.50".
-    const capitalValue = capital.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.') || '0'
+    const capitalValue = parseDecimalInput(capital)
     if (!name.trim()) return setError(t.settings.errNameRequired)
-    if (!/^\d+(\.\d+)?$/.test(capitalValue)) return setError(t.settings.errCapital)
+    if (capitalValue === null) return setError(t.settings.errCapital)
     setBusy(true)
     try {
       await create({ name, kind, broker, currency, initialCapital: capitalValue })
@@ -74,6 +75,57 @@ function AccountForm() {
   )
 }
 
+function AccountRow({ account: a }: { account: Account }) {
+  const { remove } = useAccounts()
+  const t = useT()
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function doDelete() {
+    setBusy(true)
+    setError(null)
+    try {
+      await remove(a.id)
+    } catch (err) {
+      const msg = String(err instanceof Error ? err.message : err)
+      setError(msg.includes('account_in_use') ? t.settings.errInUse : t.settings.errDelete(msg))
+      setConfirming(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <li className="py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-medium">{a.name}</span>
+        <span className="flex items-center gap-4">
+          <span className="text-tx2">
+            {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
+          </span>
+          {confirming ? (
+            <span className="flex items-center gap-2">
+              <span className="text-tx2">{t.settings.deleteConfirm(a.name)}</span>
+              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px] !text-loss" disabled={busy} onClick={doDelete}>
+                {t.settings.deleteYes}
+              </button>
+              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px]" onClick={() => setConfirming(false)}>
+                {t.settings.deleteCancel}
+              </button>
+            </span>
+          ) : (
+            <button className="text-[13px] font-medium text-tx-accent hover:underline" onClick={() => setConfirming(true)}>
+              {t.settings.delete}
+            </button>
+          )}
+        </span>
+      </div>
+      {error && <div className="nt nt-bad mt-2" role="alert">{error}</div>}
+    </li>
+  )
+}
+
 export function SettingsPage() {
   const { accounts } = useAccounts()
   const t = useT()
@@ -91,12 +143,7 @@ export function SettingsPage() {
         {accounts.length > 0 && (
           <ul className="mb-5 divide-y" style={{ borderColor: 'var(--hairline)' }}>
             {accounts.map((a) => (
-              <li key={a.id} className="flex items-center justify-between py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
-                <span className="font-medium">{a.name}</span>
-                <span className="text-tx2">
-                  {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
-                </span>
-              </li>
+              <AccountRow key={a.id} account={a} />
             ))}
           </ul>
         )}

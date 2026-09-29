@@ -75,3 +75,73 @@ fn row(r: &rusqlite::Row) -> rusqlite::Result<Account> {
         initial_capital: money::col(r, 5)?,
     })
 }
+
+/// Error message returned by [`delete`] when the account still owns data.
+/// The interface maps it to a translated text.
+pub const ACCOUNT_IN_USE: &str = "account_in_use";
+
+/// Deletes an account that owns no data (no trade, deposit/withdrawal or missed
+/// trade). An account with history is never deleted: it would erase the
+/// journal, and the schema refuses it (`ON DELETE RESTRICT`).
+pub fn delete(conn: &Connection, id: i64) -> Result<()> {
+    get(conn, id)?; // NotFound if unknown
+    let used: i64 = conn.query_row(
+        "SELECT (SELECT COUNT(*) FROM trades        WHERE account_id = ?1)
+              + (SELECT COUNT(*) FROM cash_flows    WHERE account_id = ?1)
+              + (SELECT COUNT(*) FROM missed_trades WHERE account_id = ?1)",
+        [id],
+        |r| r.get(0),
+    )?;
+    if used > 0 {
+        return Err(CoreError::Invalid(ACCOUNT_IN_USE.into()));
+    }
+    conn.execute("DELETE FROM accounts WHERE id = ?1", [id])?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod delete_tests {
+    use super::*;
+    use crate::cash_flows::{self, CashFlowKind, NewCashFlow};
+    use crate::db;
+    use crate::test_support::{account, dec};
+
+    #[test]
+    fn deletes_an_empty_account_and_keeps_the_others() {
+        let conn = db::open_in_memory().unwrap();
+        let keep = account(&conn, "1000");
+        let gone = account(&conn, "500");
+        delete(&conn, gone).unwrap();
+        let ids: Vec<i64> = list(&conn).unwrap().iter().map(|a| a.id).collect();
+        assert_eq!(ids, vec![keep]);
+    }
+
+    #[test]
+    fn refuses_to_delete_an_account_with_history() {
+        let conn = db::open_in_memory().unwrap();
+        let id = account(&conn, "1000");
+        cash_flows::create(
+            &conn,
+            &NewCashFlow {
+                account_id: id,
+                kind: CashFlowKind::Deposit,
+                amount: dec("250"),
+                occurred_at: 0,
+                tz_offset_min: 0,
+                note: String::new(),
+            },
+        )
+        .unwrap();
+        match delete(&conn, id) {
+            Err(CoreError::Invalid(m)) => assert_eq!(m, ACCOUNT_IN_USE),
+            other => panic!("expected account_in_use, got {other:?}"),
+        }
+        assert_eq!(list(&conn).unwrap().len(), 1, "account must still exist");
+    }
+
+    #[test]
+    fn deleting_an_unknown_account_is_not_found() {
+        let conn = db::open_in_memory().unwrap();
+        assert!(matches!(delete(&conn, 42), Err(CoreError::NotFound(_))));
+    }
+}

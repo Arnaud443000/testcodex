@@ -44,6 +44,12 @@ fn create_account(state: State<AppState>, account: NewAccount) -> Result<Account
     accounts::create(&conn, &account).map_err(err)
 }
 
+#[tauri::command]
+fn delete_account(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    accounts::delete(&conn, id).map_err(err)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
@@ -52,7 +58,7 @@ pub fn run() {
             app.manage(AppState { db: Mutex::new(conn), data_dir });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![app_info, list_accounts, create_account])
+        .invoke_handler(tauri::generate_handler![app_info, list_accounts, create_account, delete_account])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
 }
