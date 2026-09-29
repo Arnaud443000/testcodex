@@ -4,6 +4,7 @@ use pulse_core::behavior::{
     StreakReport, TradeDiscipline,
 };
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
+use pulse_core::dashboards::{self, DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance};
 use pulse_core::confidence::{self, ConfidenceReport};
 use pulse_core::execution_quality::{self, ExecutionScore, QualityReport};
 use pulse_core::journal::{self, DayOverview, JournalEntry};
@@ -607,7 +608,15 @@ pub fn run() {
             get_external_factors,
             get_after_losses,
             get_size_change,
-            get_plan_simulation
+            get_plan_simulation,
+            list_widget_catalog,
+            list_dashboard_layouts,
+            get_dashboard_layout,
+            get_startup_dashboard,
+            save_dashboard_layout,
+            rename_dashboard_layout,
+            delete_dashboard_layout,
+            set_default_dashboard_layout
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -652,4 +661,60 @@ fn get_size_change(state: State<AppState>, query: StatsQuery) -> Result<behavior
 fn get_plan_simulation(state: State<AppState>, query: StatsQuery) -> Result<behavior::PlanSimulation, String> {
     let conn = state.db.lock().map_err(err)?;
     behavior::plan_simulation_report(&conn, &query).map_err(err)
+}
+
+// --- Lot 13 : dashboard personnalisable (les widgets réutilisent les commandes de statistiques existantes) ---
+
+#[tauri::command]
+fn list_widget_catalog() -> Vec<WidgetDefinition> {
+    dashboards::catalog()
+}
+
+#[tauri::command]
+fn list_dashboard_layouts(state: State<AppState>) -> Result<Vec<DashboardSummary>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::list(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn get_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::get(&conn, &key).map_err(err)
+}
+
+/// Le dashboard affiché au démarrage (« Essentiel » tant que l'utilisateur n'en a pas choisi un autre).
+#[tauri::command]
+fn get_startup_dashboard(state: State<AppState>) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::startup(&conn).map_err(err)
+}
+
+/// `key` absent ou d'un preset : crée un dashboard de l'utilisateur ; sinon remplace le sien.
+#[tauri::command]
+fn save_dashboard_layout(
+    state: State<AppState>,
+    key: Option<String>,
+    name: String,
+    widgets: Vec<WidgetInstance>,
+) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::save(&conn, key.as_deref(), &name, &widgets).map_err(err)
+}
+
+#[tauri::command]
+fn rename_dashboard_layout(state: State<AppState>, key: String, name: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::rename(&conn, &key, &name).map_err(err)
+}
+
+#[tauri::command]
+fn delete_dashboard_layout(state: State<AppState>, key: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::delete(&conn, &key).map_err(err)
+}
+
+#[tauri::command]
+fn set_default_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::set_default(&conn, &key).map_err(err)
 }

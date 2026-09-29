@@ -53,12 +53,15 @@ import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
 import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
 import { mockBehaviorExtra } from './mockBackend'
+import { createDashboardsMock } from './mockDashboards'
+import type { DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
  * Outside Tauri (plain `npm run dev` in a browser) it falls back to an
  * in-memory mock (mockBackend.ts) so the UI can be developed and screenshotted without Rust.
  */
+const mockDashboards = createDashboardsMock(async () => (await mock.listAccounts()).map((a) => a.id))
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -261,5 +264,21 @@ export const api = {
   /** Simulation sans les trades hors plan : à étiqueter comme une simulation, jamais un conseil. */
   getPlanSimulation: (query: StatsQuery): Promise<PlanSimulation> =>
     inTauri ? invoke('get_plan_simulation', { query }) : mockBehaviorExtra.getPlanSimulation(query),
-}
 
+  // --- Lot 13 : dashboard personnalisable (disposition seulement ; les chiffres viennent des commandes ci-dessus) ---
+  listWidgetCatalog: (): Promise<WidgetDefinition[]> => (inTauri ? invoke('list_widget_catalog') : mockDashboards.listWidgetCatalog()),
+  listDashboardLayouts: (): Promise<DashboardSummary[]> => (inTauri ? invoke('list_dashboard_layouts') : mockDashboards.listDashboardLayouts()),
+  getDashboardLayout: (key: string): Promise<DashboardLayout> =>
+    inTauri ? invoke('get_dashboard_layout', { key }) : mockDashboards.getDashboardLayout(key),
+  /** Le dashboard affiché au démarrage : « Essentiel » tant qu'aucun autre n'est choisi par défaut. */
+  getStartupDashboard: (): Promise<DashboardLayout> => (inTauri ? invoke('get_startup_dashboard') : mockDashboards.getStartupDashboard()),
+  /** `key` `null` ou d'un preset : crée un dashboard de l'utilisateur ; sinon remplace le sien. */
+  saveDashboardLayout: (key: string | null, name: string, widgets: WidgetInstance[]): Promise<DashboardLayout> =>
+    inTauri ? invoke('save_dashboard_layout', { key, name, widgets }) : mockDashboards.saveDashboardLayout(key, name, widgets),
+  renameDashboardLayout: (key: string, name: string): Promise<DashboardLayout> =>
+    inTauri ? invoke('rename_dashboard_layout', { key, name }) : mockDashboards.renameDashboardLayout(key, name),
+  deleteDashboardLayout: (key: string): Promise<void> =>
+    inTauri ? invoke('delete_dashboard_layout', { key }) : mockDashboards.deleteDashboardLayout(key),
+  setDefaultDashboardLayout: (key: string): Promise<DashboardLayout> =>
+    inTauri ? invoke('set_default_dashboard_layout', { key }) : mockDashboards.setDefaultDashboardLayout(key),
+}
