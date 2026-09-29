@@ -99,3 +99,7 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - **Non testé** : les boîtes de dialogue de fichier natives sous Windows (enregistrer sous / ouvrir) et l'écriture/lecture d'un vrai fichier depuis l'application installée (le cœur Rust est testé sur des fichiers temporaires, le navigateur utilise un faux « disque » en mémoire) ; le rendu sur un vrai Windows / WebView2. Captures en Chromium headless (1280×720 et 1920×1080), faux backend uniquement.
 - Constat sans gravité : l'en-tête du dashboard passe sur deux lignes à 1280 px de large (le menu « Configuration » s'ajoute aux boutons du lot 13).
 
+## À voir à la fin du projet (décision de l'utilisateur)
+- **Clé API de l'IA** : créer une clé API Anthropic (facturée à l'usage, distincte de l'abonnement Claude) et faire le **vrai test** de l'analyse de screenshot (lot 20) et du coach IA (lot 21) sur un vrai Windows, avec le coffre Windows. D'ici là, tout est développé et testé avec un faux serveur ; aucun appel réel n'est fait. Ne pas demander la clé avant.
+- **Signature de l'installeur** (Smart App Control) : à envisager seulement si Pulse est distribué à d'autres personnes.
+- **Import CSV du broker** : repoussé, nécessite un vrai export du broker de l'utilisateur.
