@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { JournalPage } from './pages/JournalPage'
 import { AlertHistoryPage } from './pages/AlertHistoryPage'
+import { ComparisonsPage } from './pages/ComparisonsPage'
 import { AnalysesPage } from './pages/AnalysesPage'
 import { ReplayPage } from './pages/ReplayPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
@@ -41,6 +42,7 @@ export default function App() {
                 <Route path="/trades/:id/edit" element={<TradeFormPage key="edit" />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/analytics" element={<AnalysesPage />} />
+                <Route path="/comparisons" element={<ComparisonsPage />} />
                 <Route path="/behavior" element={<BehaviorPage />} />
                 <Route path="/discipline" element={<DisciplinePage />} />
                 <Route path="/journal" element={<JournalPage />} />

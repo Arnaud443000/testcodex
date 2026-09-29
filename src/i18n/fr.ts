@@ -1,4 +1,5 @@
 import { frDashboardBuilder } from './fr.dashboard'
+import { frComparisons } from './fr.comparisons'
 /**
  * Textes de l'interface. Le français est la langue par défaut.
  * Pour ajouter une langue : créer un objet du même type `Messages` et le
@@ -10,6 +11,7 @@ export const fr = {
     trades: 'Trades',
     calendar: 'Calendrier',
     analytics: 'Analyses',
+    comparisons: 'Comparaisons',
     behavior: 'Comportement',
     discipline: 'Discipline',
     journal: 'Journal',
@@ -1525,6 +1527,8 @@ export const fr = {
   },
   // Lot 13 : dashboard personnalisable
   dashboardBuilder: frDashboardBuilder,
+  // Lot 17 : comparaisons et exposition
+  comparisons: frComparisons,
 }
 
 export type Messages = typeof fr

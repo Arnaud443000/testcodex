@@ -71,3 +71,11 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - Signalé, non corrigé (lot 13, cosmétique) : en mode « Modifier le dashboard », la barre de titre d'un widget recouvre le haut de son contenu (pastilles « Perte / trades »).
 - Aucune migration, aucun changement Rust dans ce lot. Rendu vérifié en Chromium headless (1280×720, 1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2 ni avec la vraie base SQLite. Le parcours « je change un seuil puis je vois l'alerte se déclencher » n'a pas été essayé de bout en bout sur l'application réelle (seulement testé sur le faux backend).
 
+
+## Lot 17 (comparaisons et exposition) — points à vérifier
+- Nouvelle page « Comparaisons » : comptes côte à côte, risque max par trade contre votre limite, exposition par catégorie d'actif. **Aucune migration.**
+- Comparaison de comptes : aucune somme ni « meilleur compte ». Avec des devises différentes, les lignes en argent sont grisées et signalées ; seuls les ratios se comparent. Les « pistes » (frais plus lourds, R moyen plus bas) ne sont **pas** des conclusions : seuils choisis par moi (10 points de part de frais, 0,25 R, 5 trades minimum, un actif en commun) — à confirmer.
+- Benchmark du risque : nécessite la limite de Paramètres > Seuils de discipline. Un trade exactement à la limite est respecté. Les trades sans stop ne sont pas jugés.
+- Exposition : porte sur les trades **clôturés** de la période (pas les positions ouvertes). Le « % du capital » est la somme des risques par trade, pas un solde.
+- Point à trancher : ces pages s'appuient sur le risque « à l'entrée » (constat 10 toujours ouvert).
+- Vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2 ni avec la vraie base SQLite (sauf tests Rust sur base en mémoire). Le drawdown en % est vide dans le faux backend du navigateur.
