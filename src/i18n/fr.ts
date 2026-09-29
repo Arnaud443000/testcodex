@@ -184,7 +184,7 @@ export const fr = {
       price: '0,0000',
       size: '1,00',
       fees: '0,00',
-      optional: 'Facultatif',
+      optional: 'Optionnel',
       newTag: 'Nouveau nom',
     },
     auto: 'AUTO',

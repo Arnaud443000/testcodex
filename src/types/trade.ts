@@ -129,7 +129,7 @@ export interface Preview {
   riskPctOfCapital: number | null
   plannedRewardRisk: number | null
   durationMs: number | null
-  /** Nom de la session déduite de l'heure d'entrée (Asia, London, New York). */
+  /** Nom de la session déduite de l'heure d'entrée (Asie, Londres, New York). */
   session: string
   stopLoss: StopLoss
   opportunityCost: Decimal | null

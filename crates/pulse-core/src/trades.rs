@@ -564,9 +564,9 @@ mod tests {
     fn round_trips_every_field_exactly() {
         let f = fixture();
         let setup = tags::create(&f.conn, TagKind::Setup, "Breakout NY").unwrap();
-        let early = tags::find(&f.conn, TagKind::Mistake, "early exit").unwrap().unwrap();
-        let calm = tags::find(&f.conn, TagKind::Emotion, "calm").unwrap().unwrap();
-        let relief = tags::find(&f.conn, TagKind::Emotion, "relief").unwrap().unwrap();
+        let early = tags::find(&f.conn, TagKind::Mistake, "sortie trop tôt").unwrap().unwrap();
+        let calm = tags::find(&f.conn, TagKind::Emotion, "calme").unwrap().unwrap();
+        let relief = tags::find(&f.conn, TagKind::Emotion, "soulagement").unwrap().unwrap();
         let rule = rules::create(&f.conn, "Max 3 trades per day").unwrap();
         let item = checklist::create(&f.conn, "Stop defined").unwrap();
         let data = TradeData {
@@ -641,7 +641,7 @@ mod tests {
     fn delete_cascades_to_children_but_keeps_shared_objects() {
         let f = fixture();
         let setup = tags::create(&f.conn, TagKind::Setup, "Breakout").unwrap();
-        let calm = tags::find(&f.conn, TagKind::Emotion, "calm").unwrap().unwrap();
+        let calm = tags::find(&f.conn, TagKind::Emotion, "calme").unwrap().unwrap();
         let rule = rules::create(&f.conn, "Rule").unwrap();
         let t = create(
             &f.conn,
@@ -683,7 +683,7 @@ mod tests {
         let base = closed_long(&f);
         let setup_a = tags::create(&f.conn, TagKind::Setup, "A").unwrap();
         let setup_b = tags::create(&f.conn, TagKind::Setup, "B").unwrap();
-        let calm = tags::find(&f.conn, TagKind::Emotion, "calm").unwrap().unwrap();
+        let calm = tags::find(&f.conn, TagKind::Emotion, "calme").unwrap().unwrap();
         let rule = rules::create(&f.conn, "Rule").unwrap();
         let cases: Vec<(&str, TradeData)> = vec![
             ("zero size", TradeData { size: dec("0"), ..base.clone() }),

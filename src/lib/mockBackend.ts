@@ -64,13 +64,13 @@ const id = () => nextId++
 let nextTradeId = 1
 
 const starterTags: [TagKind, string][] = [
-  ['session', 'Asia'], ['session', 'London'], ['session', 'New York'],
+  ['session', 'Asie'], ['session', 'Londres'], ['session', 'New York'],
   ['timeframe', 'M1'], ['timeframe', 'M5'], ['timeframe', 'M15'], ['timeframe', 'H1'], ['timeframe', 'H4'], ['timeframe', 'D1'],
-  ['market_condition', 'Range'], ['market_condition', 'Trend'], ['market_condition', 'High volatility'], ['market_condition', 'Economic news'],
-  ['emotion', 'Calm'], ['emotion', 'Discipline'], ['emotion', 'Confidence'], ['emotion', 'FOMO'], ['emotion', 'Doubt'],
-  ['emotion', 'Stress'], ['emotion', 'Impatience'], ['emotion', 'Revenge'], ['emotion', 'Relief'],
-  ['mistake', 'Early exit'], ['mistake', 'Late exit'], ['mistake', 'Overtrading'], ['mistake', 'Revenge trade'],
-  ['mistake', 'No plan'], ['mistake', 'Poor risk management'], ['mistake', 'Moved stop loss'],
+  ['market_condition', 'Range'], ['market_condition', 'Tendance'], ['market_condition', 'Forte volatilité'], ['market_condition', 'Actualité économique'],
+  ['emotion', 'Calme'], ['emotion', 'Discipline'], ['emotion', 'Confiance'], ['emotion', 'Peur de rater (FOMO)'], ['emotion', 'Doute'],
+  ['emotion', 'Stress'], ['emotion', 'Impatience'], ['emotion', 'Revanche'], ['emotion', 'Soulagement'],
+  ['mistake', 'Sortie trop tôt'], ['mistake', 'Sortie trop tard'], ['mistake', 'Surtrading'], ['mistake', 'Trade de revanche'],
+  ['mistake', 'Pas de plan'], ['mistake', 'Mauvaise gestion du risque'], ['mistake', 'Stop déplacé'],
 ]
 const tags: Tag[] = starterTags.map(([kind, name]) => ({ id: id(), kind, name, archived: false }))
 const instruments: Instrument[] = [
@@ -95,7 +95,7 @@ const need = (v: string, what: string) => {
 function session(entryTime: number): string {
   const h = Math.floor(entryTime / 3_600_000) % 24
   const hour = (h + 24) % 24
-  return hour >= 7 && hour <= 12 ? 'London' : hour >= 13 && hour <= 21 ? 'New York' : 'Asia'
+  return hour >= 7 && hour <= 12 ? 'Londres' : hour >= 13 && hour <= 21 ? 'New York' : 'Asie'
 }
 
 function figuresOf(d: TradeData, multiplier: Decimal): Figures | null {

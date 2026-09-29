@@ -517,15 +517,15 @@ function PriceField({
   inputRef?: React.Ref<HTMLInputElement>
 }) {
   return (
-    <Field label={label} htmlFor={id} error={error}>
-      <InputWithSuffix suffix={suffix}>
+    <Field label={suffix ? `${label} (${suffix})` : label} htmlFor={id} error={error}>
+      <InputWithSuffix>
         <input
           id={id}
           ref={inputRef}
           type="text"
           inputMode="decimal"
           autoComplete="off"
-          className={`input ${suffix ? 'pr-16' : ''} ${error ? 'input-error' : ''}`}
+          className={`input ${error ? 'input-error' : ''}`}
           value={value}
           placeholder={placeholder}
           aria-invalid={!!error}

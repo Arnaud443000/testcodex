@@ -2,14 +2,14 @@ import type { Tag, TradeView } from '../types/trade'
 
 /** Données de test (jamais importées par l'application). */
 export const TAGS: Tag[] = [
-  { id: 1, kind: 'session', name: 'Asia', archived: false },
-  { id: 2, kind: 'session', name: 'London', archived: false },
+  { id: 1, kind: 'session', name: 'Asie', archived: false },
+  { id: 2, kind: 'session', name: 'Londres', archived: false },
   { id: 3, kind: 'session', name: 'New York', archived: false },
   { id: 4, kind: 'timeframe', name: 'M15', archived: false },
   { id: 5, kind: 'setup', name: 'Breakout NY', archived: false },
   { id: 6, kind: 'setup', name: 'Mean reversion', archived: false },
-  { id: 7, kind: 'market_condition', name: 'Trend', archived: false },
-  { id: 8, kind: 'emotion', name: 'Calm', archived: false },
+  { id: 7, kind: 'market_condition', name: 'Tendance', archived: false },
+  { id: 8, kind: 'emotion', name: 'Calme', archived: false },
   { id: 9, kind: 'mistake', name: 'Early exit', archived: false },
 ]
 

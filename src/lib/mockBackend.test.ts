@@ -44,7 +44,7 @@ describe('mock du navigateur', () => {
     expect(p.figures!.rMultiple).toBeCloseTo(341.6 / 216, 5)
     expect(p.plannedRewardRisk).toBeCloseTo(46 / 18, 5)
     expect(p.riskPctOfCapital).toBeCloseTo(2.16, 5)
-    expect(p.session).toBe('London')
+    expect(p.session).toBe('Londres')
     expect(p.stopLoss).toBe('valid')
   })
 

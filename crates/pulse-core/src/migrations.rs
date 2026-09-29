@@ -222,6 +222,41 @@ pub const MIGRATIONS: &[&str] = &[
         ('mistake','Overtrading','overtrading'), ('mistake','Revenge trade','revenge trade'),
         ('mistake','No plan','no plan'), ('mistake','Poor risk management','poor risk management'),
         ('mistake','Moved stop loss','moved stop loss');",
+    // v3 — French names for the starter tags seeded by v2. Only a tag that still
+    // carries its exact English starter name is renamed: tags the user created or
+    // renamed are left alone, and a rename that would collide with an existing tag
+    // of the same kind is skipped. The `session` starters are matched by name (see
+    // `trade_view::session_for`), which is why "Asia"/"London" follow the rename.
+    "CREATE TEMP TABLE tag_renames (kind TEXT, old_name TEXT, old_key TEXT, new_name TEXT, new_key TEXT);
+    INSERT INTO tag_renames VALUES
+        ('session','Asia','asia','Asie','asie'),
+        ('session','London','london','Londres','londres'),
+        ('market_condition','Trend','trend','Tendance','tendance'),
+        ('market_condition','High volatility','high volatility','Forte volatilité','forte volatilité'),
+        ('market_condition','Economic news','economic news','Actualité économique','actualité économique'),
+        ('emotion','Calm','calm','Calme','calme'),
+        ('emotion','Confidence','confidence','Confiance','confiance'),
+        ('emotion','FOMO','fomo','Peur de rater (FOMO)','peur de rater (fomo)'),
+        ('emotion','Doubt','doubt','Doute','doute'),
+        ('emotion','Revenge','revenge','Revanche','revanche'),
+        ('emotion','Relief','relief','Soulagement','soulagement'),
+        ('mistake','Early exit','early exit','Sortie trop tôt','sortie trop tôt'),
+        ('mistake','Late exit','late exit','Sortie trop tard','sortie trop tard'),
+        ('mistake','Overtrading','overtrading','Surtrading','surtrading'),
+        ('mistake','Revenge trade','revenge trade','Trade de revanche','trade de revanche'),
+        ('mistake','No plan','no plan','Pas de plan','pas de plan'),
+        ('mistake','Poor risk management','poor risk management','Mauvaise gestion du risque','mauvaise gestion du risque'),
+        ('mistake','Moved stop loss','moved stop loss','Stop déplacé','stop déplacé');
+    UPDATE tags SET
+        name     = (SELECT new_name FROM tag_renames r WHERE r.kind = tags.kind AND r.old_name = tags.name),
+        name_key = (SELECT new_key  FROM tag_renames r WHERE r.kind = tags.kind AND r.old_name = tags.name)
+    WHERE EXISTS (
+            SELECT 1 FROM tag_renames r
+            WHERE r.kind = tags.kind AND r.old_name = tags.name AND tags.name_key = r.old_key)
+      AND NOT EXISTS (
+            SELECT 1 FROM tag_renames r JOIN tags o ON o.kind = r.kind AND o.name_key = r.new_key
+            WHERE r.kind = tags.kind AND r.old_name = tags.name);
+    DROP TABLE tag_renames;",
 ];
 
 pub fn latest_version() -> u32 {
@@ -308,6 +343,61 @@ mod tests {
         assert!(account(&conn, "5") > 7);
         let fk_errors: i64 = conn.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| r.get(0)).unwrap();
         assert_eq!(fk_errors, 0);
+    }
+
+    #[test]
+    fn v3_renames_untouched_starter_tags_only() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 2).unwrap();
+        // The user renamed "Doubt", archived "Stress", made their own "Trend" setup,
+        // and already created "Calme" by hand before the upgrade.
+        conn.execute_batch(
+            "UPDATE tags SET name = 'My doubt', name_key = 'my doubt' WHERE name = 'Doubt';
+             UPDATE tags SET archived = 1 WHERE name = 'Stress';
+             INSERT INTO tags (kind, name, name_key) VALUES ('setup','Trend','trend'), ('emotion','Calme','calme');",
+        )
+        .unwrap();
+        let account = account_v2(&conn);
+        let doubt_id: i64 = conn.query_row("SELECT id FROM tags WHERE name = 'My doubt'", [], |r| r.get(0)).unwrap();
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let t = trades::TradeData::new(account, eu, trades::Direction::Long, 1.into(), 1.into(), 0);
+        let trade = trades::create(&conn, &t).unwrap();
+        conn.execute("INSERT INTO trade_emotions (trade_id, moment, tag_id) VALUES (?1,'before',?2)", rusqlite::params![trade.id, doubt_id]).unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 3);
+
+        let names = |kind: &str| -> Vec<String> {
+            let mut s = conn.prepare("SELECT name FROM tags WHERE kind = ?1 ORDER BY name_key").unwrap();
+            s.query_map([kind], |r| r.get(0)).unwrap().collect::<std::result::Result<_, _>>().unwrap()
+        };
+        assert_eq!(names("session"), ["Asie", "Londres", "New York"]);
+        assert_eq!(names("market_condition"), ["Actualité économique", "Forte volatilité", "Range", "Tendance"]);
+        // "Calm" collides with the user's own "Calme": left as is. "My doubt" untouched.
+        let emotions = names("emotion");
+        assert!(emotions.contains(&"Calm".to_string()) && emotions.contains(&"Calme".to_string()));
+        assert!(emotions.contains(&"My doubt".to_string()) && !emotions.contains(&"Doute".to_string()));
+        assert!(emotions.contains(&"Peur de rater (FOMO)".to_string()));
+        assert!(names("mistake").contains(&"Sortie trop tôt".to_string()));
+        // The user's own setup keeps its name; archived state and links survive; keys stay in sync.
+        assert_eq!(names("setup"), ["Trend"]);
+        let archived: i64 = conn.query_row("SELECT archived FROM tags WHERE name = 'Stress'", [], |r| r.get(0)).unwrap();
+        assert_eq!(archived, 1);
+        let linked: i64 = conn.query_row("SELECT COUNT(*) FROM trade_emotions WHERE tag_id = ?1", [doubt_id], |r| r.get(0)).unwrap();
+        assert_eq!(linked, 1);
+        let bad_keys: i64 = conn.query_row("SELECT COUNT(*) FROM tags WHERE name_key <> lower(name)", [], |r| r.get(0)).unwrap();
+        assert_eq!(bad_keys, 0);
+        // Renamed tags are found by their new name, not duplicated.
+        assert!(crate::tags::find(&conn, crate::tags::TagKind::Session, "londres").unwrap().is_some());
+        assert!(crate::tags::create(&conn, crate::tags::TagKind::Session, "Asie").is_err());
+        let leftovers: i64 = conn.query_row("SELECT COUNT(*) FROM sqlite_temp_master WHERE name = 'tag_renames'", [], |r| r.get(0)).unwrap();
+        assert_eq!(leftovers, 0);
+    }
+
+    fn account_v2(conn: &Connection) -> i64 {
+        conn.execute("INSERT INTO accounts (name, kind) VALUES ('A','personal')", []).unwrap();
+        conn.last_insert_rowid()
     }
 
     #[test]

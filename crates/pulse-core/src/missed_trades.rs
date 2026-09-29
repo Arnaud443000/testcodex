@@ -149,7 +149,7 @@ mod tests {
         let a = account(&conn, "10000");
         let eu = instrument(&conn, "EURUSD", "100000");
         let setup = tags::create(&conn, TagKind::Setup, "Breakout NY").unwrap();
-        let london = tags::find(&conn, TagKind::Session, "london").unwrap().unwrap();
+        let london = tags::find(&conn, TagKind::Session, "londres").unwrap().unwrap();
         let m = create(
             &conn,
             &MissedTradeData {
@@ -179,7 +179,7 @@ mod tests {
         let conn = db::open_in_memory().unwrap();
         let a = account(&conn, "0");
         let eu = instrument(&conn, "EURUSD", "100000");
-        let calm = tags::find(&conn, TagKind::Emotion, "calm").unwrap().unwrap();
+        let calm = tags::find(&conn, TagKind::Emotion, "calme").unwrap().unwrap();
         let base = MissedTradeData {
             account_id: a,
             instrument_id: eu,

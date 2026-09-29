@@ -112,7 +112,7 @@ mod tests {
     fn starter_tags_are_seeded() {
         let conn = db::open_in_memory().unwrap();
         let sessions: Vec<_> = list(&conn, Some(TagKind::Session), false).unwrap().into_iter().map(|t| t.name).collect();
-        assert_eq!(sessions, ["Asia", "London", "New York"]);
+        assert_eq!(sessions, ["Asie", "Londres", "New York"]);
         assert!(list(&conn, Some(TagKind::Setup), false).unwrap().is_empty());
         assert!(!list(&conn, Some(TagKind::Emotion), false).unwrap().is_empty());
     }

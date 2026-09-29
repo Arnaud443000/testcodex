@@ -13,9 +13,9 @@ use rusqlite::Connection;
 use serde::Serialize;
 use std::collections::HashMap;
 
-/// Standard session names, as seeded in the `session` tags (migration 2).
-pub const ASIA: &str = "Asia";
-pub const LONDON: &str = "London";
+/// Standard session names, as seeded in the `session` tags (migrations 2 and 3).
+pub const ASIA: &str = "Asie";
+pub const LONDON: &str = "Londres";
 pub const NEW_YORK: &str = "New York";
 
 /// Session deduced from the entry instant (spec 3.1.1), by UTC hour so it does

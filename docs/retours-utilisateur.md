@@ -16,9 +16,9 @@ Registre des retours après essai de l'application installée. Chaque retour est
 
 | # | Constat | Statut |
 |---|---|---|
-| 3 | Les tags et émotions par défaut sont créés **en anglais** par la migration v2 (« Calm », « FOMO », « Doubt », « Range », « Trend », « High volatility », « Economic news »…). Ils s'affichent tels quels dans le formulaire de trade. | **À faire** : nouvelle migration v3 qui renomme les libellés par défaut en français (sans toucher aux tags créés ou renommés par l'utilisateur ; ne jamais modifier la migration v2). Adapter aussi `src/lib/mockBackend.ts`. |
-| 4 | Dans le formulaire de trade, le placeholder « Facultatif » est tronqué (« Faculta ») dans les champs étroits (Sortie, Stop loss, Take profit). | **À faire** : raccourcir le placeholder ou élargir les champs. |
-| 5 | Le mot « prévu » à côté de Stop loss / Take profit chevauche le placeholder. | **À faire** avec le point 4. |
+| 3 | Les tags et émotions par défaut sont créés **en anglais** par la migration v2 (« Calm », « FOMO », « Doubt », « Range », « Trend », « High volatility », « Economic news »…). Ils s'affichent tels quels dans le formulaire de trade. | **Corrigé** : migration v3 (renomme uniquement les tags encore à leur nom anglais d'origine ; saute un renommage qui créerait un doublon ; un tag créé à la main portant exactement un nom anglais par défaut est indistinguable et serait renommé). Sessions : « Asie » / « Londres » (la session déduite de l'heure est retrouvée par nom). Mock du navigateur aligné. Test : `v3_renames_untouched_starter_tags_only`. |
+| 4 | Dans le formulaire de trade, le placeholder « Facultatif » est tronqué (« Faculta ») dans les champs étroits (Sortie, Stop loss, Take profit). | **Corrigé** : placeholder « Optionnel » et suppression du suffixe superposé. |
+| 5 | Le mot « prévu » à côté de Stop loss / Take profit chevauche le placeholder. | **Corrigé** : « prévu » / « réel » passe dans le libellé du champ (« Stop loss (prévu) »). Non vérifié sur un vrai écran Windows. |
 
 ## À faire plus tard (idées issues de ces retours)
 - Modifier un compte existant (nom, courtier, capital initial) — aujourd'hui seul « supprimer + recréer » existe, et seulement pour un compte vide.
