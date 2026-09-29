@@ -1,233 +1,221 @@
 # Charte graphique — Pulse
 
-Version 1.2 — 26/08/2026
-Statut : nom, logo, palette de couleurs et typographie **arrêtés** — planche de marque définitive reçue (logo dans ses quatre déclinaisons, boutons, badges de statut, palette en hex, échelle typographique). Remplace la version 1.1, qui documentait « TradeLens » comme nom de travail non tranché. Les **patrons de composants** observés sur la maquette de dashboard (boutons, cards, tableaux, graphiques — sections 4 à 7) restent la référence d'agencement ; les tokens de thème qui en sont dérivés (sections 2.3/2.4, au-delà de la palette de marque elle-même) restent des estimations de lecture visuelle, à recaler sur les fichiers sources (Figma, exports SVG/PNG) dès qu'ils sont disponibles (cf. points ouverts, section 8).
+Version 2.0 — 28/09/2026
+Statut : **direction arrêtée, style « A+D »** (structure et palette Pulse + panneaux en verre et lueurs d'aurore). Remplace la v1.2. Les valeurs de ce document sont **celles réellement utilisées** dans les maquettes validées (`docs/maquettes/`), plus des estimations.
 
-Ce document complète `docs/cahier-des-charges.md` : il ne redéfinit aucune fonctionnalité, il habille celles déjà spécifiées. Chaque composant renvoie, quand c'est pertinent, à la fonctionnalité du cahier des charges qu'il habille.
+Ce document complète `docs/cahier-des-charges.md` (v2.0) : il ne redéfinit aucune fonctionnalité, il habille celles déjà spécifiées.
+
+**Références visuelles (source de vérité)**
+| Écran | Fichier |
+|---|---|
+| Dashboard | `docs/maquettes/style-ad.html` / `.png` |
+| Nouveau trade | `docs/maquettes/screen-form.html` / `.png` |
+| Détail d'un trade | `docs/maquettes/screen-detail.html` / `.png` |
+| Comportement | `docs/maquettes/screen-behavior.html` / `.png` |
+| Générateur | `docs/maquettes/build.py` |
+
+Les autres styles explorés (B minimal clair, C terminal, D glass, E carnet de bord, F « Maison » luxe) sont conservés dans le même dossier à titre d'archive ; ils ne font pas partie de la charte.
 
 ---
 
 ## 1. Identité de marque
 
-### 1.1 Nom et signature
-- **Nom** : **Pulse** — nom définitif de l'application (remplace le nom de travail « TradeLens » utilisé jusqu'au 26/08/2026).
-- **Signature** : « Clarté. Discipline. Performance. » — trois mots séparés par des points, capitales, espacement de lettres large. Reprend directement le principe directeur du produit (cf. cahier des charges, 1.2).
-- **Écriture du nom** : un seul mot, casse initiale capitale (« Pulse »), typographie fine (cf. logo principal, 1.2).
-- **Lockup** : dans le logo principal, l'icône et le nom « Pulse » se lisent sur la même ligne, la signature apparaissant sous l'ensemble en petites capitales espacées (cf. déclinaison « Logo principal », 1.2). Hors logo (ex. en-tête de document, écran de connexion), le nom seul suffit ; la signature s'utilise ponctuellement, jamais comme sous-titre systématique.
-
-### 1.2 Logo
-> **Statut : retenu.** Planche de marque définitive reçue le 26/08/2026, avec les quatre déclinaisons ci-dessous. Remplace l'exploration précédente en anneaux concentriques (version 1.1 de ce document).
-- **Anatomie** : icône façon égaliseur audio — barres verticales de hauteurs variables disposées en losange autour d'un vide circulaire central, en dégradé bleu → violet avec un éclat lumineux au centre. Évoque à la fois un battement/pulsation et un signal de données, cohérent avec le nom « Pulse ».
-- **Déclinaisons livrées** :
-  - **Logo principal** : icône + nom « Pulse » + signature, sur fond quasi-noir.
-  - **Icône seule** : icône sur fond transparent, pour usage sur fond clair ou sombre variable.
-  - **Icône d'application** : icône dans un carré à coins très arrondis, fond en dégradé bleu marine → violet pleine surface.
-  - **Favicon** : version simplifiée et compacte de l'icône, lisible en très petite taille.
-- **Cohérence avec la palette** : le dégradé bleu → violet du logo est directement celui de l'accent de marque (section 2.1) — il porte aussi les boutons primaires et l'état actif de la navigation.
-- **Point ouvert restant** : l'espace de protection, les tailles minimales d'usage et le comportement exact sur fond clair ne sont pas encore formalisés (cf. section 8) — à définir à partir des fichiers source (SVG/Figma) plutôt que de la seule planche fournie en image.
-
-### 1.3 Ton et principes
-- **Sobre, jamais criard** : la donnée financière porte déjà sa propre charge émotionnelle (gains/pertes) ; l'interface ne doit pas en rajouter par des couleurs saturées hors du rôle sémantique gain/perte.
-- **Data-first** : la couleur d'accent (bleu-violet) sert la navigation et l'action, jamais l'affichage d'une métrique — une métrique se colore uniquement selon sa sémantique (gain/perte/neutre, section 2.2).
-- **Discipline visuelle = discipline de trading** : alignement rigoureux sur grille, chiffres alignés (tabulaires), hiérarchie typographique constante — l'interface elle-même doit incarner la rigueur que l'outil encourage chez le trader.
+- **Nom** : Pulse. **Signature** : « Clarté. Discipline. Performance. » — utilisée ponctuellement (écran d'accueil, à propos), jamais comme sous-titre systématique.
+- **Logo** : icône « égaliseur » — barres verticales de hauteurs variables formant un losange autour d'un vide circulaire central, dégradé bleu → violet avec léger halo. Déclinaisons : logo principal (icône + « Pulse » en Light), icône seule, icône d'application (carré très arrondi, dégradé pleine surface), favicon simplifié.
+- **Fichier logo source** : la version des maquettes est redessinée en SVG (`logo()` dans `build.py`). Elle est à **remplacer par le fichier officiel** si l'utilisateur en fournit un ; sinon elle sert de version de travail.
+- **Principes**
+  - **Sobre sur la donnée** : la donnée financière porte déjà sa charge émotionnelle ; la couleur n'est jamais décorative.
+  - **Accent = action, pas métrique** : le dégradé bleu-violet sert la navigation, l'action et la courbe d'équité ; vert/corail ne signifient **que** un gain ou une perte.
+  - **Discipline visuelle = discipline de trading** : grille stricte, chiffres tabulaires, hiérarchie constante.
 
 ---
 
-## 2. Couleur
+## 2. Couleur (thème sombre — thème unique en v2.0)
 
 ### 2.1 Palette de marque
-Sept couleurs de base, valeurs hex définitives fournies sur la planche de marque, de la plus sombre à la plus claire :
-
-| Token | Rôle | Hex |
+| Token | Rôle | Valeur |
 |---|---|---|
-| `--pulse-ink-950` | Fond d'application, quasi-noir bleuté | `#0B0E27` |
-| `--pulse-navy-800` | Surface élevée (cards, panneaux) | `#1E2347` |
-| `--pulse-blue-500` | Accent primaire — début de dégradé | `#4A5FD9` |
-| `--pulse-violet-400` | Accent secondaire — fin de dégradé | `#8B7FE8` |
-| `--pulse-cream-100` | Neutre clair chaud — texte sur fond sombre, boutons secondaires | `#F0EDE4` |
-| `--pulse-sage-500` | Sémantique gain (source) | `#6FA88A` |
-| `--pulse-coral-500` | Sémantique perte (source) | `#D96659` |
+| `--bg` | Fond d'application | `#0B0E27` |
+| `--bg-deep` | Fond de base sous l'aurore | `#080B20` |
+| `--blue` | Accent primaire (début de dégradé) | `#4A5FD9` |
+| `--violet` | Accent secondaire (fin de dégradé) | `#8B7FE8` |
+| `--cream` | Neutre clair chaud | `#F0EDE4` |
+| `--grad` | Dégradé de marque, 135° | `linear-gradient(135deg,#4A5FD9,#8B7FE8)` |
 
-Le dégradé de marque (logo, bouton primaire, éléments actifs) va de `--pulse-blue-500` à `--pulse-violet-400`, à 135°.
+### 2.2 Texte
+| Token | Usage | Valeur |
+|---|---|---|
+| `--tx` | Texte principal | `#F5F2EC` |
+| `--tx2` | Texte atténué (libellés, sous-titres) | `#9AA0C0` |
+| `--tx3` | Texte très atténué (axes, légendes) | `#6B7290` |
+| `--tx-accent` | Texte d'accent / lien / élément actif | `#A79DF2` |
 
-### 2.2 Tokens sémantiques (gain / perte / neutre)
-Distincts de l'accent de marque — l'accent bleu-violet ne doit jamais être utilisé pour signifier un résultat chiffré, et inversement le vert/rouge sémantique ne doit jamais servir à autre chose qu'un résultat (cf. section 1.3). Deux intensités par couleur : une version « texte/icône » plus lumineuse pour rester lisible sur fond sombre, une version « fond de badge » très assourdie.
-
-| Token | Usage | Dark | Light |
+### 2.3 Sémantique
+| Token | Usage | Texte/icône | Fond de badge |
 |---|---|---|---|
-| `--pulse-gain-text` | Texte/icône gain (PnL positif, badge « Gain », sparkline haussière) | `#5FCB9E` | `#2F8F68` |
-| `--pulse-gain-surface` | Fond de badge/chip gain | `#16302A` | `#E3F3EC` |
-| `--pulse-loss-text` | Texte/icône perte | `#F0776B` | `#C64435` |
-| `--pulse-loss-surface` | Fond de badge/chip perte | `#3A211E` | `#FBE9E7` |
-| `--pulse-neutral-text` | Texte/icône neutre (breakeven, statut neutre) | `#B9BECF` | `#5B6270` |
-| `--pulse-neutral-surface` | Fond de badge/chip neutre | `#20233A` | `#EEEFF3` |
+| `--gain` | Gain, positif | `#5FCB9E` | `#16302A` |
+| `--loss` | Perte, négatif, règle non respectée | `#F0776B` | `#3A211E` |
+| `--warn` | Alerte, avertissement (ex. coût d'opportunité, taille anormale) | `#D9A85A` | `rgba(217,168,90,.12)` |
+| `--neutral` | Breakeven, neutre | `#B9BECF` | `#20233A` |
 
-**Règle d'accessibilité** : la couleur n'est jamais le seul vecteur d'information. Un badge « Gain »/« Perte »/« Neutre » porte toujours un libellé texte (et un point de statut), jamais une pastille de couleur seule — cf. maquette (section 7).
+**Règle d'accessibilité** : la couleur n'est jamais le seul vecteur d'information. Un gain/perte porte toujours un signe `+`/`−` ou un libellé (« Gain », « Perte », « Plan followed »), avec point de statut sur les badges.
 
-### 2.3 Thème sombre (référence — celui de la maquette fournie)
-| Token | Rôle | Hex |
+### 2.4 Palette catégorielle (répartitions non sémantiques)
+`#4A5FD9` (bleu), `#8B7FE8` (violet), `#5FCB9E` (vert), `#D9A85A` (ambre), puis 2 teintes additionnelles à valider à l'usage : sarcelle `#4FB8C9` et rose poudré `#C98BB0`. Le vert/rouge sémantique n'est pas réutilisé pour une catégorie quand la répartition porte sur des résultats.
+
+### 2.5 Fond d'application : l'aurore
+Le fond est `--bg-deep` recouvert de quatre lueurs radiales, toujours dans les tons bleu-violet (le magenta de l'exploration D est **écarté** pour rester fidèle au logo) :
+```
+radial-gradient(900px 620px at 8% 6%,   rgba(74,95,217,.42),  transparent 60%),
+radial-gradient(800px 600px at 95% 10%, rgba(139,127,232,.30), transparent 60%),
+radial-gradient(900px 700px at 65% 108%, rgba(74,95,217,.30),  transparent 60%),
+radial-gradient(600px 420px at 3% 96%,  rgba(95,203,158,.10),  transparent 60%),
+#080B20
+```
+
+### 2.6 Surfaces « verre »
+| Token | Valeur | Usage |
 |---|---|---|
-| `--surface-0` | Fond de la zone de contenu | `#0B0E27` (= `--pulse-ink-950`) |
-| `--surface-1` | Fond de la sidebar / barre supérieure | `#0D1120` |
-| `--surface-2` | Fond des cards et panneaux | `#171B33` |
-| `--surface-3` | Fond des éléments interactifs au repos (chip compte, chip date) | `#1F2440` |
-| `--border-hairline` | Bordure fine sur fond sombre | `rgba(255,255,255,0.08)` |
-| `--text-primary` | Texte principal | `#F5F2EC` |
-| `--text-secondary` | Texte atténué (labels, sous-titres) | `#9AA0C0` |
-| `--text-faint` | Texte très atténué (légendes d'axes) | `#6B7290` |
+| `--glass` | `linear-gradient(160deg,rgba(255,255,255,.085),rgba(255,255,255,.03))` | Fond des cartes et panneaux |
+| `--glass-border` | `rgba(255,255,255,.10)` | Bordure des cartes |
+| `--hairline` | `rgba(255,255,255,.08)` | Séparateurs, bordures de barre latérale/supérieure |
+| `--glass-bar` | `rgba(12,16,40,.55)` + `backdrop-filter: blur(22px)` | Barre latérale et barre supérieure |
+| `--control` | `rgba(255,255,255,.05)` (bord `rgba(255,255,255,.10)`) | Champs, chips, sélecteurs au repos |
+| `--blur-card` | `blur(20px)` | Flou d'arrière-plan des cartes |
 
-### 2.4 Thème clair (dérivé)
-À construire en miroir du thème sombre, en conservant les mêmes rôles de tokens (jamais de couleur codée en dur dans un composant — toujours via un token, cf. exigence non-fonctionnelle du cahier des charges, section 6) :
-
-| Token | Rôle | Hex |
-|---|---|---|
-| `--surface-0` | Fond de la zone de contenu | `#F7F4EE` |
-| `--surface-1` | Fond de la sidebar / barre supérieure | `#FFFFFF` |
-| `--surface-2` | Fond des cards et panneaux | `#FFFFFF` (+ ombre portée, cf. 4.3) |
-| `--surface-3` | Fond des éléments interactifs au repos | `#EFECE3` |
-| `--border-hairline` | Bordure fine sur fond clair | `rgba(10,13,24,0.08)` |
-| `--text-primary` | Texte principal | `#12162A` |
-| `--text-secondary` | Texte atténué | `#565C74` |
-| `--text-faint` | Texte très atténué | `#8A8FA3` |
-
-L'accent de marque (`--pulse-blue-500` → `--pulse-violet-400`) reste identique dans les deux thèmes ; en mode clair, vérifier son contraste sur `--surface-0` clair et l'assombrir légèrement si besoin sur le texte de lien (cf. section 8, point ouvert).
-
-### 2.5 Contraste
-Toute paire texte/fond doit atteindre au minimum le ratio WCAG AA (4.5:1 pour le texte courant, 3:1 pour le texte large ≥ 24px ou 19px gras). Les valeurs `--pulse-gain-text` et `--pulse-loss-text` du thème clair (section 2.2) sont volontairement plus saturées/foncées que leurs équivalents « source » de la palette de marque (section 2.1) pour cette raison — ne pas les remplacer par les couleurs de la planche de marque telles quelles sur fond clair.
+### 2.7 Contraste
+Toute paire texte/fond atteint WCAG AA (4,5:1 texte courant, 3:1 texte large). `--tx3` est réservé à du texte secondaire non essentiel (légendes) ; ne jamais l'utiliser pour une donnée à lire.
 
 ---
 
 ## 3. Typographie
 
-### 3.1 Police
-> **Statut : confirmée.** SF Pro Display est la police retenue, sur la base de la planche de marque définitive (nom, logo et typographie sont désormais alignés — section 1).
-- **Police retenue** : SF Pro Display (Apple), graisses Light, Regular, Medium, Semibold et Bold — jeu complet majuscules/minuscules/chiffres confirmé sur la planche de marque.
-- **Pile web** :
-  `font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;`
-  Sur macOS/iOS, cette pile résout nativement vers San Francisco. Sur les autres plateformes, **Inter** sert de repli — géométrie et graisses très proches, disponible via Google Fonts.
-- **Point ouvert restant** : le rendu réel de la pile de repli (Inter) sur Windows/Android n'a pas encore été vérifié à l'écran — à valider une fois un premier écran assemblé (cf. section 8).
+- **Police unique : Inter** (variable, graisses 300 à 700), **embarquée dans l'application** (fichier `woff2` local, aucune dépendance réseau). SF Pro Display, envisagée en v1.2, est abandonnée : elle n'existe pas sous Windows.
+- Repli : `system-ui, "Segoe UI", sans-serif`.
+- **Chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sur toute donnée financière alignée.
+- **Signes explicites** : `+` devant tout PnL positif, `−` (vrai signe moins) devant tout négatif.
 
-### 3.2 Échelle typographique
 | Style | Taille | Graisse | Usage |
 |---|---|---|---|
-| Display | 2.75rem / 44px | Bold | Valeur héros (Net PnL en tête de dashboard) |
-| H1 | 1.75rem / 28px | Semibold | Titre de page (« Trading Performance ») |
-| H2 | 1.125rem / 18px | Semibold | Titre de card/panneau |
-| KPI | 1.75rem / 28px | Semibold, tabulaire | Chiffre clé dans une stat card |
-| Body | 0.9375rem / 15px | Regular | Texte courant |
-| Label | 0.8125rem / 13px | Medium | Libellé de champ, légende de card |
-| Caption | 0.75rem / 12px | Medium, majuscules, +0.06em | Étiquettes de navigation, en-têtes de colonne |
+| Display | 46px | 700, interlettrage −0.02em | P&L net en tête de dashboard (dégradé blanc → `#C9D2FF` en option) |
+| Titre de page | 28px | 600, −0.02em | « Behavior », « New trade » |
+| Titre de carte | 16px | 600 | En-tête de carte |
+| KPI | 28px | 600 | Chiffre clé d'une stat card |
+| Corps | 14–15px | 400 | Texte courant |
+| Libellé | 13px | 500 | Libellé de champ |
+| Caption majuscules | 11–12px | 600, +0.06em, majuscules | En-têtes de section, libellés de KPI |
+| Wordmark | 26px | 300 | « Pulse » dans la barre latérale |
 
-### 3.3 Règles
-- **Chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sur toute donnée financière alignée en colonne : PnL, tableaux de trades, KPI — indispensable pour que les montants restent alignés verticalement (cohérent avec l'exigence de fiabilité des calculs du cahier des charges, section 6).
-- **Signes explicites** : un PnL positif s'affiche toujours précédé de `+`, jamais de couleur seule (cf. règle d'accessibilité, 2.5).
-- **Labels en majuscules** réservés aux éléments de repère courts (nav, en-têtes de colonne, badges) — jamais pour du texte de lecture longue.
-- **Largeur de ligne** : le texte courant (post-mortem, thèse de trade, description d'insight) ne dépasse pas ~70 caractères par ligne pour rester lisible.
+Règles : largeur de ligne ≤ ~70 caractères pour les textes longs (thèse, post-mortem) ; majuscules réservées aux repères courts.
 
 ---
 
 ## 4. Grille, espacement, forme
 
-### 4.1 Échelle d'espacement
-Base 4px : `4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48px` (`--space-1` à `--space-12`). L'espacement entre cards d'une même grille est de `--space-6` (24px) ; le padding interne d'une card est de `--space-5` à `--space-6` (20–24px).
+### 4.1 Espacement
+Base 4px : `4 · 8 · 12 · 16 · 20 · 24 · 32`. Espace entre cartes : **24px** (dashboard) / **20px** (écrans denses). Padding de carte : `22px 24px`. Marge de la zone de contenu : `24px 28px`.
 
-### 4.2 Rayons de bordure
+### 4.2 Rayons
 | Token | Valeur | Usage |
 |---|---|---|
-| `--radius-sm` | 8px | Chips, petits contrôles |
-| `--radius-md` | 14px | Cards standards |
-| `--radius-lg` | 20px | Grands panneaux (insights, hero) |
-| `--radius-pill` | 999px | Boutons, badges, sélecteurs |
+| `--r-sm` | 10px | Petits contrôles internes |
+| `--r-md` | 14px | Champs, items de navigation |
+| `--r-card` | **24px** | Cartes et panneaux |
+| `--r-inner` | 16px | Blocs à l'intérieur d'une carte (comparaisons, notices) |
+| `--r-pill` | 999px | Boutons, chips, badges, sélecteurs |
 
-### 4.3 Élévation
-Sur fond sombre, l'élévation se lit par une ombre portée diffuse plutôt qu'un changement de teinte marqué :
-- `--shadow-card` : `0 1px 2px rgba(0,0,0,.35), 0 8px 24px -12px rgba(0,0,0,.5)`.
-- `--shadow-button-primary` : ombre portée teintée de l'accent (`0 6px 16px -6px rgba(91,114,200,.5)`) + reflet interne haut (`inset 0 1px 0 rgba(255,255,255,.25)`) pour l'effet « glossy » du bouton primaire de la maquette.
-- Sur fond clair, remplacer les ombres noires par des ombres neutres plus douces (`rgba(20,20,30,.08)`), l'effet glossy du bouton primaire restant identique (l'accent ne change pas de thème).
+### 4.3 Élévation et lueur
+- `--shadow-card` : `0 20px 50px -24px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.10)`.
+- `--shadow-btn` : `0 10px 30px -8px rgba(139,127,232,.85), inset 0 1px 0 rgba(255,255,255,.35)`.
+- **Lueur (glow) — réservée à** : la courbe d'équité (`drop-shadow(0 0 8px rgba(139,127,232,.95))`), le bouton primaire, l'élément actif de navigation et de période, les jours forts du calendrier (`box-shadow: 0 0 14px -2px` de la couleur du résultat). **Jamais** sur du texte courant ni sur plus de 3 éléments par écran.
 
-### 4.4 Grille du dashboard
-- **Sidebar** : largeur fixe 248px, non repliable en desktop ; passe en tiroir superposé sous 960px.
-- **Barre supérieure** : hauteur 72px, fixe en haut de la zone de contenu.
-- **Zone de contenu** : grille en 12 colonnes, gouttière `--space-6` (24px) ; les cards déclarent leur emprise en colonnes (ex. le graphique héros = 8 colonnes, le panneau Insights = 4 colonnes — cf. maquette, section 7).
-- **Dashboard personnalisable** (cahier des charges, 3.8) : cette même grille 12 colonnes est le système de positionnement que manipule le glisser-déposer (3.8.2) — un widget occupe toujours un nombre entier de colonnes et de lignes.
+### 4.4 Structure de l'application (fenêtre Windows)
+- **Fenêtre** : taille de référence 1920×1080 ; **taille minimale 1280×720** ; pas de version mobile.
+- **Barre latérale** : 248px, libellés + icônes (Dashboard, Trades, Calendar, Analytics, Behavior, Journal, Goals, Settings) ; pied avec avatar et « Local · N accounts ».
+- **Barre supérieure** : 72px ; sélecteur de compte, sélecteur de période (1D 1W 1M 3M 1Y ALL), notifications, bouton « New trade ».
+- **Zone de contenu** : grille de 12 colonnes, gouttière 24px ; les cartes déclarent leur emprise en colonnes (héro = 8, insights = 4, KPI = 5 × ⅕ de 12, rangée basse = 4 × 3). C'est le système de positionnement du dashboard personnalisable (cahier des charges 3.8).
 
 ---
 
 ## 5. Composants
 
-### 5.1 Boutons
-| Variante | Fond | Texte | Usage |
-|---|---|---|---|
-| **Primaire** | Dégradé `--pulse-blue-500` → `--pulse-violet-400`, 135°, reflet interne haut | `--pulse-cream-100`, semibold | Action principale unique par écran (« Nouveau trade ») |
-| **Secondaire** | `--pulse-cream-100` plein, reflet interne façon galet | `--pulse-ink-950`, semibold | Action alternative (« Annuler ») |
-| **Tertiaire** | Transparent | `--pulse-violet-400`, medium, soulignement fin | Navigation en ligne (« Voir plus ») |
-| **Destructif** | Fond `--pulse-loss-surface` | `--pulse-loss-text`, semibold | Suppression, action irréversible |
+### 5.1 Boutons (pilule)
+| Variante | Style | Usage |
+|---|---|---|
+| **Primaire** | Fond `--grad`, texte blanc 600 15px, padding `12px 22px`, `--shadow-btn` | Une action principale par écran (« New trade », « Save trade ») |
+| **Secondaire** | Fond `--control`, bordure `rgba(255,255,255,.14)`, texte `--tx` | « Cancel », « Quick add », « Edit » |
+| **Tertiaire** | Transparent, texte `--tx-accent` | Liens en ligne |
+| **Destructif** | Fond `--loss` à 14 %, texte `#F5A198` | Suppression |
 
-Forme : pilule (`--radius-pill`), padding `20px / 12px`. États : *hover* — éclaircir le dégradé de 5% et lever le bouton de 1px avec une ombre plus marquée ; *focus* — anneau de focus 2px `--pulse-violet-400`, décalage 2px, toujours visible au clavier ; *disabled* — opacité 45%, dégradé désaturé, curseur désactivé.
+États : *hover* +5 % de luminosité et 1px de relief ; *focus* anneau 2px `--violet` décalé de 2px (toujours visible au clavier) ; *disabled* opacité 45 %.
 
-### 5.2 Badges de statut
-Pilule compacte : point de statut (6px) + libellé. Couleurs : `--pulse-gain-surface`/`--pulse-gain-text` (Gain), `--pulse-loss-surface`/`--pulse-loss-text` (Perte), `--pulse-neutral-surface`/`--pulse-neutral-text` (Neutre). Usage direct dans le cahier des charges : statut d'un trade (gagnant/perdant/breakeven, cf. 2.2 du cahier des charges), respect d'une règle (respectée/non respectée, cf. 2.4), résultat d'une alerte.
+### 5.2 Navigation latérale
+Item : icône 20px + libellé 15px/500, padding `12px 16px`, `--r-md`. Actif : fond `linear-gradient(135deg,rgba(74,95,217,.30),rgba(139,127,232,.20))`, texte blanc, halo `0 8px 24px -10px rgba(139,127,232,.7)`. Inactif : `--tx2`.
 
-### 5.3 Cards
-- **Card de base** : `--surface-2`, `--radius-lg`, `--shadow-card`, bordure `--border-hairline`.
-- **Stat/KPI card** (cf. widgets « Performance » du cahier des charges, 3.8.3) : libellé + icône d'info en tête, chiffre clé en style KPI (3.2), delta coloré selon sa sémantique juste en dessous, sparkline pleine largeur ancrée en bas de card.
-- **Card d'insight** (cf. Insights/IA, cahier des charges 3.5) : icône de repère à gauche, titre en gras, description en body, pas de bordure interne — la liste se sépare par un filet `--border-hairline`.
+### 5.3 Cartes
+Fond `--glass`, bordure `--glass-border`, `--r-card`, `--shadow-card`, flou `--blur-card`.
+- **Carte KPI** : libellé + icône info, chiffre 28px, delta coloré selon sa sémantique, sparkline pleine largeur ancrée en bas.
+- **Carte insight** : pastille icône 36px (dégradé bleu-violet translucide) + titre 600 + description `--tx2`, séparateur `--hairline`.
+- **Carte de comparaison** (in-plan / out-of-plan, premier trade / suivants) : deux blocs `--r-inner` fond `rgba(255,255,255,.04)`, libellé caption, valeur 26px, précision `--tx2`.
 
-### 5.4 Navigation latérale
-Item de nav = icône (20px) + libellé, `--radius-md`, padding `12px / 16px`. Actif : fond teinté à 12% d'opacité du dégradé de marque + texte/icône `--pulse-violet-400`. Inactif : `--text-secondary`. Survol : fond `--surface-2`. Pied de sidebar : avatar + nom + forfait, séparé par un filet `--border-hairline`.
+### 5.4 Champs de formulaire
+Libellé caption (11.5px, majuscules, `--tx3`) au-dessus ; champ hauteur **42px**, `--r-md`, fond `--control`, texte 14px ; suffixe d'unité à droite en `--tx3` (`lots`, `USD`, `planned`). Champ calculé automatiquement (ex. session déduite de l'heure) : bordure `rgba(139,127,232,.45)` + pastille « AUTO ». Zone de texte : min 90px, interligne 1,55.
 
-### 5.5 Barre supérieure
-Sélecteur de compte et sélecteur de période : chip `--surface-3`, `--radius-pill` ou `--radius-md`, icône + texte sur deux lignes + chevron. Reflète directement le multi-comptes (cahier des charges, 3.7.5) et le filtre par période (3.7.8). Bouton de notification : icône cloche + point d'accent si notification non lue (cf. alertes à seuils, 3.6).
+### 5.5 Contrôles
+- **Contrôle segmenté** (Long/Short, Discrétionnaire/Système) : conteneur `--control` 42px, segment actif teinté (vert translucide pour Long, gradient bleu-violet pour les choix neutres).
+- **Chips** (setup, condition de marché, émotions) : pilule `--control` ; sélectionnée : gradient `rgba(74,95,217,.38)→rgba(139,127,232,.26)`, bord `rgba(139,127,232,.6)`, texte blanc ; chip d'erreur : fond `rgba(240,119,107,.14)`, bord `rgba(240,119,107,.45)`.
+- **Curseur** (conviction 1–10) : piste 6px, remplissage `--grad`, poignée blanche 20px avec anneau `rgba(139,127,232,.35)`.
+- **Note d'exécution** : 5 segments de 30×8px, remplis en `--grad`. **Étoiles** : `#D9A85A`, 18px.
+- **Interrupteur** : 46×26px, actif en `--grad`.
+- **Case à cocher** : 19px, `--r-sm`, cochée = `--grad` ; règle non respectée = bord et croix `--loss`.
 
-### 5.6 Tableaux de données
-Lignes de hauteur 44px, séparateur `--border-hairline` (pas de zébrage). Colonne « Sens » : texte coloré directement (`--pulse-gain-text` pour Long, `--pulse-loss-text` pour Short) plutôt qu'un badge, pour rester léger sur une table dense. Colonnes chiffrées alignées à droite, tabulaires (3.3).
+### 5.6 Notices (bandeaux)
+Pilule de rayon `--r-inner`, padding `13px 15px`, 13px. Trois niveaux : **ok** (vert `#9BE3C4` sur `rgba(95,203,158,.10)`), **avertissement** (ambre `#F0CE8E` sur `rgba(217,168,90,.12)`), **critique** (corail `#F5A198` sur `rgba(240,119,107,.12)`), chacune avec bordure de la même teinte à ~35 % et une icône. Sert aux alertes à seuils (cahier des charges 3.6) et aux règles non respectées.
 
-### 5.7 Iconographie
-Style trait fin (1.5px), coins arrondis, monochrome héritant de la couleur du texte environnant — à l'exception du logo de marque qui seul porte le dégradé. Taille par défaut 20px dans la nav et les boutons, 16px dans les tableaux/labels.
+### 5.7 Badges de statut
+Pilule 12.5px/600 avec point 6px : Gain (`#16302A`/`--gain`), Loss (`#3A211E`/`--loss`), Neutre (`#20233A`/`--neutral`), « Plan followed » / « Plan broken ». Usage : statut d'un trade, respect d'une règle, résultat d'une alerte.
+
+### 5.8 Tableaux
+Lignes de 44–48px, séparateur `--hairline`, pas de zébrage. Colonne « Side » : texte coloré (`--gain` Long, `--loss` Short). Colonnes numériques alignées à droite, tabulaires. En-têtes en caption.
+
+### 5.9 Zone de dépôt de screenshot
+Bordure pointillée 1,5px `rgba(255,255,255,.22)`, `--r-inner`, hauteur 96px, texte `--tx3`, accepte le glisser-déposer et le collage depuis le presse-papiers.
+
+### 5.10 Iconographie
+Trait fin 1,6px, extrémités arrondies, monochrome (couleur du texte), 20px dans la navigation et les boutons, 16px dans les tableaux. Seul le logo porte le dégradé.
 
 ---
 
 ## 6. Visualisation de données
 
-Chaque type de graphique ci-dessous habille une fonctionnalité déjà spécifiée dans le cahier des charges — se référer à ce dernier pour la donnée sous-jacente, ce document ne fixe que le rendu.
-
-| Visualisation | Rendu | Fonctionnalité habillée |
+| Visualisation | Rendu | Fonctionnalité (cahier des charges) |
 |---|---|---|
-| **Courbe d'équité / aire** | Trait 2px `--pulse-blue-500`→`--pulse-violet-400`, remplissage en dégradé vers transparent, grille horizontale à 4% d'opacité, tooltip = card élevée avec pointeur | Courbe d'équité (3.3.7), PnL net en tête de dashboard |
-| **Sparkline** | Trait 1.5px, couleur sémantique (gain/perte) ou accent selon le contexte, sans axe | Mini-graphique de chaque stat card (3.8.3) |
-| **Donut de répartition** | Segments multicolores (palette catégorielle, 6.7), valeur totale au centre | Performance par stratégie (3.3.16) |
-| **Jauge en arc** | Demi-anneau segmenté par session, lecture au centre (meilleure/pire session) | Performance par session (3.3.9) |
-| **Histogramme** | Barres à coin supérieur arrondi, vert au-dessus de la ligne de base, rouge en dessous | Performance par heure (3.3.9), distribution des R-multiples (3.3.8) |
-| **Heatmap calendrier** | Cellule par jour, teinte verte par palier d'intensité (gain) ou rouge (perte), cellule neutre `--surface-3` si aucun trade | Calendrier de trading et heatmap P&L (3.7.1, 3.3.11) |
-
-### 6.7 Palette catégorielle étendue
-Pour les visualisations à plusieurs séries non sémantiques (ex. répartition par stratégie, par setup), étendre l'accent de marque par une palette de 6 teintes perceptuellement distinctes, dérivées de la palette de base : `--pulse-blue-500`, `--pulse-violet-400`, `--pulse-sage-500`, `--pulse-coral-500`, plus deux teintes additionnelles à définir (un doré/ambre et un bleu-sarcelle) pour couvrir jusqu'à 6 catégories sans confusion avec le sens gain/perte.
+| Courbe d'équité | Trait 2,4px `--blue → --violet`, remplissage en dégradé vers transparent, grille à 5 %, point final lumineux, halo (cf. 4.3) | 3.3.7 |
+| Sparkline | Trait 1,6px, couleur sémantique (gain/perte), remplissage léger | KPI (3.8.3) |
+| Anneau de score | Trait 16–18px arrondi, dégradé `--blue → --violet`, valeur au centre 52px/600 et « / 100 » | Score de discipline (3.4.1) |
+| Histogramme horaire | Barres à coins arrondis, vert au-dessus de la ligne de base, corail en dessous | 3.3.9, 3.3.8 |
+| Donut | Segments palette catégorielle (2.4), total au centre | 3.3.16 |
+| Calendrier / heatmap | Cellule 62px `--r-sm+`, teinte gain/perte à 3 paliers (`.18 / .38 / .62`), halo sur le palier fort, cellule neutre `rgba(255,255,255,.05)` | 3.7.1, 3.3.11 |
+| Barres émotion → résultat | Barres divergentes autour d'un axe central, gain à droite / perte à gauche, valeur et win rate à droite | 3.4.2 |
+| Chandeliers (détail d'un trade) | Bougies vert/corail, lignes horizontales Entry (violet), SL (corail, pointillé), TP (vert, pointillé) avec étiquettes pilule | 3.1.4, 3.7.4 |
 
 ---
 
-## 7. Application au dashboard de référence
+## 7. Adaptation à l'application Windows (Tauri)
 
-La maquette fournie sert de référence canonique d'assemblage des composants ci-dessus. Correspondance directe avec la bibliothèque de widgets du cahier des charges (3.8.3) :
-
-- **Sélecteur de compte + période** (barre supérieure) → multi-comptes (3.7.5), filtre par période (3.7.8).
-- **Net P&L + courbe** (card héros, 8 colonnes) → PnL net (3.3.1), courbe d'équité (3.3.7).
-- **Rangée de 5 KPI** (Net Rate, Profit Factor, Average Trade, Risk/Reward, Max Drawdown) → win rate et R:R réel (3.3.2), profit factor (3.3.4), max drawdown (3.3.6).
-- **Performance Insights** (panneau latéral, 4 colonnes) → insights automatiques (3.5.1–3.5.3).
-- **Trading Sessions** (jauge en arc) → performance par session (3.3.9).
-- **Hourly Performance** (histogramme) → performance par heure (3.3.9).
-- **Strategy Performance** (donut) → comparaison de stratégies (3.3.16).
-- **Trading Activity** (mini-calendrier) → calendrier de trading / heatmap (3.7.1, 3.3.11).
-- **Recent Trades** (tableau) → historique des trades, base du mode replay (3.7.4).
-
-Cet agencement précis constitue le **dashboard par défaut** (cahier des charges, 3.8.6) proposé à l'installation — les widgets qui le composent restent, comme tous les autres, ajoutables/retirables et déplaçables (3.8.1, 3.8.2).
+- **Police embarquée** (Inter en `woff2` local) ; aucune ressource distante.
+- **Effets de verre** : `backdrop-filter` est pris en charge par WebView2 ; prévoir un réglage **« Réduire les effets »** (fond uni `--bg`, cartes `#171B33`, sans flou ni halo) pour les machines modestes et l'accessibilité. Le rendu de secours reprend le style A pur.
+- **Mode sombre uniquement en v2.0.** Un thème clair est repoussé (cf. cahier des charges, exigence « sombre/clair » : à réévaluer à l'étape 5).
+- **Barre de titre** : barre native Windows dans un premier temps ; barre personnalisée intégrée à la barre supérieure à envisager plus tard.
+- **Écran de démarrage / icône d'application** : icône d'application du logo (carré très arrondi, dégradé pleine surface) aux tailles exigées par Windows (16 à 256px, `.ico`).
+- **Notifications** : notifications natives Windows ; libellé court, un clic ouvre le journal du jour (cahier des charges 3.2.8).
 
 ---
 
 ## 8. Points ouverts
 
-- **Nom, logo, typographie et palette de marque (section 2.1)** : arrêtés depuis le 26/08/2026 (planche de marque définitive) — ne sont plus des points ouverts.
-- **Logo — usage** : espace de protection, tailles minimales et variante fond clair non encore formalisés ; à définir à partir des fichiers source (SVG/Figma) plutôt que de la planche fournie en image (cf. 1.2).
-- **Police de repli web** : Inter confirmé par défaut pour les plateformes non-Apple ; rendu à l'écran non encore vérifié en conditions réelles (cf. 3.1).
-- **Tokens de thème dérivés** (surfaces 1 à 3, texte, bordures — sections 2.3/2.4) : toujours des estimations de lecture visuelle de la maquette de dashboard, distincts de la palette de marque elle-même désormais définitive — à recaler sur les fichiers sources dès qu'ils sont transmis.
-- **Deux teintes catégorielles additionnelles** (6.7) à définir précisément pour compléter la palette de répartition à 6 séries.
-- **Mode clair** : direction proposée en section 2.4, à valider visuellement une fois un premier écran assemblé (le contraste de l'accent bleu-violet sur fond clair doit être revérifié en conditions réelles).
+- Remplacer le logo redessiné par le **fichier officiel** (SVG) s'il existe ; définir espace de protection et tailles minimales.
+- Valider les deux teintes catégorielles additionnelles (2.4) à l'usage.
+- Thème clair : à concevoir plus tard, avec les mêmes rôles de tokens.
+- Vérifier le rendu du verre et des halos sur une vraie machine Windows (performances WebView2) une fois l'étape 1 installable.
+- Écrans restants à maquetter au fil des étapes : liste des trades, calendrier plein écran, objectifs, paramètres/alertes, journal quotidien, import CSV.

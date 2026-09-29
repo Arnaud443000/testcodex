@@ -1,10 +1,18 @@
-export type AccountType = 'Personnel' | 'Prop firm' | 'Démo';
+export type AccountKind = 'personal' | 'prop' | 'demo'
 
 export interface Account {
-  id: string;
-  name: string;
-  type: AccountType;
-  broker: string;
-  currency: string;
-  initialCapital: number;
+  id: number
+  name: string
+  kind: AccountKind
+  broker: string
+  currency: string
+  initialCapital: number
+}
+
+export type NewAccount = Omit<Account, 'id'>
+
+export interface AppInfo {
+  version: string
+  dataDir: string
+  schemaVersion: number
 }

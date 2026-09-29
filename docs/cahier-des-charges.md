@@ -1,7 +1,7 @@
 # Pulse — Cahier des charges fonctionnel — Journal de Trading
 
-Version 1.1 — 26/08/2026
-Statut : périmètre fonctionnel uniquement. Le nom définitif de l'application est **Pulse** (cf. section 8, mise à jour du 26/08/2026). L'identité visuelle complète (logo, palette, typographie, composants UI) est formalisée dans le document séparé `docs/charte-graphique.md`. Les pistes de design historiques restent conservées en annexe (section 8) pour ne rien perdre.
+Version 2.0 — 28/09/2026
+Statut : périmètre fonctionnel **et cadrage technique** (section 10). Refonte complète du projet : l'application devient une **application de bureau Windows (.exe) fonctionnant 100 % en local** (Tauri + SQLite). Le périmètre fonctionnel de la v1.1 est conservé dans sa quasi-totalité, complété par l'import CSV broker, le rappel quotidien natif, l'analyse de screenshot par IA et un coach IA optionnels ; quelques éléments sont retirés ou repoussés (cf. section 11, journal des changements). Le nom de l'application reste **Pulse** ; l'identité visuelle est décrite dans `docs/charte-graphique.md` et sera revue en fin de projet (section 8).
 
 ---
 
@@ -25,12 +25,23 @@ Ce principe structure une grande partie des fonctionnalités (checklist pré-tra
 - Trader indépendant, discrétionnaire et/ou systématique (particulier ou en compte prop firm).
 - Trade sur un ou plusieurs marchés (forex, indices, crypto, actions...).
 - Peut gérer plusieurs comptes en parallèle (compte personnel, compte de prop firm, compte démo).
+- Utilisateur unique, sur son propre PC Windows : pas de comptes utilisateurs, pas de partage entre personnes.
 
 ### 1.4 Portée du présent document
-Ce cahier des charges couvre exclusivement le **fonctionnel** : ce que l'application doit faire, quelles données elle manipule, comment les fonctionnalités s'articulent entre elles. Il ne traite pas :
-- de l'identité visuelle définitive (charte graphique, maquettes) — cf. section 8 pour les pistes déjà collectées,
-- de l'architecture technique (choix de stack, base de données, hébergement),
-- du modèle économique (gratuit/payant, freemium).
+Ce cahier des charges couvre le **fonctionnel** : ce que l'application doit faire, quelles données elle manipule, comment les fonctionnalités s'articulent entre elles. La section 10 fixe en outre le cadrage technique retenu (stack, stockage, distribution). Il ne traite pas :
+- de l'identité visuelle définitive (charte graphique, maquettes) — cf. section 8, à revoir en fin de projet,
+- du modèle économique : l'application est un outil personnel, non commercialisé à ce stade.
+
+### 1.5 Décisions de cadrage de la v2.0
+| Sujet | Décision |
+|---|---|
+| Périmètre | Tout le périmètre fonctionnel est conservé, livré par **étapes successives utilisables** (section 5) |
+| Plateforme | Application de bureau **Windows (.exe)**, construite avec Tauri 2 |
+| Données | **100 % locales** (fichier SQLite sur le PC), aucun serveur, aucun compte en ligne |
+| Fonctions ajoutées | Import CSV broker (3.7.11), rappel quotidien natif (3.2.8), analyse de screenshot par IA (3.5.4), coach IA (3.5.5) |
+| IA | **Optionnelle** : l'application fonctionne entièrement sans clé API ni connexion internet |
+| Retiré | Partage de configuration entre utilisateurs, chiffrement/authentification serveur, exigence mobile |
+| Repoussé en fin de projet | Alerte news économiques (3.6.8), carte de trade partageable (3.7.7) |
 
 ---
 
@@ -87,7 +98,10 @@ Brique unitaire d'affichage représentant une donnée ou une visualisation déj�
 ### 2.10 Dashboard (`Dashboard`)
 Configuration nommée d'une page d'accueil : une liste de `WidgetInstance` positionnées sur une grille, un nom, un statut (dashboard par défaut ou non), et un rattachement optionnel à un `Compte` (dashboard spécifique à un compte) ou global (vue multi-comptes). Un utilisateur peut posséder plusieurs `Dashboard` et basculer de l'un à l'autre (cf. module 3.8).
 
-### 2.11 Schéma relationnel simplifié
+### 2.11 Paramètres de l'application (`Paramètres`)
+Configuration locale unique : seuils d'alerte (3.6.7), heure du rappel quotidien (3.2.8), clé API IA et options IA (3.5.4, 3.5.5), profils d'import CSV (3.7.11), dossier de sauvegarde (3.7.12), verrouillage par mot de passe (3.7.13), thème clair/sombre.
+
+### 2.12 Schéma relationnel simplifié
 ```
 Compte 1───N Trade N───N Tag (setup / timeframe / session / condition de marché)
 Compte 1───N Dépôt/Retrait
@@ -95,12 +109,14 @@ Trade  N───1 Stratégie (optionnel)
 Trade  1───1 ChecklistTemplate (copie remplie)
 Trade  N───N Règle (respectée / non respectée)
 Trade  1───N Émotion (avant / pendant / après)
+Trade  N───1 Import (lot d'import CSV d'origine, optionnel)
 Compte 1───N TradeManqué
 Compte 1───N EntréeJournal (par jour)
 Compte 1───N Objectif (par mois)
 Règle  1───N SeuilAlerte (0 ou 1 le plus souvent)
 Compte 0,1───N Dashboard (dashboard rattaché à un compte, ou global si vide)
 Dashboard 1───N WidgetInstance N───1 Widget (type de widget, référence une métrique/vue des modules 3.3 à 3.7)
+Paramètres 1───1 Application (configuration locale unique)
 ```
 
 Toutes les fonctionnalités décrites ci-après **lisent ou écrivent** dans ce socle commun. Chaque section 3.x précise explicitement ses dépendances vers les autres modules.
@@ -122,7 +138,7 @@ Convention de lecture pour chaque fonctionnalité :
 - **Données** : `Trade.actif`, `Trade.sens`, `Trade.taille`, `Trade.prixEntrée`, `Trade.prixSortie`, `Trade.dateHeureEntrée`, `Trade.dateHeureSortie`.
 - **Règles de gestion** :
   - Le PnL brut est calculé automatiquement à partir de ces champs (cf. 3.3.1) — jamais saisi manuellement pour éviter les incohérences.
-  - La session (Londres/NY/Asie, cf. 3.1.6) peut être déduite automatiquement de l'heure d'entrée, avec possibilité de correction manuelle.
+  - La session (Londres/NY/Asie, cf. 3.1.5) peut être déduite automatiquement de l'heure d'entrée, avec possibilité de correction manuelle.
   - Un trade encore ouvert n'a pas de prix/date de sortie ; il apparaît comme "en cours" dans le calendrier et les stats l'excluent du PnL réalisé tant qu'il n'est pas clôturé.
 - **Dépendances** : base de tous les calculs de la section 3.3, du calendrier (3.7.1), de la heatmap (3.3.11).
 
@@ -131,15 +147,15 @@ Convention de lecture pour chaque fonctionnalité :
 - **Données** : `Trade.slPrevu`, `Trade.tpPrevu`, `Trade.slReel`, `Trade.tpReel`.
 - **Règles de gestion** :
   - Un trade sans SL prévu renseigné déclenche l'alerte de garde-fou 3.6.6 avant validation de la saisie.
-  - L'écart entre TP prévu et prix réellement atteint après la sortie alimente la vue "coût d'opportunité" (3.3.19).
+  - L'écart entre TP prévu et prix réellement atteint après la sortie alimente la vue "coût d'opportunité" (3.3.18).
   - L'écart entre SL/TP prévus et réels objective le respect du plan (lié à 3.2.3).
-- **Dépendances** : 3.2.3 (respect du plan), 3.3.19 (coût d'opportunité), 3.6.6 (alerte SL manquant).
+- **Dépendances** : 3.2.3 (respect du plan), 3.3.18 (coût d'opportunité), 3.6.6 (alerte SL manquant).
 
 #### 3.1.3 Frais et commissions
 - **Description** : saisie des frais associés au trade (commission broker, spread si applicable).
 - **Données** : `Trade.frais`.
 - **Règles de gestion** : le PnL net = PnL brut − frais. Le PnL net est la valeur de référence pour tous les indicateurs de performance (win rate, expectancy, etc.), sauf mention contraire explicite "brut".
-- **Dépendances** : 3.3.1 (PnL net), 3.3.13 (coût cumulé des frais).
+- **Dépendances** : 3.3.1 (PnL net), 3.3.15 (coût cumulé des frais).
 
 #### 3.1.4 Screenshot du graphique
 - **Description** : pièce jointe image associée au trade, capturant le graphique au moment de la prise de décision.
@@ -197,7 +213,7 @@ Ce module capture le **process**, en complément du résultat chiffré du module
 - **Description** : indicateur (oui/non, ou partiel) déclaré par le trader sur le respect de son plan pour ce trade précis.
 - **Données** : `Trade.planRespecté`.
 - **Règles de gestion** : distinct de la note de qualité d'exécution (3.2.9), qui est plus granulaire (checklist) ; celui-ci est une déclaration globale rapide.
-- **Dépendances** : 3.4.4 (comparaison perf trades hors-plan vs dans le plan), 3.3.20 (PnL réel vs PnL simulé si plan toujours respecté).
+- **Dépendances** : 3.4.4 (comparaison perf trades hors-plan vs dans le plan), 3.3.14 (PnL réel vs PnL simulé si plan toujours respecté).
 
 #### 3.2.4 Note post-mortem
 - **Description** : champ texte libre rempli après clôture : qu'est-ce qui a marché, qu'est-ce qui n'a pas marché.
@@ -207,7 +223,7 @@ Ce module capture le **process**, en complément du résultat chiffré du module
 #### 3.2.5 Journal des trades manqués
 - **Description** : consignation des setups vus mais non tradés, avec la raison (peur, doute...).
 - **Données** : objet `TradeManqué` (cf. 2.3) : `actif`, `dateHeure`, `raisonNonPrise`, `notes`.
-- **Règles de gestion** : ne génère pas de PnL réel ; peut optionnellement estimer un "PnL fictif" si le setup avait été pris, pour objectiver le coût de l'inaction — à considérer en V2 (cf. section 5).
+- **Règles de gestion** : ne génère pas de PnL réel ; peut optionnellement estimer un "PnL fictif" si le setup avait été pris, pour objectiver le coût de l'inaction — à considérer à l'étape 4 (cf. section 5) et sujet ouvert en section 9.
 - **Dépendances** : 3.4.5 (repérage d'un manque de confiance récurrent par setup/session).
 
 #### 3.2.6 Journal quotidien avec question de réflexion guidée
@@ -223,14 +239,14 @@ Ce module capture le **process**, en complément du résultat chiffré du module
 
 #### 3.2.8 Rappel/notification pour remplir le journal du jour
 - **Description** : notification programmée incitant à compléter le journal quotidien (3.2.6) et les trades du jour restés en "Quick Add" (3.1.7) incomplet.
-- **Règles de gestion** : heure de rappel paramétrable ; ne se déclenche que s'il y a eu au moins un trade ou une session de marché dans la journée.
+- **Règles de gestion** : notification **native Windows**, envoyée par l'application (qui tourne en zone de notification, cf. section 10) ; heure de rappel paramétrable ; ne se déclenche que s'il y a eu au moins un trade dans la journée ; un clic sur la notification ouvre directement le journal du jour.
 - **Dépendances** : 3.2.6, 3.1.7.
 
 #### 3.2.9 Note de qualité d'exécution (séparée du résultat)
 - **Description** : note structurée évaluant si le trade a été **bien exécuté** (respect checklist, respect du plan, gestion du risque conforme), indépendamment de son résultat financier.
 - **Données** : calculée à partir de `Trade.checklistComplétée`, `Trade.planRespecté`, `Trade.règlesRespectées` — ou saisie manuellement en complément.
 - **Règles de gestion** : c'est l'indicateur pivot du principe directeur (section 1.2). Un trade peut être "gagnant / mal exécuté" ou "perdant / bien exécuté" ; ces deux catégories doivent être visibles distinctement dans les statistiques (3.3) pour éviter que le trader ne juge sa performance uniquement au résultat.
-- **Dépendances** : 3.4.1 (score de discipline global, qui agrège ces notes dans le temps), 3.3.20 (PnL simulé si discipline parfaite).
+- **Dépendances** : 3.4.1 (score de discipline global, qui agrège ces notes dans le temps), 3.3.14 (PnL simulé si discipline parfaite).
 
 ---
 
@@ -250,7 +266,7 @@ Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de p
 #### 3.3.3 Expectancy (espérance mathématique par trade, en R)
 - **Description** : gain moyen attendu par trade, exprimé en multiple du risque initial (R).
 - **Formule** : voir glossaire (section 7).
-- **Dépendances** : nécessite que chaque trade ait un risque initial défini (via le SL prévu, 3.1.2) pour calculer le R-multiple (3.3.7).
+- **Dépendances** : nécessite que chaque trade ait un risque initial défini (via le SL prévu, 3.1.2) pour calculer le R-multiple (3.3.8).
 
 #### 3.3.4 Profit factor
 - **Description** : rapport entre la somme des gains et la somme des pertes sur une période.
@@ -284,7 +300,7 @@ Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de p
 #### 3.3.12 Risque exprimé en % du capital
 - **Description** : tous les indicateurs de risque (taille de position, perte max autorisée) sont affichables en % du capital courant plutôt qu'en valeur brute.
 - **Règles de gestion** : plus pertinent que la valeur brute lorsque le capital évolue dans le temps (dépôts, retraits, gains cumulés) — s'appuie sur `Compte.capitalCourant` (2.1).
-- **Dépendances** : 3.6.3, 3.6.4, 3.7.13 (vue scaling du capital).
+- **Dépendances** : 3.6.3, 3.6.4, 3.3.21 (vue scaling du capital).
 
 #### 3.3.13 Vue "par actif" dédiée
 - **Description** : page de synthèse par instrument tradé, agrégeant l'ensemble des indicateurs pour cet actif seul.
@@ -307,12 +323,13 @@ Ce module transforme les données brutes des modules 3.1/3.2 en indicateurs de p
 - **Données** : peut être un attribut de `Stratégie` (2.7) ou du `Trade` directement.
 
 #### 3.3.18 Vue "coût d'opportunité"
-- **Description** : gains laissés sur la table en sortant trop tôt — compare le TP prévu (3.1.2) au prix réellement atteint après la sortie du trade (nécessite un suivi du prix post-clôture, ex. via une source de données de marché).
+- **Description** : gains laissés sur la table en sortant trop tôt — compare le TP prévu (3.1.2) au prix réellement atteint après la sortie du trade.
+- **Règles de gestion** : en v2.0, le prix post-sortie est un **champ optionnel saisi manuellement** sur le trade (`Trade.prixAprèsSortie`), renseignable après coup ; aucun suivi automatique de marché n'est requis.
 - **Dépendances** : 3.1.2.
 
 #### 3.3.19 Comparaison période actuelle vs même période l'année précédente
 - **Description** : tous les indicateurs peuvent être comparés en glissement annuel.
-- **Dépendances** : 3.7.6 (filtre par période), dont c'est une extension.
+- **Dépendances** : 3.7.8 (filtre par période), dont c'est une extension.
 
 #### 3.3.20 Ratio temps passé en position
 - **Description** : durée moyenne des trades gagnants vs perdants (temps entre entrée et sortie).
@@ -392,6 +409,16 @@ Ce module ne crée pas de nouvelles données : il **synthétise et met en avant*
 - **Description** : recommandations textuelles générées à partir des erreurs récurrentes (3.4.7/3.4.8) et des corrélations identifiées (3.4.2, 3.4.9).
 - **Dépendances** : 3.4.7, 3.4.8, 3.4.2, 3.4.9.
 
+#### 3.5.4 Analyse de screenshot par IA (optionnel)
+- **Description** : à partir du screenshot d'un trade (3.1.4), l'IA décrit le contexte visible (structure de marché, niveaux, position du SL/TP), le confronte à la thèse (3.2.1) et signale les incohérences éventuelles.
+- **Règles de gestion** : déclenchée à la demande, jamais automatiquement ; nécessite une clé API et une connexion internet ; le résultat est un **commentaire consultable et supprimable**, jamais une donnée modifiant les statistiques ; l'utilisateur est prévenu que l'image est envoyée au fournisseur d'IA.
+- **Dépendances** : 3.1.4, 3.2.1.
+
+#### 3.5.5 Coach IA conversationnel (optionnel)
+- **Description** : espace de discussion où l'utilisateur interroge ses propres données (« pourquoi je perds le vendredi ? », « résume ma semaine »). L'IA s'appuie sur les statistiques et journaux déjà calculés.
+- **Règles de gestion** : seules les données nécessaires à la question sont transmises (agrégats de préférence aux trades bruts) ; les chiffres cités doivent provenir des calculs de l'application (glossaire, section 7), jamais recalculés par l'IA ; l'historique de conversation est stocké localement et effaçable.
+- **Dépendances** : 3.3, 3.4, 3.5.1 à 3.5.3.
+
 ---
 
 ### 3.6 Module — Alertes à seuils (garde-fous en temps réel)
@@ -415,8 +442,8 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 - **Dépendances** : 3.4.5 (calibration du seuil "anormal" à partir de l'historique détecté).
 
 #### 3.6.5 Alerte trade hors horaires/sessions habituels
-- **Description** : déclenchée si un trade est pris en dehors des sessions habituelles du trader (3.1.6).
-- **Dépendances** : 3.1.6.
+- **Description** : déclenchée si un trade est pris en dehors des sessions habituelles du trader (3.1.5).
+- **Dépendances** : 3.1.5.
 
 #### 3.6.6 Alerte "trade sans stop loss"
 - **Description** : blocage/avertissement avant validation de la saisie si aucun SL prévu n'est renseigné (3.1.2).
@@ -428,7 +455,7 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 
 #### 3.6.8 Alerte trading pendant news économiques majeures
 - **Description** : déclenchée si un trade est pris pendant une plage de news économique majeure (CPI/NFP/FOMC), si les statistiques de l'utilisateur (3.3.9, segmentées par condition de marché "news économique", 3.1.6) montrent que ces trades sont statistiquement moins bons pour lui.
-- **Règles de gestion** : nécessite une source de calendrier économique externe pour dater les événements majeurs.
+- **Règles de gestion** : nécessite une source de calendrier économique externe pour dater les événements majeurs. **Repoussée en fin de projet** (dépendance à une API tierce fragile) ; en attendant, la condition de marché "news économique" (3.1.6) reste saisissable manuellement et alimente les statistiques par segment.
 - **Dépendances** : 3.1.6, 3.3.9.
 
 #### 3.6.9 Système de "règles personnelles" éditables et cochées par trade
@@ -451,7 +478,7 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 
 #### 3.7.3 Export CSV/PDF pour bilan fiscal
 - **Description** : export de l'historique des trades et des PnL sur une période donnée, dans un format exploitable pour la déclaration fiscale.
-- **Dépendances** : 3.1 (données brutes des trades), 3.7.6 (filtre par période).
+- **Dépendances** : 3.1 (données brutes des trades), 3.7.8 (filtre par période).
 
 #### 3.7.4 Mode "replay" / historique consultable rapidement
 - **Description** : parcours rapide de l'historique des trades, filtrable notamment par la notation manuelle (3.1.8), avec accès au screenshot (3.1.4), à la thèse (3.2.1) et au post-mortem (3.2.4).
@@ -466,7 +493,7 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 - **Dépendances** : 3.7.5.
 
 #### 3.7.7 Export/partage d'un trade individuel en "carte de trade"
-- **Description** : génération d'une image de synthèse d'un trade (setup, résultat, graphique) destinée au partage.
+- **Description** : génération d'une image de synthèse d'un trade (setup, résultat, graphique) destinée au partage. *Priorité la plus basse, livrée en fin de projet.*
 - **Dépendances** : 3.1.4 (screenshot), 3.1.5 (setup), 3.3.1 (résultat).
 
 #### 3.7.8 Filtre par période et comparaison à la période précédente
@@ -481,6 +508,20 @@ Contrairement au module 3.4 (analyse a posteriori), ce module intervient **au mo
 - **Description** : les mouvements de capital (dépôts, retraits) sont enregistrés séparément des trades, afin de ne pas fausser la courbe d'équité (3.3.7) ni les indicateurs de performance.
 - **Données** : `Compte.historiqueDépôtsRetraits` (2.1).
 - **Dépendances** : 3.3.7, 2.1 — règle de gestion fondamentale à respecter dans tous les calculs de performance du module 3.3.
+
+#### 3.7.11 Import CSV depuis le broker
+- **Description** : import d'un historique de trades exporté par le broker (CSV), avec assistant de correspondance des colonnes (actif, sens, taille, prix, dates, frais) et **profils d'import mémorisés** par broker.
+- **Règles de gestion** : aperçu avant validation ; détection des doublons (un même trade importé deux fois n'est pas créé deux fois) ; chaque import est un lot annulable en bloc ; les trades importés sont marqués incomplets (3.1.7) tant que les champs qualitatifs ne sont pas renseignés ; rattachement obligatoire à un `Compte`.
+- **Dépendances** : 3.1.1, 3.1.7, 2.1.
+
+#### 3.7.12 Sauvegarde et restauration locales
+- **Description** : sauvegarde complète des données (base + screenshots) vers un dossier choisi par l'utilisateur, et restauration depuis une sauvegarde.
+- **Règles de gestion** : sauvegarde automatique périodique paramétrable (ex. à chaque fermeture, en gardant les N dernières) ; la restauration demande confirmation et crée d'abord une sauvegarde de l'état courant ; export complet dans un format ouvert (cf. section 6).
+- **Dépendances** : section 6, section 10.
+
+#### 3.7.13 Verrouillage de l'application (optionnel)
+- **Description** : mot de passe demandé au lancement, pour protéger les données financières sur un PC partagé.
+- **Règles de gestion** : désactivé par défaut ; lorsqu'il est activé, la base locale est chiffrée avec une clé dérivée du mot de passe ; un mot de passe perdu n'est pas récupérable (avertissement explicite à l'activation).
 
 ---
 
@@ -524,8 +565,8 @@ Ce module ne définit **aucune nouvelle métrique**. Il donne à l'utilisateur l
 - **Description** : l'utilisateur désigne le dashboard affiché automatiquement à la connexion.
 - **Dépendances** : 3.8.5.
 
-#### 3.8.7 Duplication, export et partage de configuration
-- **Description** : un dashboard sauvegardé peut être dupliqué comme point de départ d'un nouveau, exporté sous forme de fichier de configuration, puis réimporté sur un autre appareil ou partagé avec un autre utilisateur.
+#### 3.8.7 Duplication, export et import de configuration
+- **Description** : un dashboard sauvegardé peut être dupliqué comme point de départ d'un nouveau, exporté sous forme de fichier de configuration, puis réimporté (sauvegarde personnelle, changement de PC). Le partage avec d'autres utilisateurs n'est plus prévu.
 - **Dépendances** : 3.8.5.
 
 #### 3.8.8 Réglages internes par widget
@@ -555,52 +596,56 @@ Cette section explicite les grands **fils de données** qui traversent plusieurs
 
 ---
 
-## 5. Priorisation fonctionnelle (V1 / V2 / V3)
+## 5. Phasage de la livraison (étapes utilisables)
 
-Le document source indiquait explicitement qu'un tri serait fait pour la V1. Proposition de phasage, à valider :
+Tout le périmètre est conservé, mais construit par étapes : **chaque étape aboutit à une application installable et utilisable au quotidien**. L'ordre suit le fil de dépendances de la section 4 (le socle de données d'abord).
 
-### V1 — Socle indispensable
-- Saisie de trade complète (3.1.1 à 3.1.7, hors mode confiance)
-- Le "pourquoi" du trade : thèse, émotions, respect du plan, post-mortem (3.2.1 à 3.2.4)
-- Checklist pré-trade (3.2.7)
-- Statistiques de base : PnL, win rate, R:R réel, expectancy, profit factor, max drawdown, courbe d'équité (3.3.1 à 3.3.7)
-- Performance par segment simple (3.3.9)
-- Calendrier de trading (3.7.1)
-- Règles personnelles éditables + cochage par trade, sans alerte temps réel (3.6.9, volet déclaratif)
-- Multi-comptes basique (3.7.5)
-- Export CSV (3.7.3)
-- Filtre par période (3.7.8)
-- Suivi dépôts/retraits séparé (3.7.10)
+### Étape 1 — Socle : saisir et mesurer
+- Application Tauri installable, base SQLite, sauvegarde/restauration (3.7.12)
+- Multi-comptes (3.7.5), suivi dépôts/retraits séparé (3.7.10)
+- Saisie de trade complète (3.1.1 à 3.1.8), tags normalisés, Quick Add
+- Import CSV broker (3.7.11)
+- Statistiques de base (3.3.1 à 3.3.7), performance par segment (3.3.9), filtre par période (3.7.8)
+- Calendrier (3.7.1), export CSV (3.7.3)
+- Règles personnelles et checklist pré-trade, volet déclaratif (3.6.9, 3.2.7)
 
-### V2 — Analyse comportementale et garde-fous
-- Mode confiance (3.1.9), trades manqués (3.2.5), journal quotidien (3.2.6) + rappel (3.2.8)
-- Note de qualité d'exécution (3.2.9) et score de discipline (3.4.1)
-- Distribution des R-multiples, heatmap, long vs short, risque en % (3.3.8, 3.3.10 à 3.3.12)
-- Analyse comportementale complète (streaks, hors-plan vs plan, erreurs récurrentes, corrélations — 3.4.2 à 3.4.10)
-- Toutes les alertes à seuils temps réel (3.6.1 à 3.6.8)
-- Objectifs mensuels (3.7.2)
-- Mode replay (3.7.4)
-- Dashboard modulaire complet : widgets ajoutables/retirables, disposition libre par glisser-déposer, bibliothèque de widgets, presets préconfigurés, sauvegarde et bascule entre plusieurs dashboards nommés, dashboard par défaut, réglages internes par widget (3.8.1 à 3.8.6, 3.8.8)
+### Étape 2 — Le « pourquoi » et l'analyse comportementale
+- Thèse, émotions, respect du plan, post-mortem (3.2.1 à 3.2.4), mode confiance (3.1.9)
+- Trades manqués (3.2.5), journal quotidien (3.2.6), rappel natif (3.2.8)
+- Note de qualité d'exécution (3.2.9), score de discipline (3.4.1)
+- Analyse comportementale complète (3.4.2 à 3.4.10)
+- R-multiples, heatmap, long vs short, risque en % (3.3.8, 3.3.10 à 3.3.12)
+- Objectifs mensuels (3.7.2), mode replay (3.7.4)
 
-### V3 — Approfondissement et intelligence
-- Insights/IA (alertes de tendance, suggestions personnalisées — 3.5.1 à 3.5.3)
-- Comparaison de stratégies et système vs discrétionnaire (3.3.16, 3.3.17)
-- Coût d'opportunité, comparaison an-1, scaling du capital (3.3.18 à 3.3.21)
-- Comparaison entre comptes/brokers (3.7.6)
-- Carte de trade partageable (3.7.7)
-- Benchmark risque max par trade (3.4.11)
-- Duplication/export/partage de configuration de dashboard, dashboard rattaché à un compte ou vue multi-comptes (3.8.7, 3.8.9)
+### Étape 3 — Garde-fous et dashboard modulaire
+- Alertes à seuils temps réel (3.6.1 à 3.6.7) reliées aux règles personnelles (3.6.9)
+- Dashboard personnalisable : widgets, disposition libre, bibliothèque, presets, dashboards multiples, dashboard par défaut, réglages par widget (3.8.1 à 3.8.8)
+- Frais cumulés, vue par actif, PnL simulé, stratégies, système vs discrétionnaire (3.3.13 à 3.3.17)
+
+### Étape 4 — Intelligence et approfondissement
+- Insights automatiques (3.5.1 à 3.5.3)
+- Analyse de screenshot par IA (3.5.4), coach IA (3.5.5)
+- Coût d'opportunité manuel, comparaison an-1, temps en position, scaling (3.3.18 à 3.3.21)
+- Comparaison entre comptes/brokers (3.7.6), benchmark risque max (3.4.11), exposition par catégorie d'actif (3.7.9)
+- Dashboard rattaché à un compte ou multi-comptes (3.8.9), duplication/export de configuration (3.8.7)
+- Verrouillage par mot de passe (3.7.13)
+
+### Étape 5 — Finitions
+- Alerte news économiques (3.6.8), carte de trade partageable (3.7.7), export PDF (3.7.3)
+- Refonte de l'identité visuelle (section 8) et passe finale de polish
 
 ---
 
 ## 6. Exigences non-fonctionnelles
 
-- **Confidentialité des données** : les données de trading sont sensibles (PnL, capital) ; chiffrement au repos et en transit recommandé, accès protégé par authentification.
-- **Sauvegarde et export** : possibilité d'exporter l'intégralité des données à tout moment (au-delà du seul export fiscal 3.7.3), pour éviter tout verrouillage des données de l'utilisateur.
-- **Performance** : les écrans de statistiques (section 3.3) doivent rester réactifs même avec un historique de plusieurs milliers de trades.
-- **Mode sombre/clair** : les deux thèmes doivent être supportés (détail visuel traité en annexe, section 8).
-- **Accessibilité multi-support** : usage envisagé sur ordinateur en priorité, avec consultation mobile a minima pour la saisie rapide (3.1.7) et les alertes (3.6).
-- **Fiabilité des calculs** : toute métrique affichée (cf. glossaire, section 7) doit être recalculée depuis les données sources, jamais mise en cache de façon incohérente entre deux vues.
+- **Confidentialité** : aucune donnée ne quitte le PC par défaut. Seules les fonctions IA optionnelles (3.5.4, 3.5.5) envoient des données, uniquement à la demande de l'utilisateur et avec avertissement. La clé API IA est stockée dans le coffre d'identifiants de Windows, jamais en clair dans la base. Chiffrement de la base optionnel (3.7.13).
+- **Sauvegarde et export** : possibilité d'exporter l'intégralité des données à tout moment dans un format ouvert (CSV/JSON + images), au-delà du seul export fiscal (3.7.3), pour éviter tout verrouillage. Sauvegardes locales automatiques (3.7.12).
+- **Fonctionnement hors ligne** : toutes les fonctions hors IA marchent sans connexion internet.
+- **Performance** : écrans de statistiques (3.3) réactifs avec plusieurs dizaines de milliers de trades ; démarrage de l'application en quelques secondes.
+- **Intégrité des données** : écritures transactionnelles, migrations de schéma versionnées et testées ; une mise à jour de l'application ne doit jamais faire perdre de données (sauvegarde automatique avant migration).
+- **Mode sombre/clair** : les deux thèmes sont supportés (détail visuel en section 8).
+- **Plateforme** : Windows 10/11 64 bits, écran d'ordinateur (l'exigence mobile de la v1.1 est abandonnée). Installeur unique, sans prérequis à installer par l'utilisateur.
+- **Fiabilité des calculs** : toute métrique affichée (cf. glossaire, section 7) doit être recalculée depuis les données sources, jamais mise en cache de façon incohérente entre deux vues ; les formules du glossaire sont couvertes par des tests automatisés.
 
 ---
 
@@ -621,7 +666,9 @@ Ce glossaire garantit que chaque métrique est implémentée de façon identique
 
 ---
 
-## 8. Annexe — Identité visuelle (à traiter ultérieurement)
+## 8. Annexe — Identité visuelle
+
+**Mise à jour du 28/09/2026 (v2.0) — direction arrêtée : style « A+D »** (palette Pulse + panneaux en verre et lueurs d'aurore, thème sombre, police Inter embarquée). La référence est désormais `docs/charte-graphique.md` v2.0 et les maquettes de `docs/maquettes/`. Les pistes historiques ci-dessous sont conservées pour mémoire.
 
 Cette section conserve les pistes déjà évoquées, pour mémoire, dans l'attente du document de charte graphique dédié :
 
@@ -650,7 +697,37 @@ Cette section conserve les pistes déjà évoquées, pour mémoire, dans l'atten
 ## 9. Points ouverts / décisions produit à trancher avant développement
 
 - Formule exacte de pondération du score de discipline (3.4.1) — quelles composantes pèsent le plus.
-- Faut-il estimer un "PnL fictif" sur les trades manqués (3.2.5), et selon quelle méthode ?
-- Source de données pour le calendrier économique (3.6.8) et pour le suivi du prix post-clôture (3.3.18, coût d'opportunité) — nécessite potentiellement une API de marché tierce.
+- Faut-il estimer un « PnL fictif » sur les trades manqués (3.2.5), et selon quelle méthode ?
+- Fournisseur et modèle d'IA retenus pour 3.5.4 et 3.5.5, et plafond de coût à afficher à l'utilisateur.
+- Source du calendrier économique pour 3.6.8 (étape 5).
 - Granularité du multi-comptes : vue consolidée automatique ou uniquement par bascule manuelle (3.7.5) ?
 - Valeurs par défaut proposées pour les seuils d'alerte (3.6.7) à l'installation.
+- Brokers prioritaires pour les profils d'import CSV (3.7.11).
+- Signature de code de l'.exe (évite l'avertissement Windows SmartScreen) : nécessaire ou non pour un usage personnel ?
+
+---
+
+## 10. Cadrage technique
+
+- **Application de bureau** : [Tauri 2](https://tauri.app) (coque native Rust + interface web), cible Windows 10/11 x64.
+- **Interface** : React + TypeScript + Tailwind CSS ; graphiques via une bibliothèque de graphiques React (ex. Recharts).
+- **Stockage** : SQLite local, accédé depuis le cœur Rust de l'application ; schéma migré par des migrations versionnées ; screenshots stockés en fichiers dans le dossier de données de l'application, référencés par la base.
+- **Calculs** : les statistiques sont calculées à partir des données sources (section 6), les formules du glossaire (section 7) étant implémentées une seule fois et testées.
+- **Notifications** : API native de notification Windows ; l'application peut rester en zone de notification pour le rappel quotidien (3.2.8).
+- **IA optionnelle** : appels HTTPS à une API d'IA avec la clé de l'utilisateur, stockée dans le coffre d'identifiants Windows (3.5.4, 3.5.5).
+- **Build et distribution** : compilation de l'installeur Windows via GitHub Actions (le développement se fait hors Windows) ; installeur `.exe`/`.msi` publié en artefact de release ; mises à jour automatiques envisageables plus tard.
+- **Tests** : tests unitaires sur les calculs, tests de migration de base, test de fumée de l'installeur à valider manuellement sur Windows.
+
+---
+
+## 11. Journal des changements (v1.1 → v2.0)
+
+**Ajouté** : cadrage technique Tauri/SQLite (sections 1.5, 10) ; import CSV broker (3.7.11) ; sauvegarde/restauration locales (3.7.12) ; verrouillage optionnel (3.7.13) ; analyse de screenshot par IA (3.5.4) ; coach IA (3.5.5) ; rappel quotidien par notification native (3.2.8) ; objet `Paramètres` (2.11).
+
+**Retiré** : partage de configuration de dashboard entre utilisateurs (3.8.7) ; chiffrement/authentification côté serveur ; exigence de consultation mobile.
+
+**Simplifié** : coût d'opportunité en saisie manuelle du prix post-sortie (3.3.18).
+
+**Repoussé en fin de projet** : alerte news économiques (3.6.8), carte de trade partageable (3.7.7).
+
+**Restructuré** : priorisation V1/V2/V3 remplacée par un phasage en cinq étapes toutes utilisables (section 5) ; références croisées obsolètes corrigées (3.1.1, 3.1.2, 3.1.3, 3.2.3, 3.2.9, 3.3.3, 3.3.12, 3.3.19, 3.6.5, 3.7.3).
