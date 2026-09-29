@@ -1,5 +1,6 @@
 import { useT } from '../../i18n'
 import { Fragment } from 'react'
+import { roundDecimal } from '../../lib/decimal'
 import { formatPercentValue, heatTier, isLossBin, rBinLabel } from '../../lib/behaviorFormat'
 import { formatMoney, formatR, formatRatioPercent, formatSignedAmount, formatSignedMoney } from '../../lib/format'
 import type { Heatmap, LongShort, RDistribution, RiskReport } from '../../types/stats'
@@ -159,7 +160,7 @@ export function RiskCard({ report, currency }: { report: RiskReport; currency: s
         <div className="mt-3 text-sm">
           <div className="text-tx2">
             {t.limit(formatPercentValue(report.maxRiskPercent))}
-            {report.limitAmount !== null && <span className="text-tx3"> ({formatMoney(report.limitAmount, currency)})</span>}
+            {report.limitAmount !== null && <span className="text-tx3"> ({formatMoney(roundDecimal(report.limitAmount, 2), currency)})</span>}
           </div>
           {report.overLimitCount !== null && (
             <div className={`mt-1 font-semibold ${report.overLimitCount > 0 ? 'text-warn' : 'text-tx2'}`}>{t.overLimit(report.overLimitCount)}</div>

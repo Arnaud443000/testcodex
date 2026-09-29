@@ -661,7 +661,7 @@ export const fr = {
       ruleBroken: (rule: string) => `Règle non respectée : ${rule}`,
       detail: (count: number, share: string) => `${count} ${count > 1 ? 'trades' : 'trade'} · ${share} des trades`,
       empty: 'Aucune erreur enregistrée sur cette période : ni étiquette d’erreur, ni règle non respectée.',
-      summary: (withMistake: number, total: number) => `${withMistake} trades sur ${total} portent au moins une erreur. Le coût est la somme de leurs pertes.`,
+      summary: (withMistake: number, total: number) => `Sur ${total} ${total > 1 ? 'trades' : 'trade'}, ${withMistake} ${withMistake > 1 ? 'portent' : 'porte'} au moins une erreur. Le coût est la somme des pertes.`,
     },
     rDistribution: {
       title: 'Distribution des R',

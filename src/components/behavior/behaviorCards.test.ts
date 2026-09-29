@@ -59,6 +59,7 @@ describe('états vides de la page Comportement', () => {
     const out = html(createElement(MistakesCard, { report, currency: 'USD' }))
     expect(out).toContain('−50,00')
     expect(out).toContain('Règle non respectée : Stop posé')
+    expect(out).toContain('Sur 10 trades, 2 portent au moins une erreur')
   })
 
   it('R sans stop loss : message, pas de barre', () => {
