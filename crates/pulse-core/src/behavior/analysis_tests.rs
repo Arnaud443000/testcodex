@@ -302,3 +302,25 @@ mod from_db {
         assert_eq!((p.missed_trade_count, p.hesitation[0].name.as_str(), p.hesitation[0].missed_share), (1, "Breakout", Some(0.5)));
     }
 }
+
+/// The IPC shape the TypeScript types in `src/types/behavior.ts` mirror.
+#[test]
+fn json_shape_for_the_interface() {
+    let l = ledger("10000", journal_e());
+    let d = serde_json::to_value(discipline(&l, &all(), &strict()).unwrap()).unwrap();
+    assert_eq!((d["sampleTooSmall"].as_bool(), d["minTradeCount"].as_u64()), (Some(false), Some(5)));
+    assert_eq!(d["components"][3]["key"], "stopLoss");
+    assert_eq!(d["quadrants"]["poorlyExecutedLosses"]["netPnl"], "-250");
+    assert_eq!(d["settings"], serde_json::json!({"maxRiskPercent": "1", "maxTradesPerDay": 2, "revengeWindowMin": 60, "revengeSizeFactor": "1.5"}));
+    let t5 = &d["trades"][4];
+    assert_eq!((t5["revenge"]["basis"].as_str(), t5["revenge"]["previousTradeId"].as_i64(), t5["dayRank"].as_u64()), (Some("risk"), Some(4), Some(2)));
+    assert_eq!(t5["outcome"], "loss");
+    let p = serde_json::to_value(patterns(&l, &[], &all(), &strict()).unwrap()).unwrap();
+    assert_eq!(p["revengeTrades"][0]["previousTradeId"], 4, "the revenge detail is flattened");
+    let m = serde_json::to_value(mistakes(&l, &all()).unwrap()).unwrap();
+    assert_eq!((m["byCost"][0]["source"].as_str(), m["byCost"][1]["source"].as_str()), (Some("tag"), Some("rule")));
+    let e = serde_json::to_value(emotions(&l, &all()).unwrap()).unwrap();
+    assert_eq!(e["any"][0]["summary"]["netPnl"], "180");
+    let s: BehaviorSettings = serde_json::from_value(serde_json::json!({"maxRiskPercent": null, "revengeWindowMin": 30, "revengeSizeFactor": "2"})).unwrap();
+    assert_eq!((s.max_risk_percent, s.max_trades_per_day, s.revenge_window_min), (None, None, 30));
+}

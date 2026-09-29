@@ -132,3 +132,90 @@ export interface DayTrade {
   rMultiple: number | null
   outcome: Outcome
 }
+
+/** Filtres communs des rapports (StatsQuery de pulse-core) : trades clôturés dans `[from, to)`. */
+export interface StatsQuery {
+  /** Tous les comptes si vide ; ils doivent partager une devise. */
+  accountIds?: number[]
+  from?: number | null
+  to?: number | null
+  direction?: Direction | null
+  instrumentIds?: number[]
+  /** Trades portant tous ces tags. */
+  tagIds?: number[]
+  riskFreeDaily?: number
+}
+
+export interface Segment {
+  /** Clé stable (id de tag, « long », « yes », « first »…) ; « none » = sans valeur, toujours en dernier. */
+  key: string
+  /** Libellé technique (nom du tag ou texte de la règle) ; l'interface traduit les clés fixes. */
+  label: string
+  summary: Summary
+}
+
+/** Distribution des R-multiples (3.3.8) : classes `[from, to)` de 0,5 R, deux classes ouvertes aux extrémités. */
+export interface RBin {
+  from: number | null
+  to: number | null
+  count: number
+}
+
+export interface RDistribution {
+  binWidth: number
+  bins: RBin[]
+  rTradeCount: number
+  noRCount: number
+  meanR: number | null
+  medianR: number | null
+}
+
+/** Case de la heatmap jour de semaine × heure locale d'entrée. */
+export interface HeatCell {
+  /** 1 = lundi … 7 = dimanche. */
+  weekday: number
+  hour: number
+  tradeCount: number
+  winCount: number
+  netPnl: Decimal
+  winRate: number | null
+  /** Entre −1 et 1. */
+  intensity: number
+}
+
+export interface Heatmap {
+  cells: HeatCell[]
+  maxAbsNetPnl: Decimal
+}
+
+export interface LongShort {
+  long: Summary
+  short: Summary
+  longShare: number | null
+}
+
+export interface TradeRisk {
+  tradeId: number
+  entryTime: number
+  exitTime: number
+  initialRisk: Decimal | null
+  balanceAtEntry: Decimal
+  /** Fraction (0,01 = 1 %). */
+  riskPct: number | null
+  withinLimit: boolean | null
+}
+
+/** Risque en % du solde réel du compte à l'entrée (3.3.12). */
+export interface RiskReport {
+  trades: TradeRisk[]
+  tradeCount: number
+  withoutStopCount: number
+  avgRiskPct: number | null
+  medianRiskPct: number | null
+  maxRiskPct: number | null
+  /** Limite de l'utilisateur, en pourcentage (« 1.5 » = 1,5 %). */
+  maxRiskPercent: Decimal | null
+  overLimitCount: number | null
+  currentCapital: Decimal
+  limitAmount: Decimal | null
+}

@@ -56,8 +56,14 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 - [x] Lot 6 (réduit) — Export CSV des trades (`export.rs` : `;`, virgule décimale, BOM UTF-8, protection des formules), sauvegarde manuelle et restauration sécurisée (`backup.rs` : VACUUM INTO, validation, copie de sécurité, API de backup SQLite) ; UI dans Paramètres > Données (**Sonnet, moyen**). **L'import CSV broker (profils, doublons, annulation de lot) est repoussé à plus tard** (décision de l'utilisateur, il faudra un vrai export de son broker)
 - [x] Lot 7 — Règles personnelles + checklist pré-trade (volet déclaratif), dépôts/retraits UI (**Sonnet, moyen**)
 
-### Étapes 2 à 5
-Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : score de discipline, détection de patterns comportementaux, alertes à seuils, coach IA. Le reste : Sonnet, moyen.
+### Étape 2 — Le « pourquoi » et l'analyse comportementale
+- [x] Lot 8 — Moteur de l'analyse comportementale dans `pulse-core`, sans UI : score de discipline par trade / jour / période avec détail des composantes (3.4.1, 3.2.9), émotions, séries, plan, premier trade du jour, erreurs récurrentes, respect des règles, patterns (revanche, surtrading, hésitation) (3.4.2 à 3.4.10 sauf 3.4.9), distribution des R, heatmap jour × heure, long/short, risque en % (3.3.8, 3.3.10 à 3.3.12) ; réglages (table `settings`) ; commandes Tauri, types TS, faux backend (**Opus, élevé**)
+- [ ] Lot 9 — Interface de l'analyse : page « Discipline » (jauge /100, composantes, score par jour, gagnant mal exécuté / perdant bien exécuté), page « Comportement » (émotions, séries, plan, premier trade, erreurs récurrentes cliquables, règles, revanches / surtrading / hésitation), statistiques complémentaires (histogramme des R, heatmap jour × heure, long/short, risque en %), score dans le détail d'un trade, réglages des seuils dans Paramètres (**Sonnet, moyen**)
+- [ ] Lot 10 — Journal qualitatif : trades manqués (UI, 3.2.5), journal quotidien avec facteurs externes (3.2.6, migration), rappel natif Windows (3.2.8), corrélation facteurs externes / qualité des trades (3.4.9, calcul dans `pulse-core`) (**Sonnet, moyen** ; 3.4.9 **Opus, élevé**)
+- [ ] Lot 11 — Objectifs mensuels et suivi (3.7.2, dont le score de discipline comme cible), mode replay (3.7.4) (**Sonnet, moyen**)
+
+### Étapes 3 à 5
+Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : alertes à seuils (à relier aux réglages du lot 8 et aux règles personnelles), coach IA. Le reste : Sonnet, moyen.
 
 ## Argent, prix et temps (décision du lot 2)
 
@@ -167,6 +173,7 @@ Score d'un trade = `100 × Σ(poids × valeur) / Σ(poids)` sur les **seules com
 ## Décisions déjà prises
 
 - Tableau de bord et calendrier : commandes `get_dashboard`, `get_calendar`, `get_day_trades` (module `stats::dashboard` de `pulse-core`). La période (1J = aujourd'hui, 1S = 7 jours, 1M = 30, 3M = 90, 1A = 365, jours locaux se terminant aujourd'hui) est comparée à la période de même longueur juste avant ; « Tout » n'a pas de comparaison. L'interface ne calcule rien : elle formate et dessine.
+- Analyse comportementale : une commande par rapport, toutes prenant un `StatsQuery` (`get_discipline`, `get_emotions`, `get_streaks`, `get_plan_comparison`, `get_first_trade`, `get_mistakes`, `get_rule_adherence`, `get_patterns`, `get_r_distribution`, `get_heatmap`, `get_long_short`, `get_risk`), plus `get_trade_discipline(id)` et `get/set_behavior_settings`. Types : `src/types/behavior.ts` et `src/types/stats.ts` ; faux backend : `src/lib/mockBehavior.ts` (vérifié contre le journal calculé à la main côté Rust). Les libellés fixes (« Yes », « First trade of the day »…) sont techniques : l'interface traduit par la **clé**.
 - Tags par défaut en français depuis la migration v3 (sessions « Asie » / « Londres » / « New York », retrouvées par nom pour la session déduite de l'heure).
 
 - Application 100 % locale, aucun serveur ; IA optionnelle (clé API de l'utilisateur, coffre Windows, jamais en clair).

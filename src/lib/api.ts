@@ -12,7 +12,30 @@ import type {
   TradeView,
 } from '../types/trade'
 import type { BackupInfo, RestoreResult } from '../types/data'
-import type { Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade } from '../types/stats'
+import type {
+  Calendar,
+  CalendarQuery,
+  Dashboard,
+  DashboardQuery,
+  DayTrade,
+  Heatmap,
+  LongShort,
+  RDistribution,
+  RiskReport,
+  StatsQuery,
+} from '../types/stats'
+import type {
+  BehaviorSettings,
+  DisciplineReport,
+  EmotionReport,
+  FirstTradeReport,
+  MistakeReport,
+  PatternReport,
+  PlanReport,
+  RuleAdherenceReport,
+  StreakReport,
+  TradeDiscipline,
+} from '../types/behavior'
 import { mock } from './mockBackend'
 
 /**
@@ -89,6 +112,40 @@ export const api = {
     inTauri ? invoke('get_calendar', { query }) : mock.getCalendar(query),
   getDayTrades: (accountIds: number[], day: string): Promise<DayTrade[]> =>
     inTauri ? invoke('get_day_trades', { accountIds, day }) : mock.getDayTrades(accountIds, day),
+
+  /** Seuils de l'analyse comportementale (risque max, trades max par jour, revanche). */
+  getBehaviorSettings: (): Promise<BehaviorSettings> =>
+    inTauri ? invoke('get_behavior_settings') : mock.getBehaviorSettings(),
+  setBehaviorSettings: (settings: BehaviorSettings): Promise<BehaviorSettings> =>
+    inTauri ? invoke('set_behavior_settings', { settings }) : mock.setBehaviorSettings(settings),
+
+  /** Analyse comportementale (lot 8) : un rapport par commande, tout est calculé par pulse-core. */
+  getDiscipline: (query: StatsQuery): Promise<DisciplineReport> =>
+    inTauri ? invoke('get_discipline', { query }) : mock.getDiscipline(query),
+  getTradeDiscipline: (id: number): Promise<TradeDiscipline> =>
+    inTauri ? invoke('get_trade_discipline', { id }) : mock.getTradeDiscipline(id),
+  getEmotions: (query: StatsQuery): Promise<EmotionReport> =>
+    inTauri ? invoke('get_emotions', { query }) : mock.getEmotions(query),
+  getStreaks: (query: StatsQuery): Promise<StreakReport> =>
+    inTauri ? invoke('get_streaks', { query }) : mock.getStreaks(query),
+  getPlanComparison: (query: StatsQuery): Promise<PlanReport> =>
+    inTauri ? invoke('get_plan_comparison', { query }) : mock.getPlanComparison(query),
+  getFirstTrade: (query: StatsQuery): Promise<FirstTradeReport> =>
+    inTauri ? invoke('get_first_trade', { query }) : mock.getFirstTrade(query),
+  getMistakes: (query: StatsQuery): Promise<MistakeReport> =>
+    inTauri ? invoke('get_mistakes', { query }) : mock.getMistakes(query),
+  getRuleAdherence: (query: StatsQuery): Promise<RuleAdherenceReport> =>
+    inTauri ? invoke('get_rule_adherence', { query }) : mock.getRuleAdherence(query),
+  getPatterns: (query: StatsQuery): Promise<PatternReport> =>
+    inTauri ? invoke('get_patterns', { query }) : mock.getPatterns(query),
+  getRDistribution: (query: StatsQuery): Promise<RDistribution> =>
+    inTauri ? invoke('get_r_distribution', { query }) : mock.getRDistribution(query),
+  getHeatmap: (query: StatsQuery): Promise<Heatmap> =>
+    inTauri ? invoke('get_heatmap', { query }) : mock.getHeatmap(query),
+  getLongShort: (query: StatsQuery): Promise<LongShort> =>
+    inTauri ? invoke('get_long_short', { query }) : mock.getLongShort(query),
+  getRisk: (query: StatsQuery): Promise<RiskReport> =>
+    inTauri ? invoke('get_risk', { query }) : mock.getRisk(query),
 
   /** `image` : fichier en base64 (ou URL `data:`). Renvoie le chemin relatif à mémoriser sur le trade. */
   saveScreenshot: (image: string): Promise<string> =>

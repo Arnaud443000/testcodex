@@ -1,11 +1,19 @@
 use pulse_core::accounts::{self, Account, NewAccount};
+use pulse_core::behavior::{
+    self, DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, RuleAdherenceReport,
+    StreakReport, TradeDiscipline,
+};
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::export;
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
+use pulse_core::settings::{self, BehaviorSettings};
+use pulse_core::stats::StatsQuery;
 use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
+use pulse_core::stats::distribution::{self, Heatmap, LongShort, RDistribution};
+use pulse_core::stats::risk::{self, RiskReport};
 use pulse_core::tags::{self, Tag, TagKind};
 use pulse_core::trade_view::{self, Preview, TradeView};
 use pulse_core::trades::{self, TradeData, TradeFilter};
@@ -212,6 +220,98 @@ fn get_day_trades(state: State<AppState>, account_ids: Vec<i64>, day: String) ->
     dashboard::day_trades(&conn, &account_ids, &day).map_err(err)
 }
 
+// Behavioural analysis (lot 8): one command per report, all computed by pulse-core.
+
+#[tauri::command]
+fn get_behavior_settings(state: State<AppState>) -> Result<BehaviorSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    settings::behavior(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_behavior_settings(state: State<AppState>, settings: BehaviorSettings) -> Result<BehaviorSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    settings::set_behavior(&conn, &settings).map_err(err)
+}
+
+#[tauri::command]
+fn get_discipline(state: State<AppState>, query: StatsQuery) -> Result<DisciplineReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::discipline_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_trade_discipline(state: State<AppState>, id: i64) -> Result<TradeDiscipline, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::trade_discipline(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn get_emotions(state: State<AppState>, query: StatsQuery) -> Result<EmotionReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::emotion_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_streaks(state: State<AppState>, query: StatsQuery) -> Result<StreakReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::streak_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_plan_comparison(state: State<AppState>, query: StatsQuery) -> Result<PlanReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::plan_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_first_trade(state: State<AppState>, query: StatsQuery) -> Result<FirstTradeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::first_trade_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_mistakes(state: State<AppState>, query: StatsQuery) -> Result<MistakeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::mistake_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_rule_adherence(state: State<AppState>, query: StatsQuery) -> Result<RuleAdherenceReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::rule_adherence_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_patterns(state: State<AppState>, query: StatsQuery) -> Result<PatternReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::pattern_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_r_distribution(state: State<AppState>, query: StatsQuery) -> Result<RDistribution, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::r_distribution_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_heatmap(state: State<AppState>, query: StatsQuery) -> Result<Heatmap, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::heatmap_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_long_short(state: State<AppState>, query: StatsQuery) -> Result<LongShort, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::long_short_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_risk(state: State<AppState>, query: StatsQuery) -> Result<RiskReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    risk::risk_report(&conn, &query).map_err(err)
+}
+
 /// `image` is the file as base64 (a `data:` URL is accepted); returns the relative path to store on the trade.
 #[tauri::command]
 fn save_screenshot(state: State<AppState>, image: String) -> Result<String, String> {
@@ -290,6 +390,21 @@ pub fn run() {
             get_dashboard,
             get_calendar,
             get_day_trades,
+            get_behavior_settings,
+            set_behavior_settings,
+            get_discipline,
+            get_trade_discipline,
+            get_emotions,
+            get_streaks,
+            get_plan_comparison,
+            get_first_trade,
+            get_mistakes,
+            get_rule_adherence,
+            get_patterns,
+            get_r_distribution,
+            get_heatmap,
+            get_long_short,
+            get_risk,
             export_trades_csv,
             create_backup,
             inspect_backup,

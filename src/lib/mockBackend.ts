@@ -15,8 +15,10 @@ import type {
   TradeFilter,
   TradeView,
 } from '../types/trade'
-import type { CalendarQuery, DashboardQuery } from '../types/stats'
+import type { CalendarQuery, DashboardQuery, StatsQuery } from '../types/stats'
+import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
+import * as behavior from './mockBehavior'
 import { ASSET_CATALOG } from './assetCatalog'
 
 /**
@@ -89,6 +91,7 @@ const rules: Rule[] = []
 const checklist: ChecklistItem[] = []
 const cashFlows: CashFlow[] = []
 const trades = new Map<number, TradeData & { id: number; createdAt: string; updatedAt: string }>()
+let behaviorSettings: BehaviorSettings = { ...behavior.DEFAULT_BEHAVIOR_SETTINGS }
 const screenshots = new Map<string, string>()
 
 const key = (s: string) => s.split(/\s+/).filter(Boolean).join(' ').toLowerCase()
@@ -207,6 +210,22 @@ function ledgerOf(accountIds: number[]): MockLedger {
         : [],
     ),
     openCount: views.filter((v) => v.exitTime == null).length,
+  }
+}
+
+/** Comptes choisis pour l'analyse comportementale ; mêmes refus que pulse-core. */
+function behaviorInput(accountIds: number[] = []): behavior.BehaviorInput {
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts
+  const other = chosen.find((a) => a.currency !== chosen[0].currency)
+  if (other) throw invalid(`accounts in different currencies (${chosen[0].currency} and ${other.currency}) cannot be combined`)
+  const ids = new Set(chosen.map((a) => a.id))
+  return {
+    accounts: chosen,
+    cashFlows: cashFlows.filter((f) => ids.has(f.accountId)),
+    trades: [...trades.values()].filter((t) => ids.has(t.accountId)).map(view),
+    tags,
+    rules,
+    settings: behaviorSettings,
   }
 }
 
@@ -396,6 +415,33 @@ export const mock = {
   getDashboard: async (q: DashboardQuery) => mockDashboard(ledgerOf(q.accountIds), q),
   getCalendar: async (q: CalendarQuery) => mockCalendar(ledgerOf(q.accountIds), q),
   getDayTrades: async (accountIds: number[], day: string) => mockDayTrades(ledgerOf(accountIds), day),
+  getBehaviorSettings: async (): Promise<BehaviorSettings> => ({ ...behaviorSettings }),
+  setBehaviorSettings: async (s: BehaviorSettings): Promise<BehaviorSettings> => {
+    const percent = s.maxRiskPercent === null ? null : parse(s.maxRiskPercent)
+    if (percent && (sign(percent) <= 0 || sign(sub(percent, parse('100'))) > 0)) throw invalid('the maximum risk per trade must be between 0 and 100 %')
+    if (s.maxTradesPerDay !== null && s.maxTradesPerDay < 1) throw invalid('the maximum number of trades per day must be at least 1')
+    if (s.revengeWindowMin < 1 || s.revengeWindowMin > 1440) throw invalid('the revenge window must be between 1 minute and 24 hours')
+    if (sign(sub(parse(s.revengeSizeFactor), parse('1'))) < 0) throw invalid('the revenge size factor must be at least 1')
+    behaviorSettings = { ...s }
+    return { ...behaviorSettings }
+  },
+  getDiscipline: async (q: StatsQuery) => behavior.mockDiscipline(behaviorInput(q.accountIds), q),
+  getTradeDiscipline: async (tid: number) => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    return behavior.mockTradeDiscipline(behaviorInput([t.accountId]), tid)
+  },
+  getEmotions: async (q: StatsQuery) => behavior.mockEmotions(behaviorInput(q.accountIds), q),
+  getStreaks: async (q: StatsQuery) => behavior.mockStreaks(behaviorInput(q.accountIds), q),
+  getPlanComparison: async (q: StatsQuery) => behavior.mockPlan(behaviorInput(q.accountIds), q),
+  getFirstTrade: async (q: StatsQuery) => behavior.mockFirstTrade(behaviorInput(q.accountIds), q),
+  getMistakes: async (q: StatsQuery) => behavior.mockMistakes(behaviorInput(q.accountIds), q),
+  getRuleAdherence: async (q: StatsQuery) => behavior.mockRuleAdherence(behaviorInput(q.accountIds), q),
+  getPatterns: async (q: StatsQuery) => behavior.mockPatterns(behaviorInput(q.accountIds), q),
+  getRDistribution: async (q: StatsQuery) => behavior.mockRDistribution(behaviorInput(q.accountIds), q),
+  getHeatmap: async (q: StatsQuery) => behavior.mockHeatmap(behaviorInput(q.accountIds), q),
+  getLongShort: async (q: StatsQuery) => behavior.mockLongShort(behaviorInput(q.accountIds), q),
+  getRisk: async (q: StatsQuery) => behavior.mockRisk(behaviorInput(q.accountIds), q),
   saveScreenshot: async (image: string): Promise<string> => {
     if (!image.startsWith('data:image/')) throw invalid('unsupported image format (use PNG, JPEG, WebP or GIF)')
     const path = `screenshots/mock-${id()}.png`

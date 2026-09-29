@@ -24,6 +24,13 @@ Registre des retours après essai de l'application installée. Chaque retour est
 | 4 | Dans le formulaire de trade, le placeholder « Facultatif » est tronqué (« Faculta ») dans les champs étroits (Sortie, Stop loss, Take profit). | **Corrigé** : placeholder « Optionnel » et suppression du suffixe superposé. |
 | 5 | Le mot « prévu » à côté de Stop loss / Take profit chevauche le placeholder. | **Corrigé** : « prévu » / « réel » passe dans le libellé du champ (« Stop loss (prévu) »). Non vérifié sur un vrai écran Windows. |
 
+## Constats de revue (29/09/2026, lot 8) — signalés, non corrigés
+
+| # | Constat | Statut |
+|---|---|---|
+| 9 | `stats::dashboard::calendar` : `firstWeekday` (jour de semaine du 1er du mois) est décalé d'un jour pour un décalage UTC **négatif** (Amériques) : l'instant passé à `time::weekday` ajoute deux fois le décalage. Sans effet en France (UTC+1/+2). Le faux backend, lui, est juste. | **À corriger** (une ligne ; ajouter un test à UTC−5) |
+| 10 | L'aperçu du formulaire (`trade_view::preview`) exprime le risque en % du **capital courant**, alors que le rapport de risque du lot 8 utilise le **solde à l'entrée** : pour un ancien trade modifié, les deux pourcentages peuvent différer. | À trancher au lot 9 (garder « courant » pour un nouveau trade, « à l'entrée » pour un trade existant ?) |
+
 ## À faire plus tard (idées issues de ces retours)
 - Modifier un compte existant (nom, courtier, capital initial) — aujourd'hui seul « supprimer + recréer » existe, et seulement pour un compte vide.
 - Archiver un compte qui a de l'historique, au lieu de le laisser impossible à retirer.

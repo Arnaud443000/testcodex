@@ -26,20 +26,20 @@ const SCALE = 8
 const ONE = 10n ** BigInt(SCALE)
 const DAY = 86_400_000
 
-const toScaled = (v: Decimal): bigint => {
+export const toScaled = (v: Decimal): bigint => {
   const neg = v.startsWith('-')
   const [i, f = ''] = (neg ? v.slice(1) : v).split('.')
   const n = BigInt(i + f.padEnd(SCALE, '0').slice(0, SCALE))
   return neg ? -n : n
 }
-const toDec = (n: bigint): Decimal => {
+export const toDec = (n: bigint): Decimal => {
   const neg = n < 0n
   const digits = (neg ? -n : n).toString().padStart(SCALE + 1, '0')
   const frac = digits.slice(-SCALE).replace(/0+$/, '')
   return `${neg ? '-' : ''}${digits.slice(0, -SCALE)}${frac ? `.${frac}` : ''}`
 }
 const asNumber = (n: bigint): number => Number(n) / Number(ONE)
-const ratio = (a: bigint, b: bigint): number | null => (b === 0n ? null : Number((a * ONE) / b) / Number(ONE))
+export const ratio = (a: bigint, b: bigint): number | null => (b === 0n ? null : Number((a * ONE) / b) / Number(ONE))
 
 export interface MockClosed {
   id: number
@@ -61,10 +61,10 @@ export interface MockLedger {
   openCount: number
 }
 
-const dayKey = (ms: number, tz: number) => new Date(ms + tz * 60_000).toISOString().slice(0, 10)
-const localDay = (ms: number, tz: number) => Math.floor((ms + tz * 60_000) / DAY)
+export const dayKey = (ms: number, tz: number) => new Date(ms + tz * 60_000).toISOString().slice(0, 10)
+export const localDay = (ms: number, tz: number) => Math.floor((ms + tz * 60_000) / DAY)
 
-function summarize(set: MockClosed[]): Summary {
+export function summarize(set: MockClosed[]): Summary {
   let gross = 0n
   let gains = 0n
   let losses = 0n
