@@ -11,6 +11,7 @@ import type {
   TradeFilter,
   TradeView,
 } from '../types/trade'
+import type { Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade } from '../types/stats'
 import { mock } from './mockBackend'
 
 /**
@@ -63,6 +64,14 @@ export const api = {
   /** Aperçu P&L / R / risque : toujours calculé par pulse-core dans l'application. */
   previewTrade: (trade: TradeData): Promise<Preview> =>
     inTauri ? invoke('preview_trade', { trade }) : mock.previewTrade(trade),
+
+  /** Tableau de bord d'une période et de la précédente : tout est calculé par pulse-core. */
+  getDashboard: (query: DashboardQuery): Promise<Dashboard> =>
+    inTauri ? invoke('get_dashboard', { query }) : mock.getDashboard(query),
+  getCalendar: (query: CalendarQuery): Promise<Calendar> =>
+    inTauri ? invoke('get_calendar', { query }) : mock.getCalendar(query),
+  getDayTrades: (accountIds: number[], day: string): Promise<DayTrade[]> =>
+    inTauri ? invoke('get_day_trades', { accountIds, day }) : mock.getDayTrades(accountIds, day),
 
   /** `image` : fichier en base64 (ou URL `data:`). Renvoie le chemin relatif à mémoriser sur le trade. */
   saveScreenshot: (image: string): Promise<string> =>

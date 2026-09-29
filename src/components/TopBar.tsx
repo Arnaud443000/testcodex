@@ -1,16 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
+import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
-
-const PERIODS = ['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const
 
 export function TopBar() {
   const { accounts, selectedId, select } = useAccounts()
   const t = useT()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('3M')
+  const { period, setPeriod } = usePeriod()
 
   return (
     <header
@@ -36,7 +34,7 @@ export function TopBar() {
       </label>
 
       <div className="control flex gap-0.5 !rounded-full p-1" role="group" aria-label={t.topbar.period}>
-        {PERIODS.map((p) => (
+        {PERIOD_KEYS.map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}

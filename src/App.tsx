@@ -3,6 +3,8 @@ import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { useT } from './i18n'
 import { AccountsProvider } from './lib/accounts'
+import { PeriodProvider } from './lib/period'
+import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
@@ -14,6 +16,7 @@ export default function App() {
   const t = useT()
   return (
     <AccountsProvider>
+      <PeriodProvider>
       <HashRouter>
         <div className="app-shell flex h-full">
           <Sidebar />
@@ -26,7 +29,7 @@ export default function App() {
                 <Route path="/trades/new" element={<TradeFormPage />} />
                 <Route path="/trades/:id" element={<TradeDetailPage />} />
                 <Route path="/trades/:id/edit" element={<TradeFormPage key="edit" />} />
-                <Route path="/calendar" element={<PlaceholderPage title={t.pages.calendar.title} subtitle={t.pages.calendar.subtitle} step={1} />} />
+                <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/analytics" element={<PlaceholderPage title={t.pages.analytics.title} subtitle={t.pages.analytics.subtitle} step={1} />} />
                 <Route path="/behavior" element={<PlaceholderPage title={t.pages.behavior.title} subtitle={t.pages.behavior.subtitle} step={2} />} />
                 <Route path="/journal" element={<PlaceholderPage title={t.pages.journal.title} subtitle={t.pages.journal.subtitle} step={2} />} />
@@ -37,6 +40,7 @@ export default function App() {
           </main>
         </div>
       </HashRouter>
+      </PeriodProvider>
     </AccountsProvider>
   )
 }

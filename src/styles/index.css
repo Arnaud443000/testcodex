@@ -172,3 +172,26 @@ body {
   backdrop-filter: none;
   background: #171b33;
 }
+
+/* Calendrier / heatmap (charte 4.3) : teinte gain/perte à 3 paliers, halo sur le palier fort */
+@layer components {
+  .cal-cell {
+    @apply relative rounded-[12px] px-1.5 py-1 text-left text-[11px] text-tx3;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  button.cal-cell {
+    @apply cursor-pointer transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet hover:brightness-125;
+  }
+  .cal-cell b {
+    @apply absolute bottom-[3px] right-1.5 text-[10px] font-semibold text-tx;
+  }
+  .cal-cell-selected {
+    @apply outline outline-2 outline-offset-1 outline-violet;
+  }
+  .cal-g1 { background: rgba(95, 203, 158, 0.18); }
+  .cal-g2 { background: rgba(95, 203, 158, 0.38); }
+  .cal-g3 { background: rgba(95, 203, 158, 0.62); box-shadow: 0 0 14px -2px rgba(95, 203, 158, 0.55); }
+  .cal-l1 { background: rgba(240, 119, 107, 0.18); }
+  .cal-l2 { background: rgba(240, 119, 107, 0.38); }
+  .cal-l3 { background: rgba(240, 119, 107, 0.62); box-shadow: 0 0 14px -2px rgba(240, 119, 107, 0.55); }
+}

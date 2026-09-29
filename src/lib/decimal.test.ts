@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareDecimal, isPlainDecimal, isPositiveDecimal, normalizeDecimalInput, parseDecimalInput, signOf, trimDecimal } from './decimal'
+import { compareDecimal, isPlainDecimal, isPositiveDecimal, normalizeDecimalInput, parseDecimalInput, roundDecimal, signOf, trimDecimal } from './decimal'
 
 describe('compareDecimal', () => {
   it('compare sans flottant, même au-delà de 2^53', () => {
@@ -67,5 +67,20 @@ describe('parseDecimalInput', () => {
   })
   it('refuse les valeurs invalides ou négatives', () => {
     for (const bad of ['-5', 'abc', '1e5', '1,5,2', '12$']) expect(parseDecimalInput(bad)).toBeNull()
+  })
+})
+
+describe('roundDecimal', () => {
+  it('arrondit la moitié en s’éloignant de zéro, sans passer par un flottant', () => {
+    expect(roundDecimal('6.84915254')).toBe('6.85')
+    expect(roundDecimal('6.844')).toBe('6.84')
+    expect(roundDecimal('6.845')).toBe('6.85')
+    expect(roundDecimal('-6.845')).toBe('-6.85')
+    expect(roundDecimal('0.999')).toBe('1.00')
+    expect(roundDecimal('9.995')).toBe('10.00')
+    expect(roundDecimal('-0.004')).toBe('0.00')
+    expect(roundDecimal('12')).toBe('12.00')
+    expect(roundDecimal('1234.5')).toBe('1234.50')
+    expect(roundDecimal('2.5', 0)).toBe('3')
   })
 })

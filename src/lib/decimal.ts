@@ -67,3 +67,17 @@ export function parseDecimalInput(input: string): Decimal | null {
   if (s === '') return '0'
   return isPlainDecimal(s) ? s : null
 }
+
+/**
+ * Arrondit un décimal exact à `digits` décimales (moitié éloignée de zéro), sur la chaîne :
+ * "6.84915254" → "6.85". Pour l'affichage d'une valeur dérivée (moyenne) ; jamais pour un montant saisi.
+ */
+export function roundDecimal(value: Decimal, digits = 2): Decimal {
+  const { negative, int, frac } = split(value)
+  if (frac.length <= digits) return trimDecimal(value, digits)
+  const keep = BigInt(int + frac.slice(0, digits))
+  const up = frac.charCodeAt(digits) >= 53 // chiffre suivant ≥ 5
+  const n = (up ? keep + 1n : keep).toString().padStart(digits + 1, '0')
+  const body = digits > 0 ? `${n.slice(0, -digits)}.${n.slice(-digits)}` : n
+  return `${negative && /[1-9]/.test(n) ? '-' : ''}${body}`
+}

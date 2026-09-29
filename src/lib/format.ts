@@ -1,5 +1,5 @@
 import type { Decimal } from '../types/money'
-import { signOf, trimDecimal } from './decimal'
+import { roundDecimal, signOf, trimDecimal } from './decimal'
 
 /** Formatage à la française : espace insécable fine comme séparateur de milliers, virgule décimale. */
 const LOCALE = 'fr-FR'
@@ -118,4 +118,42 @@ export function formatDateTime(ms: number): string {
 /** Date locale courte : « 28 sept. 2026 ». */
 export function formatDate(ms: number): string {
   return new Date(ms).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/** Fraction renvoyée par pulse-core → pourcentage affiché : 0,584 → « 58,4 % » (non signé). */
+export function formatRatioPercent(fraction: number | null | undefined, digits = 1): string {
+  if (fraction === null || fraction === undefined) return '—'
+  return `${(fraction * 100).toLocaleString(LOCALE, { minimumFractionDigits: digits, maximumFractionDigits: digits })}${NBSP}%`
+}
+
+/** Écart de taux en points de pourcentage : 0,032 → « +3,2 pts » ; « −0,5 pt ». */
+export function formatPoints(fraction: number, digits = 1): string {
+  const value = fraction * 100
+  const rounded = Number(value.toFixed(digits))
+  const abs = `${Math.abs(value).toLocaleString(LOCALE, { minimumFractionDigits: digits, maximumFractionDigits: digits })}${NBSP}pt${Math.abs(rounded) >= 2 ? 's' : ''}`
+  return rounded > 0 ? `+${abs}` : rounded < 0 ? `${MINUS}${abs}` : abs
+}
+
+/** Écart signé d'un ratio sans unité : « +0,12 » / « −0,10 ». */
+export function formatSignedNumber(value: number, digits = 2): string {
+  const rounded = Number(value.toFixed(digits))
+  const abs = Math.abs(value).toLocaleString(LOCALE, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+  return rounded > 0 ? `+${abs}` : rounded < 0 ? `${MINUS}${abs}` : abs
+}
+
+/** Pourcentage signé d'une variation relative (0,5 → « +50,0 % »). */
+export function formatSignedRatioPercent(fraction: number, digits = 1): string {
+  return formatPercent(fraction * 100, digits)
+}
+
+/** Montant signé sans devise pour les petites cases du calendrier : « +1 038,5 » / « −602 ». */
+export function formatSignedAmount(value: Decimal): string {
+  const s = signOf(value)
+  const abs = formatDecimal(trimDecimal(s < 0 ? value.slice(1) : value, 0), 0)
+  return s > 0 ? `+${abs}` : s < 0 ? `${MINUS}${abs}` : abs
+}
+
+/** Valeur dérivée (moyenne par trade…) : arrondie à 2 décimales pour l'affichage, signe explicite. */
+export function formatSignedMoneyRounded(value: Decimal, currency: string): string {
+  return formatSignedMoney(roundDecimal(value, 2), currency)
 }

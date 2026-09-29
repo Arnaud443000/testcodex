@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDecimal, formatDuration, formatMoney, formatPercent, formatPnl, formatR, formatSignedMoney } from './format'
+import { formatDecimal, formatDuration, formatMoney, formatPercent, formatPnl, formatR, formatSignedMoney, formatPoints, formatRatioPercent, formatSignedAmount, formatSignedNumber, formatSignedRatioPercent } from './format'
 
 // Intl met une espace insécable fine (U+202F) entre les milliers et une insécable (U+00A0) avant $ et %.
 const norm = (s: string) => s.replace(/[  ]/g, ' ')
@@ -74,5 +74,28 @@ describe('formatDuration', () => {
     expect(formatDuration((26 * 60 + 5) * 60_000)).toBe('1 j 2 h')
     expect(formatDuration(20_000)).toBe('< 1 min')
     expect(formatDuration(null)).toBe('—')
+  })
+})
+
+describe('formats du tableau de bord', () => {
+  it('affiche une fraction en pourcentage, ou un tiret quand elle est indéfinie', () => {
+    expect(norm(formatRatioPercent(0.584))).toBe('58,4 %')
+    expect(norm(formatRatioPercent(2 / 3, 0))).toBe('67 %')
+    expect(formatRatioPercent(null)).toBe('—')
+  })
+  it('signe les écarts avec un vrai signe moins', () => {
+    expect(norm(formatPoints(0.032))).toBe('+3,2 pts')
+    expect(norm(formatPoints(-0.005))).toBe('−0,5 pt')
+    expect(norm(formatPoints(0))).toBe('0,0 pt')
+    expect(formatSignedNumber(0.12)).toBe('+0,12')
+    expect(formatSignedNumber(-0.1)).toBe('−0,10')
+    expect(formatSignedNumber(0.001)).toBe('0,00')
+    expect(norm(formatSignedRatioPercent(0.084))).toBe('+8,4 %')
+  })
+  it('écrit les montants des cases du calendrier sans devise ni arrondi', () => {
+    expect(norm(formatSignedAmount('1038.5'))).toBe('+1 038,5')
+    expect(formatSignedAmount('-602')).toBe('−602')
+    expect(formatSignedAmount('0')).toBe('0')
+    expect(formatSignedAmount('-0.00')).toBe('0')
   })
 })

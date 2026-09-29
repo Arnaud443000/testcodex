@@ -14,6 +14,8 @@ import type {
   TradeFilter,
   TradeView,
 } from '../types/trade'
+import type { CalendarQuery, DashboardQuery } from '../types/stats'
+import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 
 /**
  * MOCK EN MÉMOIRE — uniquement pour `npm run dev` dans un navigateur, sans Rust.
@@ -180,6 +182,27 @@ function view(t: TradeData & { id: number; createdAt: string; updatedAt: string 
   }
 }
 
+/** Comptes sélectionnés (tous si vide), clôturés uniquement ; refuse de mélanger les devises comme pulse-core. */
+function ledgerOf(accountIds: number[]): MockLedger {
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts
+  if (chosen.length === 0) return { currency: null, initialCapital: '0', capitalMoves: [], closed: [], openCount: 0 }
+  const other = chosen.find((a) => a.currency !== chosen[0].currency)
+  if (other) throw invalid(`accounts in different currencies (${chosen[0].currency} and ${other.currency}) cannot be combined`)
+  const initial = chosen.reduce<Dec>((sum, a) => sub(sum, { n: -parse(a.initialCapital).n, s: parse(a.initialCapital).s }), { n: 0n, s: 0 })
+  const views = [...trades.values()].filter((t) => chosen.some((a) => a.id === t.accountId)).map(view)
+  return {
+    currency: chosen[0].currency,
+    initialCapital: str(initial),
+    capitalMoves: [],
+    closed: views.flatMap((v) =>
+      v.figures && v.exitTime != null
+        ? [{ id: v.id, symbol: v.symbol, direction: v.direction, exitTime: v.exitTime, tzOffsetMin: v.tzOffsetMin, netPnl: v.figures.netPnl, rMultiple: v.figures.rMultiple, outcome: v.figures.outcome }]
+        : [],
+    ),
+    openCount: views.filter((v) => v.exitTime == null).length,
+  }
+}
+
 export const mock = {
   appInfo: async () => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
   listAccounts: async (): Promise<Account[]> => [...accounts],
@@ -280,6 +303,9 @@ export const mock = {
           : null,
     }
   },
+  getDashboard: async (q: DashboardQuery) => mockDashboard(ledgerOf(q.accountIds), q),
+  getCalendar: async (q: CalendarQuery) => mockCalendar(ledgerOf(q.accountIds), q),
+  getDayTrades: async (accountIds: number[], day: string) => mockDayTrades(ledgerOf(accountIds), day),
   saveScreenshot: async (image: string): Promise<string> => {
     if (!image.startsWith('data:image/')) throw invalid('unsupported image format (use PNG, JPEG, WebP or GIF)')
     const path = `screenshots/mock-${id()}.png`
