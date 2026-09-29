@@ -152,7 +152,7 @@ export function EditableGrid({
                 title={t.edit.dragHandle(title)}
               >
                 <span className="text-tx3"><Icon name="grip" size={16} /></span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={title}>{title}</span>
                 <button
                   type="button"
                   className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-white/10 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"

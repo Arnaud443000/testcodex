@@ -15,14 +15,14 @@ function NavEntry({ item, active, children }: { item: NavItem; active: boolean; 
     <Link
       to={item.to}
       aria-current={active ? 'page' : undefined}
-      className={`flex items-center gap-3.5 rounded-md px-4 py-3 text-[15px] font-medium transition short:py-2 ${
+      className={`flex items-center gap-3.5 rounded-md px-4 py-2.5 text-[15px] font-medium transition short:py-1.5 ${
         active
           ? 'bg-gradient-to-br from-blue/30 to-violet/20 text-white shadow-[0_8px_24px_-10px_rgba(139,127,232,.7),inset_0_1px_0_rgba(255,255,255,.12)]'
           : 'text-tx2 hover:bg-white/5 hover:text-tx'
       }`}
     >
       <Icon name={item.icon} />
-      <span className="min-w-0 flex-1 truncate">{t.nav[item.key]}</span>
+      <span className="min-w-0 flex-1 truncate" title={t.nav[item.key]}>{t.nav[item.key]}</span>
       {children}
     </Link>
   )
@@ -35,17 +35,17 @@ export function Sidebar() {
   const { unseen } = useInsights()
   const { status, setStatus } = useLock()
   return (
-    <aside className="glass-bar flex w-[248px] shrink-0 flex-col border-r px-4 py-[26px] short:py-4">
-      <div className="flex items-center gap-3 px-2.5 pb-[26px] short:pb-3">
+    <aside className="glass-bar flex w-[248px] shrink-0 flex-col border-r px-4 py-5 short:py-3">
+      <div className="flex items-center gap-3 px-2.5 pb-5 short:pb-3">
         <Logo />
         <span className="text-[26px] font-light leading-none tracking-tight">Pulse</span>
       </div>
       {/* La liste défile toute seule quand la fenêtre est basse : « Paramètres » et le profil restent visibles en bas. */}
-      <nav aria-label={t.nav.label} className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1 pb-2">
+      <nav aria-label={t.nav.label} className="nav-scroll -mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1 pb-2">
         {NAV_GROUPS.map((group) => (
-          <div key={group.key ?? 'top'} role="group" aria-label={group.key ? t.nav.groups[group.key] : undefined} className="flex flex-col gap-0.5">
+          <div key={group.key ?? 'top'} role="group" aria-label={group.key ? t.nav.groups[group.key] : undefined} className="flex flex-col gap-0.5 tiny:mt-1 tiny:first:mt-0">
             {group.key && (
-              <div className="caption px-4 pb-1 pt-4 short:pt-2" aria-hidden="true">
+              <div className="caption px-4 pb-1 pt-3 short:pt-2 tiny:hidden" aria-hidden="true">
                 {t.nav.groups[group.key]}
               </div>
             )}
@@ -64,7 +64,7 @@ export function Sidebar() {
       <div className="border-t pt-2" style={{ borderColor: 'var(--hairline)' }}>
         <NavEntry item={SETTINGS_ITEM} active={isNavActive(SETTINGS_ITEM, pathname)} />
       </div>
-      <div className="flex items-center gap-3 px-2.5 pt-3 short:pt-2">
+      <div className="flex items-center gap-3 px-2.5 pt-2">
         <div
           className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full font-semibold text-white"
           style={{ background: 'var(--grad)' }}

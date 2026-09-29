@@ -6,8 +6,8 @@ export default {
   safelist: [{ pattern: /^cal-(g|l)[123]$/ }],
   theme: {
     extend: {
-      // Fenêtre basse (charte 4.4 : minimum 1280×720) : la barre latérale se compacte.
-      screens: { short: { raw: '(max-height: 820px)' } },
+      // Fenêtres basses (charte 4.4 : minimum 1280×720) : la barre latérale se compacte (short), puis masque les titres de groupe (tiny).
+      screens: { short: { raw: '(max-height: 940px)' }, tiny: { raw: '(max-height: 760px)' } },
       colors: {
         bg: '#0B0E27',
         'bg-deep': '#080B20',

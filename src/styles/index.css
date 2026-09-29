@@ -23,6 +23,12 @@ body,
   height: 100%;
 }
 
+/* Liste de navigation qui défile : barre fine et discrète. */
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
 /* Focus clavier visible partout (lot 26) : même anneau violet que les boutons, quel que soit l'élément. */
 :focus-visible {
   outline: 2px solid #8b7fe8;
