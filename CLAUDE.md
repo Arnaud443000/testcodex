@@ -49,7 +49,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 ### Étape 1 — Socle : saisir et mesurer
 - [x] Lot 1 — Squelette Tauri/React/SQLite, comptes, coque UI A+D, CI, workflow d'installeur (**Sonnet, moyen**)
 - [x] Lot 2 — Schéma complet SQLite : trades, tags normalisés, règles, checklist, dépôts/retraits, trades manqués ; décision argent/prix ; migrations testées (**Opus, élevé**)
-- [ ] Lot 3 — Moteur de statistiques dans `pulse-core` : PnL brut/net, win rate, R:R, expectancy, profit factor, drawdown, courbe d'équité hors dépôts, segments ; tests à résultats connus (**Opus, élevé**)
+- [x] Lot 3 — Moteur de statistiques dans `pulse-core` : PnL brut/net, win rate, R:R, expectancy, profit factor, drawdown, courbe d'équité hors dépôts, segments ; tests à résultats connus (**Opus, élevé**)
 - [ ] Lot 4 — Saisie de trade (formulaire maquette `screen-form`), liste, détail (**Sonnet, moyen**)
 - [ ] Lot 5 — Dashboard réel branché sur les stats, calendrier, filtres de période (**Sonnet, moyen**)
 - [ ] Lot 6 — Import CSV broker (profils, doublons, annulation de lot), export CSV, sauvegarde/restauration (**Sonnet, moyen**)
@@ -72,6 +72,28 @@ Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé
 - **Frais** : positif = coût, négatif = crédit (swap positif). `PnL net = brut − frais`.
 - **Temps** : jour et heure « locaux » = instant UTC + `tz_offset_min` du trade (ou du dépôt). Aucune dépendance de fuseau horaire au moment du calcul : un trade reste dans le même jour même si le PC change de fuseau.
 - **Devise** : les statistiques ne mélangent jamais deux devises ; une vue consolidée n'est possible qu'entre comptes de même devise.
+
+## Moteur de statistiques (lot 3) — interprétation du glossaire
+
+Code : `crates/pulse-core/src/stats/` (`pnl.rs` par trade, `summary.rs` agrégats, `segments.rs`, `load.rs` lecture SQLite, `tests.rs` journaux calculés à la main). Point d'entrée : `stats::report(conn, &StatsQuery)` et `stats::segment_report(conn, &query, SegmentBy::…)`. Une valeur indéfinie vaut `None` (affichée « — »), jamais 0 ni l'infini.
+
+| Formule (glossaire 7) | Choix d'implémentation |
+|---|---|
+| PnL brut / net | voir « Argent » ; **net** = référence de tous les indicateurs. Trade ouvert : exclu (compté dans `openTradeCount`). |
+| Gagnant / perdant / breakeven | signe du PnL **net** (des frais peuvent transformer un trade à plat en perte). |
+| R-multiple | `PnL net / risque initial`, risque = `(entrée − SL prévu) × sens × taille × multiplicateur`. Sans frais, identique à la formule du glossaire **avec dénominateur en valeur absolue** (`|entrée − SL|`) : écrite littéralement, la formule donne un signe faux pour un short. Pas de SL prévu, ou SL du mauvais côté / égal à l'entrée → `None`. |
+| Win rate | gagnants / trades clôturés (les breakevens comptent au dénominateur). |
+| R:R réel | gain moyen / perte moyenne (en argent, net). `None` s'il manque des gains ou des pertes. |
+| Expectancy | formule du glossaire, calculée sur les seuls trades ayant un R (`rTradeCount`) ; elle est alors égale au R moyen. Expectancy en argent : `avgNetPnl`. |
+| Profit factor | somme des gains / somme des pertes (valeur absolue). Aucune perte → `None` ; l'UI affiche « ∞ » si `totalGains > 0`. |
+| Courbe d'équité pure | PnL net cumulé (départ 0), dépôts/retraits exclus ; un point par trade, dans l'ordre de sortie (égalité : id du trade). |
+| Rendement %, drawdown % | rendements **pondérés dans le temps** : chaque trade rapporte `PnL net / solde réel juste avant` (capital initial + flux déjà survenus + PnL antérieurs ; un flux au même instant qu'une sortie est appliqué avant). Les rendements sont chaînés : sans flux, c'est exactement « solde / solde de départ » ; avec flux, un dépôt n'apparaît jamais comme de la performance. Solde ≤ 0 → pourcentages `None`. |
+| Max drawdown / en cours | plus forte baisse depuis un sommet (le point de départ compte comme sommet), en argent sur le PnL cumulé et en % sur la courbe pondérée. |
+| Sharpe | rendements **journaliers** (jours locaux de sortie ayant au moins un trade), écart-type d'échantillon (n − 1), taux sans risque par jour en paramètre (0 par défaut), **non annualisé**. Moins de 2 jours ou écart-type nul → `None`. |
+
+- **Période** : un trade compte dans la période où il est **clôturé** (`exit_time` dans `[from, to)`). Les soldes utilisent toujours tout l'historique des comptes choisis.
+- **Calendrier / PnL par jour** : jour local de sortie. **Segments jour de semaine / heure** : heure locale d'**entrée** (moment de la décision). Un trade avec plusieurs erreurs compte dans chacune ; sans tag du type demandé → segment « none », listé en dernier.
+- **Débordement** : les calculs en `Decimal` sont vérifiés ; un montant hors limites donne une erreur, jamais un plantage (le profil release est en `panic = "abort"`).
 
 ## Modèle de données (schéma v2)
 
