@@ -5,8 +5,10 @@
 //! returns the alerts active at that instant, for each account of the ledger on
 //! its own. Nothing an account does ever raises an alert on another one.
 
+pub mod log;
 pub mod settings;
 
+pub use log::{AlertRecord, active_alerts, dismiss, history};
 pub use settings::AlertSettings;
 
 use crate::behavior::{Context, ExposureBasis};
@@ -329,14 +331,17 @@ pub fn evaluate(ledger: &Ledger, now: i64, tz_offset_min: i32, behavior: &Behavi
             }
         }
     }
-    out.sort_by(|a, b| {
-        (a.severity, a.detail.rank(), a.trade_id, &a.id).cmp(&(b.severity, b.detail.rank(), b.trade_id, &b.id))
-    });
+    sort(&mut out);
     Ok(out)
 }
 
+/// Critical first, then the order of CLAUDE.md's table, then the trade.
+pub(crate) fn sort(alerts: &mut [Alert]) {
+    alerts.sort_by(|a, b| (a.severity, a.detail.rank(), a.trade_id, &a.id).cmp(&(b.severity, b.detail.rank(), b.trade_id, &b.id)));
+}
+
 /// `tradesPerDay.exceeded` → `tradesPerDay`.
-fn message_key_kind(key: &str) -> &str {
+pub(crate) fn message_key_kind(key: &str) -> &str {
     key.split('.').next().unwrap_or(key)
 }
 

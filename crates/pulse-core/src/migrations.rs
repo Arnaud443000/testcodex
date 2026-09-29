@@ -303,6 +303,21 @@ pub const MIGRATIONS: &[&str] = &[
     INSERT INTO goals_new (id, month, metric, target, created_at) SELECT id, month, metric, target, created_at FROM goals;
     DROP TABLE goals;
     ALTER TABLE goals_new RENAME TO goals;",
+    // v8 — guard-rail alerts (spec 3.6): log of every alert shown, and of the ones the trader dismissed,
+    // so a seen alert never loops. It is an event log, not a cache: active alerts are always recomputed.
+    // `payload` is the alert as first shown (JSON); `trade_id` has no foreign key so the history
+    // outlives a deleted trade; deleting an account removes its history.
+    "CREATE TABLE alert_log (
+        alert_id      TEXT PRIMARY KEY CHECK (length(alert_id) > 0),
+        account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        kind          TEXT NOT NULL CHECK (length(kind) > 0),
+        severity      TEXT NOT NULL CHECK (severity IN ('warning','critical')),
+        trade_id      INTEGER,
+        payload       TEXT NOT NULL,
+        first_seen_at INTEGER NOT NULL,
+        dismissed_at  INTEGER
+    );
+    CREATE INDEX alert_log_by_account ON alert_log (account_id, first_seen_at);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -624,7 +639,7 @@ mod tests {
             .collect::<std::result::Result<_, _>>()
             .unwrap();
 
-        migrate(&mut conn).unwrap();
+        migrate_to(&mut conn, 7).unwrap();
         assert_eq!(current_version(&conn).unwrap(), 7);
         let after: Vec<(i64, String, String, String, String)> = conn
             .prepare("SELECT id, month, metric, target, created_at FROM goals ORDER BY id")
@@ -640,5 +655,41 @@ mod tests {
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '0')", []).is_err());
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'sharpe', '1')", []).is_err());
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '1e2')", []).is_err());
+    }
+
+    #[test]
+    fn v8_adds_the_alert_log_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 7).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let trade = trades::create(&conn, &trades::TradeData::new(a, eu, trades::Direction::Long, 1.into(), 1.into(), 0)).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 8);
+        // Existing data untouched.
+        assert_eq!(accounts::list(&conn).unwrap().len(), 1);
+        assert_eq!(trades::get(&conn, trade.id).unwrap().data.account_id, a);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'behavior.max_trades_per_day'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "3");
+        let goals: i64 = conn.query_row("SELECT COUNT(*) FROM goals", [], |r| r.get(0)).unwrap();
+        assert_eq!(goals, 1);
+        let log: i64 = conn.query_row("SELECT COUNT(*) FROM alert_log", [], |r| r.get(0)).unwrap();
+        assert_eq!(log, 0, "the history starts empty");
+        // Guards written straight to the schema.
+        let insert = |id: &str, account: i64, severity: &str| {
+            conn.execute(
+                "INSERT INTO alert_log (alert_id, account_id, kind, severity, payload, first_seen_at) VALUES (?1, ?2, 'x', ?3, '{}', 0)",
+                rusqlite::params![id, account, severity],
+            )
+        };
+        assert!(insert("x:1:1", a, "warning").is_ok());
+        assert!(insert("x:1:1", a, "critical").is_err(), "one line per alert identity");
+        assert!(insert("x:1:2", a, "info").is_err());
+        assert!(insert("", a, "warning").is_err());
+        assert!(insert("x:9:1", 999, "warning").is_err(), "unknown account");
     }
 }
