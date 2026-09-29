@@ -469,3 +469,195 @@ export function mockRisk(input: BehaviorInput, q: StatsQuery): RiskReport {
     limitAmount: max === null ? null : toDec((toScaled(max) * capital) / (100n * ONE)),
   }
 }
+
+// --- Lot 8 bis : facteurs externes, après 2 pertes, taille après une perte, simulation du plan ---
+
+import type { JournalEntry } from '../types/journal'
+import type { Outcome } from '../types/trade'
+import type { Summary } from '../types/stats'
+import type {
+  AfterLossesReport,
+  Comparison,
+  ExposureBasis,
+  ExternalFactorReport,
+  FactorKey,
+  FactorSide,
+  PlanSimulation,
+  Scenario,
+  SequenceGroup,
+  SimulatedResult,
+  SizeChangeCase,
+  SizeChangeGroup,
+  SizeChangeReport,
+} from '../types/behavior'
+
+const MIN_FACTOR_DAYS = 5
+const MIN_R_TRADES = 5
+const MIN_SEQUENCE_TRADES = 5
+const MIN_SIZE_CASES = 5
+const FACTORS: [FactorKey, (e: JournalEntry) => boolean | null][] = [
+  ['poorSleep', (e) => (e.sleepQuality == null ? null : e.sleepQuality <= 2)],
+  ['highFatigue', (e) => (e.fatigue == null ? null : e.fatigue >= 4)],
+  ['lateHours', (e) => e.lateHours],
+  ['lowMood', (e) => (e.mood == null ? null : e.mood <= 2)],
+]
+
+/** Les trades du compte de `t` clôturés au plus tard à son entrée, du plus récent au plus ancien. */
+const historyOf = (ctx: Ctx, t: TradeView) =>
+  ctx.closed.filter((c) => c.accountId === t.accountId && c.exitTime <= t.entryTime && c.id !== t.id).reverse()
+
+const compare = (present: number | null, absent: number | null, enough: boolean, gap: number): Comparison => {
+  const difference = present !== null && absent !== null && enough ? present - absent : null
+  const verdict = difference === null ? 'notEnoughData' : difference <= -gap ? 'lower' : difference >= gap ? 'higher' : 'similar'
+  return { present, absent, difference, verdict }
+}
+const withR = (s: Summary, min: number) => (s.rTradeCount >= min ? s.expectancyR : null)
+const decGap = (a: Decimal | null, b: Decimal | null, enough: boolean) => (a !== null && b !== null && enough ? toDec(toScaled(a) - toScaled(b)) : null)
+
+export function mockExternalFactors(input: BehaviorInput, q: StatsQuery, entries: JournalEntry[]): ExternalFactorReport {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const journal = new Map(entries.map((e) => [e.day, e]))
+  const dayOf = (t: Closed) => dayKey(t.entryTime, t.tzOffsetMin)
+  const days = new Set(list.map(dayOf))
+  const side = (trades: Closed[]): FactorSide => {
+    const { score, count } = meanScore(trades.map((t) => disciplineOf(ctx, input.settings, t)))
+    return { dayCount: new Set(trades.map(dayOf)).size, summary: summarize(trades.map(asMock)), disciplineScore: score, scoredTradeCount: count, tradeIds: trades.map((t) => t.id) }
+  }
+  return {
+    factors: FACTORS.map(([key, state]) => {
+      const pick = (t: Closed) => {
+        const e = journal.get(dayOf(t))
+        return e ? state(e) : null
+      }
+      const present = side(list.filter((t) => pick(t) === true))
+      const absent = side(list.filter((t) => pick(t) === false))
+      const undeclared = list.filter((t) => pick(t) === null)
+      const enough = present.dayCount >= MIN_FACTOR_DAYS && absent.dayCount >= MIN_FACTOR_DAYS
+      return {
+        key,
+        present,
+        absent,
+        undeclaredDayCount: new Set(undeclared.map(dayOf)).size,
+        undeclaredTradeCount: undeclared.length,
+        discipline: compare(present.disciplineScore, absent.disciplineScore, enough, 10),
+        expectancyR: compare(withR(present.summary, MIN_R_TRADES), withR(absent.summary, MIN_R_TRADES), enough, 0.25),
+        avgNetPnlDifference: decGap(present.summary.avgNetPnl, absent.summary.avgNetPnl, enough),
+      }
+    }),
+    tradeCount: list.length,
+    tradingDayCount: days.size,
+    journalDayCount: [...days].filter((d) => journal.has(d)).length,
+    minDayCount: MIN_FACTOR_DAYS,
+    minRTradeCount: MIN_R_TRADES,
+  }
+}
+
+export function mockAfterLosses(input: BehaviorInput, q: StatsQuery): AfterLossesReport {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const isAfter = (t: Closed) => {
+    const last = historyOf(ctx, t).slice(0, 2)
+    return last.length === 2 && last.every((c) => c.figures.outcome === 'loss')
+  }
+  const group = (trades: Closed[]): SequenceGroup => {
+    const { score, count } = meanScore(trades.map((t) => disciplineOf(ctx, input.settings, t)))
+    return { summary: summarize(trades.map(asMock)), disciplineScore: score, scoredTradeCount: count, tradeIds: trades.map((t) => t.id) }
+  }
+  const after = group(list.filter(isAfter))
+  const others = group(list.filter((t) => !isAfter(t)))
+  const [a, o] = [after.summary, others.summary]
+  const sampleTooSmall = a.tradeCount < MIN_SEQUENCE_TRADES || o.tradeCount < MIN_SEQUENCE_TRADES
+  const gap = (x: number | null, y: number | null) => (x !== null && y !== null && !sampleTooSmall ? x - y : null)
+  return {
+    afterTwoLosses: after,
+    others,
+    minTradeCount: MIN_SEQUENCE_TRADES,
+    sampleTooSmall,
+    winRateDifference: gap(a.winRate, o.winRate),
+    avgNetPnlDifference: decGap(a.avgNetPnl, o.avgNetPnl, !sampleTooSmall),
+    expectancyRDifference: gap(withR(a, MIN_SEQUENCE_TRADES), withR(o, MIN_SEQUENCE_TRADES)),
+    disciplineDifference: gap(after.disciplineScore, others.disciplineScore),
+  }
+}
+
+export function mockSizeChange(input: BehaviorInput, q: StatsQuery): SizeChangeReport {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const outcomes: Outcome[] = ['loss', 'win', 'breakeven']
+  const cases: SizeChangeCase[][] = [[], [], []]
+  const notComparable = [0, 0, 0]
+  let noPreviousCount = 0
+  for (const t of list) {
+    const p = historyOf(ctx, t)[0]
+    if (!p) {
+      noPreviousCount++
+      continue
+    }
+    const k = outcomes.indexOf(p.figures.outcome)
+    let basis: ExposureBasis
+    let mine: bigint
+    let theirs: bigint
+    if (t.figures.initialRisk !== null && p.figures.initialRisk !== null) {
+      ;[basis, mine, theirs] = ['risk', toScaled(t.figures.initialRisk), toScaled(p.figures.initialRisk)]
+    } else if (t.instrumentId === p.instrumentId) {
+      ;[basis, mine, theirs] = ['size', toScaled(t.size) * toScaled(t.multiplier ?? '1'), toScaled(p.size) * toScaled(p.multiplier ?? '1')]
+    } else {
+      notComparable[k]++
+      continue
+    }
+    const r = ratio(mine, theirs)
+    if (r === null) notComparable[k]++
+    else cases[k].push({ tradeId: t.id, previousTradeId: p.id, basis, change: r - 1 })
+  }
+  const group = (k: number): SizeChangeGroup => {
+    const changes = cases[k].map((c) => c.change)
+    const sorted = [...changes].sort((x, y) => x - y)
+    const n = sorted.length
+    const enough = n >= MIN_SIZE_CASES
+    return {
+      previousOutcome: outcomes[k],
+      caseCount: n,
+      notComparableCount: notComparable[k],
+      increasedCount: changes.filter((c) => c > 0).length,
+      meanChange: enough ? mean(changes) : null,
+      medianChange: enough ? (n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2) : null,
+      cases: cases[k],
+    }
+  }
+  const [afterLoss, afterWin, afterBreakeven] = [group(0), group(1), group(2)]
+  return {
+    afterLoss,
+    afterWin,
+    afterBreakeven,
+    noPreviousCount,
+    tradeCount: list.length,
+    minCaseCount: MIN_SIZE_CASES,
+    lossVsWin: afterLoss.meanChange !== null && afterWin.meanChange !== null ? afterLoss.meanChange - afterWin.meanChange : null,
+  }
+}
+
+export function mockPlanSimulation(input: BehaviorInput, q: StatsQuery): PlanSimulation {
+  const list = selected(input, q)
+  const declaredTradeCount = list.filter((t) => t.planFollowed != null).length
+  const result = (trades: Closed[]): SimulatedResult => {
+    const s = summarize(trades.map(asMock))
+    return {
+      tradeCount: s.tradeCount, netPnl: s.netPnl, winRate: s.winRate, expectancyR: s.expectancyR, rTradeCount: s.rTradeCount,
+      profitFactor: s.profitFactor, totalGains: s.totalGains, totalLosses: s.totalLosses, maxDrawdown: s.maxDrawdown,
+    }
+  }
+  const actual = result(list)
+  const scenario = (excluded: string[]): Scenario => {
+    const out = list.filter((t) => t.planFollowed != null && excluded.includes(t.planFollowed))
+    const kept = result(list.filter((t) => !out.includes(t)))
+    return {
+      excludedTradeCount: out.length,
+      excludedNetPnl: sum(out.map((t) => t.figures.netPnl)),
+      result: kept,
+      difference: declaredTradeCount ? toDec(toScaled(kept.netPnl) - toScaled(actual.netPnl)) : null,
+      excludedTradeIds: out.map((t) => t.id),
+    }
+  }
+  return { declaredTradeCount, actual, withoutOffPlan: scenario(['no']), withoutOffPlanOrPartial: scenario(['no', 'partial']) }
+}

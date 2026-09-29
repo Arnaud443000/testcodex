@@ -227,3 +227,138 @@ export interface PatternReport {
   hesitation: Hesitation[]
   missedTradeCount: number
 }
+
+// --- Lot 8 bis : compléments (CLAUDE.md, « Compléments du moteur ») ---
+// Aucun de ces rapports n'affirme de causalité : l'interface décrit ce qui s'est passé en même temps.
+
+/** Facteurs du journal quotidien, toujours renvoyés dans cet ordre. */
+export type FactorKey = 'poorSleep' | 'highFatigue' | 'lateHours' | 'lowMood'
+
+/** Jours avec le facteur comparés aux jours sans : `lower` = plus bas quand le facteur est présent. */
+export type Verdict = 'notEnoughData' | 'lower' | 'similar' | 'higher'
+
+export interface Comparison {
+  /** null sous l'échantillon minimal de la valeur (5 trades notés, ou 5 trades avec R). */
+  present: number | null
+  absent: number | null
+  /** présent − absent ; null quand le verdict est `notEnoughData`. */
+  difference: number | null
+  verdict: Verdict
+}
+
+export interface FactorSide {
+  /** Jours locaux d'entrée distincts ayant au moins un trade. */
+  dayCount: number
+  summary: Summary
+  /** null sous 5 trades notés. */
+  disciplineScore: number | null
+  scoredTradeCount: number
+  tradeIds: number[]
+}
+
+export interface FactorReport {
+  key: FactorKey
+  present: FactorSide
+  absent: FactorSide
+  /** Jours sans journal, ou journal laissant ce facteur vide. */
+  undeclaredDayCount: number
+  undeclaredTradeCount: number
+  /** En points. */
+  discipline: Comparison
+  /** En R. */
+  expectancyR: Comparison
+  /** PnL net moyen par trade, présent − absent, sans verdict (dépend de la taille). */
+  avgNetPnlDifference: Decimal | null
+}
+
+export interface ExternalFactorReport {
+  factors: FactorReport[]
+  tradeCount: number
+  tradingDayCount: number
+  journalDayCount: number
+  minDayCount: number
+  minRTradeCount: number
+}
+
+export interface SequenceGroup {
+  summary: Summary
+  disciplineScore: number | null
+  scoredTradeCount: number
+  tradeIds: number[]
+}
+
+/** « Moyenne après 2 pertes » : la maquette affiche `afterTwoLosses.summary.expectancyR` (« — » si `sampleTooSmall`). */
+export interface AfterLossesReport {
+  afterTwoLosses: SequenceGroup
+  others: SequenceGroup
+  minTradeCount: number
+  sampleTooSmall: boolean
+  /** Écarts « après 2 pertes − autres » ; null si l'échantillon est trop petit. */
+  winRateDifference: number | null
+  avgNetPnlDifference: Decimal | null
+  expectancyRDifference: number | null
+  disciplineDifference: number | null
+}
+
+export interface SizeChangeCase {
+  tradeId: number
+  previousTradeId: number
+  basis: ExposureBasis
+  /** Exposition / exposition précédente − 1 (0,23 = +23 %). */
+  change: number
+}
+
+export interface SizeChangeGroup {
+  previousOutcome: Outcome
+  caseCount: number
+  notComparableCount: number
+  increasedCount: number
+  /** null sous 5 cas. */
+  meanChange: number | null
+  medianChange: number | null
+  cases: SizeChangeCase[]
+}
+
+/** « Variation de taille après une perte » : la maquette affiche `afterLoss.meanChange`. */
+export interface SizeChangeReport {
+  afterLoss: SizeChangeGroup
+  afterWin: SizeChangeGroup
+  afterBreakeven: SizeChangeGroup
+  noPreviousCount: number
+  tradeCount: number
+  minCaseCount: number
+  /** Moyenne après perte − moyenne après gain. */
+  lossVsWin: number | null
+}
+
+/** Aucun pourcentage : les soldes réels n'ont pas de sens dans une simulation. */
+export interface SimulatedResult {
+  tradeCount: number
+  netPnl: Decimal
+  winRate: number | null
+  expectancyR: number | null
+  rTradeCount: number
+  profitFactor: number | null
+  totalGains: Decimal
+  totalLosses: Decimal
+  maxDrawdown: Decimal
+}
+
+export interface Scenario {
+  excludedTradeCount: number
+  excludedNetPnl: Decimal
+  result: SimulatedResult
+  /** PnL net simulé − réel (positif : les trades retirés ont coûté) ; null si aucun plan n'est renseigné. */
+  difference: Decimal | null
+  excludedTradeIds: number[]
+}
+
+/** « Gain si le plan avait été suivi » : une simulation, à étiqueter comme telle, jamais un conseil. */
+export interface PlanSimulation {
+  declaredTradeCount: number
+  actual: SimulatedResult
+  /** Sans les trades hors plan (`no`) : c'est le chiffre de la maquette. */
+  withoutOffPlan: Scenario
+  /** Sans les `no` ni les `partial`. */
+  withoutOffPlanOrPartial: Scenario
+}

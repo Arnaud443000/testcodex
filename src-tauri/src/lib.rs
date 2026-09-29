@@ -603,7 +603,11 @@ pub fn run() {
             copy_goals,
             get_goal_progress,
             list_replay,
-            get_replay_card
+            get_replay_card,
+            get_external_factors,
+            get_after_losses,
+            get_size_change,
+            get_plan_simulation
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -621,4 +625,31 @@ fn update_account(state: State<AppState>, id: i64, account: AccountUpdate) -> Re
 fn set_account_archived(state: State<AppState>, id: i64, archived: bool) -> Result<Account, String> {
     let conn = state.db.lock().map_err(err)?;
     accounts::set_archived(&conn, id, archived).map_err(err)
+}
+
+// --- Lot 8 bis : compléments de l'analyse comportementale ---
+
+#[tauri::command]
+fn get_external_factors(state: State<AppState>, query: StatsQuery) -> Result<behavior::ExternalFactorReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::external_factor_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_after_losses(state: State<AppState>, query: StatsQuery) -> Result<behavior::AfterLossesReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::after_losses_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_size_change(state: State<AppState>, query: StatsQuery) -> Result<behavior::SizeChangeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::size_change_report(&conn, &query).map_err(err)
+}
+
+/// A simulation (off-plan trades removed), never advice: the UI labels it as such.
+#[tauri::command]
+fn get_plan_simulation(state: State<AppState>, query: StatsQuery) -> Result<behavior::PlanSimulation, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::plan_simulation_report(&conn, &query).map_err(err)
 }

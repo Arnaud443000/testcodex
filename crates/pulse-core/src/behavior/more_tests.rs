@@ -516,3 +516,15 @@ fn plan_simulation_follows_the_selection_of_two_accounts() {
     let r = plan_simulation(&l, &q).unwrap();
     assert_eq!((r.without_off_plan.excluded_trade_ids.clone(), r.without_off_plan.difference), (vec![4], Some(dec("-30"))));
 }
+
+#[test]
+fn plan_simulation_on_journal_h() {
+    // Off plan: days 0, 1, 3 (−10 each). Actual: −25 (days 0–4) + 45 (days 5–9) + 0 + 5 = 25.
+    let r = plan_simulation(&ledger("10000", journal_h().0), &all()).unwrap();
+    assert_eq!((r.declared_trade_count, r.actual.net_pnl), (10, dec("25")));
+    let s = &r.without_off_plan;
+    assert_eq!((s.excluded_trade_ids.clone(), s.result.net_pnl, s.difference), (vec![1, 2, 4], dec("55"), Some(dec("30"))));
+    // Kept: 9 trades, 6 wins; no partial plan, so both scenarios agree.
+    approx(s.result.win_rate, 6.0 / 9.0);
+    assert_eq!(r.without_off_plan_or_partial, r.without_off_plan);
+}
