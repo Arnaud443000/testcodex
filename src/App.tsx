@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { AccountsProvider } from './lib/accounts'
@@ -29,7 +29,7 @@ import { LockProvider, useLock } from './lib/lock'
 import { LockScreen, LockSplash } from './components/LockScreen'
 import { LockWarningBanner, PersistBanner } from './components/PersistBanner'
 import { EffectsProvider } from './lib/effects'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 /**
  * Lot 22 : tant que la base chiffrée n'est pas ouverte, seul l'écran de déverrouillage existe ; aucun
@@ -41,6 +41,24 @@ function LockGate({ children }: { children: ReactNode }) {
   if (!status) return <LockSplash />
   if (status.locked) return <LockScreen />
   return <>{children}</>
+}
+
+/**
+ * Zone de contenu qui défile. Un changement de page la remet en haut (avant le lot 26, elle gardait la position de la
+ * page précédente : une page ouverte après une longue page s'affichait décalée, titre hors de vue). Un simple
+ * changement de paramètre ou d'ancre dans la même page ne la déplace pas.
+ */
+function ScrollArea({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { pathname } = useLocation()
+  useEffect(() => {
+    ref.current?.scrollTo({ top: 0 })
+  }, [pathname])
+  return (
+    <div ref={ref} className="flex-1 overflow-y-auto px-7 py-6">
+      {children}
+    </div>
+  )
 }
 
 export default function App() {
@@ -56,7 +74,7 @@ export default function App() {
           <Sidebar />
           <main className="flex min-w-0 flex-1 flex-col">
             <TopBar />
-            <div className="flex-1 overflow-y-auto px-7 py-6">
+            <ScrollArea>
               {/* Largeur max du contenu : au-delà, les grilles s’étireraient et les cartes se déséquilibreraient. */}
               <div className="mx-auto w-full max-w-[1480px]">
               <PersistBanner />
@@ -86,7 +104,7 @@ export default function App() {
                 <Route path="/sizing" element={<SizingPage />} />
               </Routes>
               </div>
-            </div>
+            </ScrollArea>
           </main>
         </div>
         </InsightsProvider>
