@@ -195,4 +195,46 @@ export const frDashboardBuilder = {
       topBar: 'Compte de la barre du haut',
     } as Record<string, string>,
   },
+
+  // Duplication, export et import de configuration (3.8.7, lot 18)
+  transfer: {
+    menu: 'Configuration',
+    menuLabel: 'Dupliquer, exporter ou importer un dashboard',
+    duplicate: 'Dupliquer ce dashboard',
+    duplicateHint: 'Une copie à modifier, avec les mêmes widgets et la même portée.',
+    export: 'Exporter la configuration…',
+    exportHint: 'Un fichier à garder en sauvegarde ou à ouvrir sur un autre PC.',
+    import: 'Importer une configuration…',
+    importHint: 'Crée un nouveau dashboard ; aucun dashboard existant n’est remplacé.',
+    dialogExportTitle: 'Exporter la configuration du dashboard',
+    dialogImportTitle: 'Importer une configuration de dashboard',
+    duplicated: (name: string) => `Dashboard « ${name} » créé par copie.`,
+    exported: (name: string, path: string) => `La configuration de « ${name} » est enregistrée dans ${path}.`,
+    imported: (name: string) => `Dashboard « ${name} » importé.`,
+    importedWithWarnings: (name: string, n: number) => `Dashboard « ${name} » importé, avec ${n === 1 ? 'une remarque' : `${n} remarques`}.`,
+    reportTitle: 'Importation terminée',
+    reportIntro: (name: string) => `Le dashboard « ${name} » a été créé. Voici ce qui a été adapté ou ignoré :`,
+    reportClose: 'Compris',
+    error: {
+      title: 'Importation impossible',
+      nothingWritten: 'Rien n’a été importé : vos dashboards sont intacts.',
+      empty: 'Ce fichier est vide.',
+      corrupt: 'Ce fichier est abîmé ou n’est pas une configuration Pulse lisible.',
+      not_a_dashboard: 'Ce fichier n’est pas une configuration de dashboard Pulse.',
+      too_new: (version: string | null) =>
+        `Ce fichier vient d’une version plus récente de Pulse${version ? ` (format ${version})` : ''}. Mettez Pulse à jour pour l’ouvrir.`,
+      too_large: 'Ce fichier est beaucoup trop volumineux pour être une configuration de dashboard.',
+      invalid: 'La configuration est incohérente (disposition impossible, réglage inconnu ou nom invalide).',
+      unreadable: (detail: string) => `Le fichier n’a pas pu être lu ou écrit : ${detail}`,
+      detail: 'Détail technique',
+      dismiss: 'Fermer',
+    },
+    warning: {
+      unknownWidget: (kind: string) => `Le widget « ${kind} » n’existe pas dans cette version de Pulse : il est ignoré.`,
+      unknownAccount: (account: string, widget: string) =>
+        `Le compte « ${account} » n’existe pas ici : le widget « ${widget} » lit de nouveau le compte du dashboard.`,
+      unknownScopeAccount: (account: string) => `Le compte « ${account} » n’existe pas ici : le dashboard suit la barre du haut.`,
+      renamed: (from: string, to: string) => `Le nom « ${from} » était déjà pris : le dashboard s’appelle « ${to} ». Rien n’a été écrasé.`,
+    },
+  },
 }

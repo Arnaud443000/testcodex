@@ -55,7 +55,7 @@ import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
 import { mockAnalyses, mockBehaviorExtra } from './mockBackend'
 import { createDashboardsMock } from './mockDashboards'
-import type { DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
+import type { DashboardLayout, DashboardScope, DashboardSummary, ImportResult, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
@@ -319,6 +319,30 @@ export const api = {
     inTauri
       ? invoke('resolve_dashboard_scope', { scope, widgets, selectedAccountId })
       : mockDashboards.resolveDashboardScope(scope, widgets, selectedAccountId),
+
+  // --- Lot 18 : duplication, export et import de configuration (3.8.7) ---
+  /** Copie un dashboard (livré ou à soi) comme point de départ ; sans nom : « <nom> (copie) ». */
+  duplicateDashboardLayout: (key: string, name: string | null = null): Promise<DashboardLayout> =>
+    inTauri ? invoke('duplicate_dashboard_layout', { key, name }) : mockDashboards.duplicateDashboardLayout(key, name),
+  /** Écrit la configuration d'un dashboard (JSON versionné) au chemin choisi. */
+  exportDashboardConfig: (key: string, path: string): Promise<void> =>
+    inTauri ? invoke('export_dashboard_config', { key, path }) : mockDashboards.exportDashboardConfig(key, path),
+  /** Importe une configuration : tout ou rien, jamais d'écrasement. Les erreurs portent un code `dashboard_import:…`. */
+  importDashboardConfig: (path: string): Promise<ImportResult> =>
+    inTauri ? invoke('import_dashboard_config', { path }) : mockDashboards.importDashboardConfig(path),
+  /** Boîte de dialogue « enregistrer sous » d'un fichier de configuration (`null` si annulée). */
+  pickConfigSavePath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return mockDashboards.pickExportPath(defaultName)
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'Configuration Pulse (JSON)', extensions: ['json'] }] })
+  },
+  /** Boîte de dialogue « ouvrir » d'un fichier de configuration (`null` si annulée). */
+  pickConfigOpenPath: async (title: string): Promise<string | null> => {
+    if (!inTauri) return mockDashboards.pickImportPath()
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const picked = await open({ title, multiple: false, directory: false, filters: [{ name: 'Configuration Pulse (JSON)', extensions: ['json'] }] })
+    return typeof picked === 'string' ? picked : null
+  },
 }
 
 

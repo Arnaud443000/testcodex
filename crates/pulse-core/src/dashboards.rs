@@ -815,5 +815,8 @@ pub fn set_default(conn: &Connection, key: &str) -> Result<DashboardLayout> {
     get(conn, key)
 }
 
+mod transfer;
+pub use transfer::*;
+
 #[cfg(test)]
 mod tests;

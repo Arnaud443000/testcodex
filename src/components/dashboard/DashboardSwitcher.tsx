@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../Icon'
+import { ConfigMenu } from './ConfigMenu'
 import { Modal } from './Modal'
 import { useT } from '../../i18n'
 import type { DashboardLayout, DashboardSummary } from '../../types/dashboardLayout'
@@ -16,6 +17,10 @@ export function DashboardSwitcher({
   onRename,
   onDelete,
   onNew,
+  onDuplicate,
+  onExport,
+  onImport,
+  transferBusy,
 }: {
   summaries: DashboardSummary[]
   current: DashboardLayout
@@ -24,6 +29,10 @@ export function DashboardSwitcher({
   onRename: () => void
   onDelete: () => Promise<void>
   onNew: () => void
+  onDuplicate: () => void
+  onExport: () => void
+  onImport: () => void
+  transferBusy: boolean
 }) {
   const all = useT()
   const t = all.dashboardBuilder.toolbar
@@ -62,6 +71,7 @@ export function DashboardSwitcher({
         </>
       )}
       <button type="button" className={iconBtn} title={t.newDashboard} aria-label={t.newDashboard} onClick={onNew}><Icon name="plus" size={18} /></button>
+      <ConfigMenu onDuplicate={onDuplicate} onExport={onExport} onImport={onImport} busy={transferBusy} />
       {confirmDelete && (
         <Modal title={t.delete} onClose={() => setConfirmDelete(false)}>
           <p className="mb-5 text-sm text-tx2">{t.deleteConfirm(current.name)}</p>

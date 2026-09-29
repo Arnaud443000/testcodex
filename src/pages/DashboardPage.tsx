@@ -4,6 +4,7 @@ import { ReadOnlyGrid, STACK_BELOW, useWidth } from '../components/dashboard/Das
 import { DashboardSwitcher } from '../components/dashboard/DashboardSwitcher'
 import { EditBar } from '../components/dashboard/EditBar'
 import { EditableGrid } from '../components/dashboard/EditableGrid'
+import { ImportReport } from '../components/dashboard/ImportReport'
 import { NameDialog } from '../components/dashboard/NameDialog'
 import { ScopeBar } from '../components/dashboard/ScopeBar'
 import { ScopeDialog } from '../components/dashboard/ScopeDialog'
@@ -15,11 +16,12 @@ import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
+import { configFileName, parseImportError } from '../lib/dashboardTransfer'
 import { addWidget, countByKind, patchWidget, removeWidget, sameLayout } from '../lib/dashboardDraft'
 import { ENGINE_PERIOD, localTzOffsetMin, usePeriod } from '../lib/period'
 import { clearWidgetCache } from '../lib/widgetData'
 import type { ScopeEnv } from '../lib/widgetScope'
-import type { DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
+import type { DashboardLayout, DashboardScope, DashboardSummary, ImportWarning, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /** Dashboard consulté pendant cette session : on y revient en quittant puis en rouvrant la page. */
 let sessionKey: string | null = null
@@ -45,6 +47,9 @@ export function DashboardPage() {
   const [editError, setEditError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [live, setLive] = useState('')
+  const [transferBusy, setTransferBusy] = useState(false)
+  const [transferError, setTransferError] = useState<{ text: string; detail: string | null } | null>(null)
+  const [report, setReport] = useState<{ name: string; warnings: ImportWarning[] } | null>(null)
   // Comptes réellement lus (calculés par pulse-core), avec ce pour quoi ils ont été calculés.
   const [resolvedState, setResolvedState] = useState<{ for: string; value: ResolvedDashboard } | null>(null)
   const [gridRef, gridWidth] = useWidth<HTMLDivElement>()
@@ -211,6 +216,60 @@ export function DashboardPage() {
     }
   }
 
+  /** Dupliquer, exporter, importer (3.8.7). Toutes les règles sont dans pulse-core ; ici on ne fait que choisir le fichier et dire le résultat. */
+  async function transfer(run: () => Promise<void>) {
+    setTransferBusy(true)
+    setTransferError(null)
+    setNotice(null)
+    try {
+      await run()
+    } catch (e) {
+      const raw = message(e)
+      const parsed = parseImportError(raw)
+      const er = b.transfer.error
+      const text = !parsed
+        ? er.unreadable(raw)
+        : parsed.code === 'too_new'
+          ? er.too_new(parsed.detail)
+          : er[parsed.code]
+      setTransferError({ text, detail: parsed?.code === 'invalid' || parsed?.code === 'corrupt' ? parsed.detail : null })
+    } finally {
+      setTransferBusy(false)
+    }
+  }
+
+  const duplicate = () =>
+    transfer(async () => {
+      if (!layout) return
+      const copy = await api.duplicateDashboardLayout(layout.key)
+      show(copy)
+      await refreshSummaries()
+      setNotice(b.transfer.duplicated(copy.name))
+    })
+
+  const exportConfig = () =>
+    transfer(async () => {
+      if (!layout) return
+      const path = await api.pickConfigSavePath(b.transfer.dialogExportTitle, configFileName(layout.name))
+      if (!path) return
+      await api.exportDashboardConfig(layout.key, path)
+      setNotice(b.transfer.exported(layout.name, path))
+    })
+
+  const importConfig = () =>
+    transfer(async () => {
+      const path = await api.pickConfigOpenPath(b.transfer.dialogImportTitle)
+      if (!path) return
+      const result = await api.importDashboardConfig(path)
+      clearWidgetCache()
+      show(result.layout)
+      await refreshSummaries()
+      if (result.warnings.length > 0) {
+        setNotice(b.transfer.importedWithWarnings(result.layout.name, result.warnings.length))
+        setReport({ name: result.layout.name, warnings: result.warnings })
+      } else setNotice(b.transfer.imported(result.layout.name))
+    })
+
   const announce = useCallback((m: string) => setLive(m), [])
   const settingsTarget = draft?.find((w) => w.uid === settingsUid) ?? null
 
@@ -219,7 +278,7 @@ export function DashboardPage() {
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
       actions={
-        layout && ready && hasTrades !== false && !editing ? (
+        layout && ready && !editing ? (
           <div className="flex flex-wrap items-center justify-end gap-3">
             <DashboardSwitcher
               summaries={summaries}
@@ -229,6 +288,10 @@ export function DashboardPage() {
               onRename={() => setDialog({ kind: 'rename' })}
               onDelete={removeDashboard}
               onNew={() => setDialog({ kind: 'new' })}
+              onDuplicate={() => void duplicate()}
+              onExport={() => void exportConfig()}
+              onImport={() => void importConfig()}
+              transferBusy={transferBusy}
             />
             {!narrow && (
               <button type="button" className="btn btn-secondary" onClick={() => startEdit()}>
@@ -245,7 +308,22 @@ export function DashboardPage() {
     // La bibliothèque est un panneau fixe à droite : le contenu lui laisse la place (les boutons Enregistrer restent visibles).
     <div className={`flex flex-col gap-5 ${editing && libraryOpen ? 'pr-[436px]' : ''}`}>
       {header}
+      {notice && !editing && <div className="nt nt-ok" role="status">{notice}</div>}
+      {transferError && (
+        <div className="nt nt-bad flex flex-col gap-1" role="alert">
+          <p className="font-semibold">{b.transfer.error.title}</p>
+          <p>{transferError.text} {b.transfer.error.nothingWritten}</p>
+          {transferError.detail && (
+            <details className="text-xs text-tx3">
+              <summary className="cursor-pointer">{b.transfer.error.detail}</summary>
+              <code className="break-words">{transferError.detail}</code>
+            </details>
+          )}
+          <button type="button" className="btn btn-secondary btn-sm self-start" onClick={() => setTransferError(null)}>{b.transfer.error.dismiss}</button>
+        </div>
+      )}
       {body}
+      {report && <ImportReport name={report.name} warnings={report.warnings} onClose={() => setReport(null)} />}
     </div>
   )
 
@@ -351,7 +429,6 @@ export function DashboardPage() {
   return wrap(
     <>
       {scopeBar}
-      {notice && !editing && <div className="nt nt-ok" role="status">{notice}</div>}
       {editing && (
         <EditBar
           name={layout.name}

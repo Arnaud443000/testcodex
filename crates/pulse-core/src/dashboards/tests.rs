@@ -417,3 +417,353 @@ fn an_archived_linked_account_is_still_read_with_a_notice() {
     // A new dashboard may be linked to an archived account, named explicitly.
     assert!(save_scoped(&conn, None, "Encore", Some(&linked(old)), &simple()).is_ok());
 }
+
+// --- Duplicating, exporting, importing (3.8.7) --------------------------------------------------
+
+fn count(conn: &Connection) -> usize {
+    list(conn).unwrap().len()
+}
+
+/// A dashboard using every kind of setting: a scope on an account, a pinned widget, a period, a mode.
+fn rich(conn: &Connection, prop: i64) -> DashboardLayout {
+    let widgets = vec![
+        widget("a", "capital", 0, 0, 10, 16),
+        WidgetInstance { account_id: Some(prop), ..widget("b", "calendar", 10, 0, 13, 13) },
+        WidgetInstance { period: Some("1M".into()), mode: Some("expectancy".into()), ..widget("k", "kpi", 0, 16, 6, 6) },
+        WidgetInstance { mode: Some("after".into()), ..widget("e", "emotions", 6, 16, 12, 18) },
+    ];
+    save_scoped(conn, None, "Prop firm", Some(&linked(prop)), &widgets).unwrap()
+}
+
+fn import_err(conn: &Connection, text: &str) -> String {
+    let before = count(conn);
+    let err = import_config(conn, text).expect_err("must be refused").to_string();
+    assert_eq!(count(conn), before, "a refused import writes nothing: {text:.60}");
+    err
+}
+
+#[test]
+fn duplicate_copies_layout_settings_and_scope_without_touching_the_source() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let src = rich(&conn, prop);
+    set_default(&conn, &src.key).unwrap();
+    let copy = duplicate(&conn, &src.key, None).unwrap();
+    assert_eq!(copy.name, "Prop firm (copie)");
+    assert_eq!((copy.widgets.clone(), copy.scope.clone(), copy.builtin, copy.is_default), (src.widgets.clone(), linked(prop), false, false));
+    assert_ne!(copy.key, src.key);
+    assert_eq!(duplicate(&conn, &src.key, None).unwrap().name, "Prop firm (copie 2)");
+    assert_eq!(get(&conn, &src.key).unwrap().widgets, src.widgets, "the source is untouched");
+    assert_eq!(startup(&conn).unwrap().key, src.key, "the default is still the source");
+    // The copy is independent: editing it does not change the source.
+    save(&conn, Some(&copy.key), "Prop firm (copie)", &[]).unwrap();
+    assert_eq!(get(&conn, &src.key).unwrap().widgets.len(), 4);
+    // A name given by the user is used as is, and refused when taken.
+    assert_eq!(duplicate(&conn, &src.key, Some(" Mon  départ ")).unwrap().name, "Mon départ");
+    assert!(is_invalid(duplicate(&conn, &src.key, Some("mon départ"))));
+    assert!(is_invalid(duplicate(&conn, &src.key, Some("Essentiel"))));
+    assert!(matches!(duplicate(&conn, "custom:404", None), Err(CoreError::NotFound(_))));
+}
+
+#[test]
+fn a_preset_can_be_duplicated_and_the_copy_edited() {
+    let conn = db::open_in_memory().unwrap();
+    let copy = duplicate(&conn, "preset:analysis", None).unwrap();
+    assert_eq!((copy.name.as_str(), copy.builtin, copy.scope.clone()), ("Analyse (copie)", false, DashboardScope::FOLLOW));
+    assert_eq!(copy.widgets, get(&conn, "preset:analysis").unwrap().widgets);
+    assert!(save(&conn, Some(&copy.key), "Analyse (copie)", &simple()).is_ok());
+    assert_eq!(get(&conn, "preset:analysis").unwrap().widgets.len(), 11, "the preset is untouched");
+}
+
+#[test]
+fn a_copy_name_never_exceeds_the_limit_and_an_orphan_scope_becomes_follow() {
+    let conn = db::open_in_memory().unwrap();
+    let long = "x".repeat(MAX_NAME_CHARS);
+    let src = save(&conn, None, &long, &simple()).unwrap();
+    let copy = duplicate(&conn, &src.key, None).unwrap();
+    assert!(copy.name.chars().count() <= MAX_NAME_CHARS && copy.name.ends_with(" (copie)"), "{}", copy.name);
+    let prop = acct(&conn, "Prop", "USD");
+    let linked_one = save_scoped(&conn, None, "Lié", Some(&linked(prop)), &simple()).unwrap();
+    accounts::delete(&conn, prop).unwrap();
+    assert_eq!(duplicate(&conn, &linked_one.key, None).unwrap().scope, DashboardScope::FOLLOW);
+}
+
+#[test]
+fn the_exported_file_is_versioned_and_holds_no_id_of_this_database() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let src = rich(&conn, prop);
+    let text = export_config(&conn, &src.key).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!((v["format"].as_str(), v["version"].as_u64(), v["name"].as_str()), (Some("pulse-dashboard"), Some(1), Some("Prop firm")));
+    assert_eq!(v["scope"]["kind"], "account");
+    assert_eq!(v["scope"]["account"], serde_json::json!({"name": "Prop", "currency": "USD"}));
+    assert_eq!(v["widgets"].as_array().unwrap().len(), 4);
+    assert!(!text.contains("accountId") && !text.contains("account_id") && !text.contains("custom:"));
+    assert_eq!(export_config(&conn, &src.key).unwrap(), text, "exporting twice gives the same file");
+    // A preset exports like any dashboard; an orphan scope is exported as "follow".
+    assert!(export_config(&conn, ESSENTIAL).unwrap().contains("\"name\": \"Essentiel\""));
+    accounts::delete(&conn, prop).unwrap();
+    let orphan: serde_json::Value = serde_json::from_str(&export_config(&conn, &src.key).unwrap()).unwrap();
+    assert_eq!((orphan["scope"]["kind"].as_str(), orphan["scope"]["account"].is_null()), (Some("follow"), true));
+    assert!(orphan["widgets"].as_array().unwrap().iter().all(|w| w["account"].is_null()));
+}
+
+#[test]
+fn export_then_import_gives_back_the_same_dashboard() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let src = rich(&conn, prop);
+    let text = export_config(&conn, &src.key).unwrap();
+
+    // Same database, the original still there: the copy is renamed, never overwriting it.
+    let again = import_config(&conn, &text).unwrap();
+    assert_eq!(again.warnings, [ImportWarning::Renamed { from: "Prop firm".into(), to: "Prop firm (importé)".into() }]);
+    assert_eq!(again.layout.name, "Prop firm (importé)");
+    assert_eq!((again.layout.widgets.clone(), again.layout.scope.clone()), (src.widgets.clone(), linked(prop)));
+    assert!(!again.layout.builtin && !again.layout.is_default);
+    assert_eq!(get(&conn, &src.key).unwrap(), DashboardLayout { is_default: false, ..src.clone() }, "the original is untouched");
+    assert_eq!(import_config(&conn, &text).unwrap().layout.name, "Prop firm (importé 2)");
+    // Exporting the import gives the same file, apart from the name.
+    let re = export_config(&conn, &again.layout.key).unwrap().replace("Prop firm (importé)", "Prop firm");
+    assert_eq!(re, text);
+
+    // Original deleted: the very same name comes back, no warning at all.
+    delete(&conn, &src.key).unwrap();
+    let back = import_config(&conn, &text).unwrap();
+    assert!(back.warnings.is_empty());
+    assert_eq!((back.layout.name.as_str(), back.layout.widgets.clone(), back.layout.scope.clone()), ("Prop firm", src.widgets, linked(prop)));
+}
+
+#[test]
+fn a_preset_survives_the_round_trip_under_another_name() {
+    let conn = db::open_in_memory().unwrap();
+    let text = export_config(&conn, "preset:behavior").unwrap();
+    let r = import_config(&conn, &text).unwrap();
+    assert_eq!(r.layout.name, "Comportement (importé)");
+    assert_eq!(r.layout.widgets, get(&conn, "preset:behavior").unwrap().widgets);
+    assert_eq!(r.warnings.len(), 1);
+}
+
+#[test]
+fn accounts_are_found_by_name_and_currency_on_another_database() {
+    let a = db::open_in_memory().unwrap();
+    let prop_a = acct(&a, "Prop", "USD");
+    let text = export_config(&a, &rich(&a, prop_a).key).unwrap();
+    // Another PC: same account, other id, name written differently.
+    let b = db::open_in_memory().unwrap();
+    acct(&b, "Perso", "EUR");
+    acct(&b, "Autre", "USD");
+    let prop_b = acct(&b, "  prop ", "usd");
+    let r = import_config(&b, &text).unwrap();
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    assert_eq!(r.layout.scope, linked(prop_b));
+    assert_eq!(r.layout.widgets.iter().find(|x| x.uid == "b").unwrap().account_id, Some(prop_b));
+}
+
+#[test]
+fn unknown_accounts_go_back_to_the_global_account_with_a_warning() {
+    let a = db::open_in_memory().unwrap();
+    let prop_a = acct(&a, "Prop", "USD");
+    let text = export_config(&a, &rich(&a, prop_a).key).unwrap();
+    // No such account here; and a same-named account in another currency is not the same account.
+    let b = db::open_in_memory().unwrap();
+    acct(&b, "Prop", "EUR");
+    let r = import_config(&b, &text).unwrap();
+    assert_eq!(r.layout.scope, DashboardScope::FOLLOW);
+    assert!(r.layout.widgets.iter().all(|w| w.account_id.is_none()));
+    assert!(r.warnings.contains(&ImportWarning::UnknownScopeAccount { name: "Prop".into() }));
+    assert!(r.warnings.contains(&ImportWarning::UnknownAccount { name: "Prop".into(), widget_kind: "calendar".into() }));
+    assert_eq!(r.warnings.len(), 2);
+    // The rest of the layout is intact.
+    assert_eq!(r.layout.widgets.len(), 4);
+    assert_eq!(r.layout.widgets.iter().find(|x| x.uid == "k").unwrap().period.as_deref(), Some("1M"));
+    // Two accounts matching the same name and currency: no guessing.
+    let c = db::open_in_memory().unwrap();
+    acct(&c, "Prop", "USD");
+    acct(&c, "prop", "USD");
+    let r = import_config(&c, &text).unwrap();
+    assert_eq!(r.layout.scope, DashboardScope::FOLLOW);
+    assert_eq!(r.warnings.len(), 2);
+}
+
+fn file(widgets: &str) -> String {
+    format!(r#"{{"format":"pulse-dashboard","version":1,"name":"Reçu","scope":{{"kind":"follow"}},"widgets":{widgets}}}"#)
+}
+
+#[test]
+fn widgets_of_an_unknown_kind_are_ignored_and_reported() {
+    let conn = db::open_in_memory().unwrap();
+    let text = file(
+        r#"[{"uid":"a","kind":"capital","x":0,"y":0,"w":10,"h":16},
+            {"uid":"z","kind":"hologram","x":10,"y":0,"w":6,"h":6,"someFutureField":1},
+            {"uid":"k","kind":"kpi","x":10,"y":0,"w":6,"h":6,"mode":"win_rate"}]"#,
+    );
+    let r = import_config(&conn, &text).unwrap();
+    assert_eq!(r.layout.widgets.iter().map(|w| w.uid.as_str()).collect::<Vec<_>>(), ["a", "k"]);
+    assert_eq!(r.warnings, [ImportWarning::UnknownWidget { kind: "hologram".into() }]);
+    // Even a file made only of unknown widgets imports, as an empty dashboard.
+    let only = import_config(&conn, &file(r#"[{"uid":"z","kind":"hologram","x":0,"y":0,"w":1,"h":1}]"#).replace("Reçu", "Vide")).unwrap();
+    assert_eq!((only.layout.widgets.len(), only.warnings.len()), (0, 1));
+}
+
+#[test]
+fn warnings_serialise_with_a_code_the_interface_can_translate() {
+    let w = serde_json::to_value(ImportWarning::UnknownAccount { name: "Prop".into(), widget_kind: "kpi".into() }).unwrap();
+    assert_eq!(w, serde_json::json!({"code": "unknownAccount", "name": "Prop", "widgetKind": "kpi"}));
+    let w = serde_json::to_value(ImportWarning::Renamed { from: "A".into(), to: "B".into() }).unwrap();
+    assert_eq!(w, serde_json::json!({"code": "renamed", "from": "A", "to": "B"}));
+    assert_eq!(serde_json::to_value(ImportWarning::UnknownWidget { kind: "x".into() }).unwrap()["code"], "unknownWidget");
+    assert_eq!(serde_json::to_value(ImportWarning::UnknownScopeAccount { name: "P".into() }).unwrap()["code"], "unknownScopeAccount");
+}
+
+#[test]
+fn empty_corrupt_foreign_and_too_recent_files_are_refused_with_an_explicit_code() {
+    let conn = db::open_in_memory().unwrap();
+    save(&conn, None, "Déjà là", &simple()).unwrap();
+    assert_eq!(import_err(&conn, ""), "invalid input: dashboard_import:empty");
+    assert_eq!(import_err(&conn, " \n\t "), "invalid input: dashboard_import:empty");
+    assert!(import_err(&conn, "{not json").starts_with("invalid input: dashboard_import:corrupt"));
+    assert!(import_err(&conn, &file("[]")[..40]).starts_with("invalid input: dashboard_import:corrupt"), "a truncated file");
+    for foreign in ["[]", "42", "null", r#"{"name":"x"}"#, r#"{"format":"other","version":1}"#] {
+        assert_eq!(import_err(&conn, foreign), "invalid input: dashboard_import:not_a_dashboard", "{foreign}");
+    }
+    // A newer file says so, even though it carries fields this version has never heard of.
+    let newer = r#"{"format":"pulse-dashboard","version":2,"name":"X","layout":{"tabs":[]},"scope":{"kind":"quantum"}}"#;
+    assert_eq!(import_err(&conn, newer), "invalid input: dashboard_import:too_new:2");
+    assert_eq!(import_err(&conn, r#"{"format":"pulse-dashboard","version":99999999999}"#), "invalid input: dashboard_import:too_new:99999999999");
+    for bad_version in [r#""version":0"#, r#""version":"1""#, r#""version":1.5"#, r#""version":-1"#, r#""version":null"#] {
+        let text = format!(r#"{{"format":"pulse-dashboard",{bad_version},"name":"X","scope":{{"kind":"follow"}},"widgets":[]}}"#);
+        assert!(import_err(&conn, &text).contains("dashboard_import:corrupt"), "{bad_version}");
+    }
+    let no_version = r#"{"format":"pulse-dashboard","name":"X","scope":{"kind":"follow"},"widgets":[]}"#;
+    assert!(import_err(&conn, no_version).contains("dashboard_import:corrupt"));
+}
+
+#[test]
+fn a_file_with_missing_extra_or_wrongly_typed_fields_is_refused() {
+    let conn = db::open_in_memory().unwrap();
+    let wrap = |name: &str, scope: &str, widgets: &str| format!(r#"{{"format":"pulse-dashboard","version":1{name}{scope}{widgets}}}"#);
+    let n = r#","name":"X""#;
+    let s = r#","scope":{"kind":"follow"}"#;
+    let w = r#","widgets":[]"#;
+    for (label, text) in [
+        ("no name", wrap("", s, w)),
+        ("no scope", wrap(n, "", w)),
+        ("no widgets", wrap(n, s, "")),
+        ("name is a number", wrap(r#","name":7"#, s, w)),
+        ("widgets is an object", wrap(n, s, r#","widgets":{}"#)),
+        ("unknown top-level field", wrap(n, s, w) .replace("\"version\":1", "\"version\":1,\"extra\":true")),
+        ("unknown scope kind", wrap(n, r#","scope":{"kind":"everywhere"}"#, w)),
+        ("account scope without account", wrap(n, r#","scope":{"kind":"account"}"#, w)),
+        ("follow scope with an account", wrap(n, r#","scope":{"kind":"follow","account":{"name":"P","currency":"USD"}}"#, w)),
+        ("account without currency", wrap(n, r#","scope":{"kind":"account","account":{"name":"P"}}"#, w)),
+        ("widget without kind", wrap(n, s, r#","widgets":[{"uid":"a","x":0,"y":0,"w":10,"h":16}]"#)),
+        ("widget kind is a number", wrap(n, s, r#","widgets":[{"uid":"a","kind":3,"x":0,"y":0,"w":10,"h":16}]"#)),
+        ("known widget without size", wrap(n, s, r#","widgets":[{"uid":"a","kind":"capital","x":0,"y":0}]"#)),
+        ("known widget with a text coordinate", wrap(n, s, r#","widgets":[{"uid":"a","kind":"capital","x":"0","y":0,"w":10,"h":16}]"#)),
+        ("known widget with an extra field", wrap(n, s, r#","widgets":[{"uid":"a","kind":"capital","x":0,"y":0,"w":10,"h":16,"accountId":1}]"#)),
+        ("widget entry is not an object", wrap(n, s, r#","widgets":[7]"#)),
+    ] {
+        let err = import_err(&conn, &text);
+        assert!(err.contains("dashboard_import:corrupt"), "{label}: {err}");
+    }
+}
+
+#[test]
+fn an_invalid_layout_is_refused_whole() {
+    let conn = db::open_in_memory().unwrap();
+    let cap = |uid: &str, x: i64, y: i64, w: i64, h: i64| format!(r#"{{"uid":"{uid}","kind":"capital","x":{x},"y":{y},"w":{w},"h":{h}}}"#);
+    let too_many = format!("[{}]", (0..=MAX_WIDGETS).map(|i| cap(&format!("u{i}"), 0, i as i64 * 2, 7, 10)).collect::<Vec<_>>().join(","));
+    for (label, widgets) in [
+        ("overlap", format!("[{},{}]", cap("a", 0, 0, 10, 16), cap("b", 9, 0, 10, 16))),
+        ("outside the grid", format!("[{}]", cap("a", 25, 0, 10, 16))),
+        ("below the grid", format!("[{}]", cap("a", 0, 295, 10, 16))),
+        ("negative", format!("[{}]", cap("a", -1, 0, 10, 16))),
+        ("smaller than the minimum", format!("[{}]", cap("a", 0, 0, 2, 2))),
+        ("same uid twice", format!("[{},{}]", cap("a", 0, 0, 10, 16), cap("a", 10, 0, 10, 16))),
+        ("empty uid", format!("[{}]", cap("", 0, 0, 10, 16))),
+        ("unknown mode", r#"[{"uid":"k","kind":"kpi","x":0,"y":0,"w":6,"h":6,"mode":"sharpe"}]"#.to_string()),
+        ("mode on a widget without any", r#"[{"uid":"a","kind":"capital","x":0,"y":0,"w":10,"h":16,"mode":"x"}]"#.to_string()),
+        ("unknown period", r#"[{"uid":"k","kind":"kpi","x":0,"y":0,"w":6,"h":6,"period":"2W"}]"#.to_string()),
+        ("period on a widget without one", r#"[{"uid":"a","kind":"capital","x":0,"y":0,"w":10,"h":16,"period":"1M"}]"#.to_string()),
+        ("too many widgets", too_many),
+    ] {
+        let err = import_err(&conn, &file(&widgets));
+        assert!(err.contains("dashboard_import:invalid"), "{label}: {err}");
+    }
+    // One bad widget among good ones: nothing at all is written (import_err checks the count).
+    let mixed = format!("[{},{}]", cap("a", 0, 0, 10, 16), cap("b", 5, 5, 10, 16));
+    assert!(import_err(&conn, &file(&mixed)).contains("dashboard_import:invalid"));
+}
+
+#[test]
+fn a_bad_name_is_refused_and_a_taken_one_is_renamed() {
+    let conn = db::open_in_memory().unwrap();
+    let named = |name: &str| file("[]").replace("Reçu", name);
+    assert!(import_err(&conn, &named("   ")).contains("dashboard_import:invalid"));
+    assert!(import_err(&conn, &named(&"x".repeat(MAX_NAME_CHARS + 1))).contains("dashboard_import:invalid"));
+    // Case, spaces and presets all count as taken; the existing dashboards are never overwritten.
+    let mine = save(&conn, None, "Mon suivi", &simple()).unwrap();
+    for (given, expected) in [(" mon   SUIVI ", "mon SUIVI (importé)"), ("essentiel", "essentiel (importé)")] {
+        let r = import_config(&conn, &named(given)).unwrap();
+        assert_eq!(r.layout.name, expected);
+        assert!(r.warnings.iter().any(|w| matches!(w, ImportWarning::Renamed { .. })));
+    }
+    assert_eq!(get(&conn, &mine.key).unwrap().widgets, mine.widgets);
+    assert_eq!(get(&conn, ESSENTIAL).unwrap().name, "Essentiel");
+    // A name at the limit still gets a suffix that fits.
+    let long = "y".repeat(MAX_NAME_CHARS);
+    import_config(&conn, &named(&long)).unwrap();
+    let r = import_config(&conn, &named(&long)).unwrap();
+    assert!(r.layout.name.chars().count() <= MAX_NAME_CHARS && r.layout.name.ends_with("(importé)"), "{}", r.layout.name);
+}
+
+#[test]
+fn a_byte_order_mark_is_accepted() {
+    let conn = db::open_in_memory().unwrap();
+    let text = format!("\u{feff}{}", file("[]"));
+    assert_eq!(import_config(&conn, &text).unwrap().layout.name, "Reçu");
+}
+
+#[test]
+fn files_are_written_and_read_back_and_bad_files_are_refused() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let src = rich(&conn, prop);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("dashboard.json");
+    export_config_file(&conn, &src.key, &path).unwrap();
+    let r = import_config_file(&conn, &path).unwrap();
+    assert_eq!((r.layout.widgets, r.layout.scope), (src.widgets, linked(prop)));
+
+    let before = count(&conn);
+    let refuse = |bytes: &[u8]| {
+        let p = dir.path().join("bad.json");
+        std::fs::write(&p, bytes).unwrap();
+        let e = import_config_file(&conn, &p).expect_err("refused").to_string();
+        assert_eq!(count(&conn), before);
+        e
+    };
+    assert_eq!(refuse(b""), "invalid input: dashboard_import:empty");
+    assert!(refuse(&[0xff, 0xfe, 0x00, 0x9f]).contains("dashboard_import:corrupt"), "not UTF-8");
+    assert!(refuse(br#"{"format":"pulse-dashboard","ver"#).contains("dashboard_import:corrupt"), "truncated");
+    let huge = vec![b' '; MAX_FILE_BYTES as usize + 10];
+    assert_eq!(refuse(&huge), "invalid input: dashboard_import:too_large");
+    // A missing file is an error, not a panic, and writes nothing.
+    assert!(matches!(import_config_file(&conn, &dir.path().join("absent.json")), Err(CoreError::Io(_))));
+    assert_eq!(count(&conn), before);
+    // Exporting into a folder that does not exist is an error too.
+    assert!(matches!(export_config_file(&conn, &src.key, &dir.path().join("no/such/dir/x.json")), Err(CoreError::Io(_))));
+    assert!(matches!(export_config_file(&conn, "custom:404", &path), Err(CoreError::NotFound(_))));
+}
+
+#[test]
+fn the_default_dashboard_is_never_changed_by_an_import_or_a_copy() {
+    let conn = db::open_in_memory().unwrap();
+    let mine = save(&conn, None, "Mon suivi", &simple()).unwrap();
+    set_default(&conn, &mine.key).unwrap();
+    duplicate(&conn, &mine.key, None).unwrap();
+    import_config(&conn, &export_config(&conn, &mine.key).unwrap()).unwrap();
+    assert_eq!(startup(&conn).unwrap().key, mine.key);
+}

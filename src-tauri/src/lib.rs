@@ -5,7 +5,7 @@ use pulse_core::behavior::{
     StreakReport, TradeDiscipline,
 };
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
-use pulse_core::dashboards::{self, DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance};
+use pulse_core::dashboards::{self, DashboardLayout, DashboardScope, DashboardSummary, ImportResult, ResolvedDashboard, WidgetDefinition, WidgetInstance};
 use pulse_core::confidence::{self, ConfidenceReport};
 use pulse_core::execution_quality::{self, ExecutionScore, QualityReport};
 use pulse_core::journal::{self, DayOverview, JournalEntry};
@@ -630,7 +630,10 @@ pub fn run() {
             delete_dashboard_layout,
             set_default_dashboard_layout,
             set_dashboard_scope,
-            resolve_dashboard_scope
+            resolve_dashboard_scope,
+            duplicate_dashboard_layout,
+            export_dashboard_config,
+            import_dashboard_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -830,4 +833,27 @@ fn resolve_dashboard_scope(
 ) -> Result<ResolvedDashboard, String> {
     let conn = state.db.lock().map_err(err)?;
     dashboards::resolve(&conn, &scope, &widgets, selected_account_id).map_err(err)
+}
+
+// --- Lot 18 : duplication, export et import de configuration (3.8.7) ---
+
+/// Copie un dashboard (livré ou à soi) comme point de départ ; sans nom, « <nom> (copie) ».
+#[tauri::command]
+fn duplicate_dashboard_layout(state: State<AppState>, key: String, name: Option<String>) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::duplicate(&conn, &key, name.as_deref()).map_err(err)
+}
+
+/// Écrit la configuration d'un dashboard (JSON versionné) à l'endroit choisi dans la boîte de dialogue.
+#[tauri::command]
+fn export_dashboard_config(state: State<AppState>, key: String, path: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::export_config_file(&conn, &key, std::path::Path::new(&path)).map_err(err)
+}
+
+/// Importe une configuration : tout ou rien, jamais d'écrasement ; renvoie le dashboard créé et les avertissements.
+#[tauri::command]
+fn import_dashboard_config(state: State<AppState>, path: String) -> Result<ImportResult, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::import_config_file(&conn, std::path::Path::new(&path)).map_err(err)
 }

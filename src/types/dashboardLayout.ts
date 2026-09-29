@@ -108,3 +108,18 @@ export interface ResolvedDashboard {
   scope: ResolvedScope
   widgets: WidgetScope[]
 }
+
+/** Miroir de `dashboards::ImportWarning` (lot 18, 3.8.7) : ce que l'import a changé ou ignoré sans échouer. */
+export type ImportWarning =
+  | { code: 'unknownWidget'; kind: string }
+  | { code: 'unknownAccount'; name: string; widgetKind: string }
+  | { code: 'unknownScopeAccount'; name: string }
+  | { code: 'renamed'; from: string; to: string }
+
+export interface ImportResult {
+  layout: DashboardLayout
+  warnings: ImportWarning[]
+}
+
+/** Codes d'erreur d'un import refusé (`dashboard_import:<code>[:détail]`) ; rien n'est alors écrit. */
+export type ImportErrorCode = 'empty' | 'corrupt' | 'not_a_dashboard' | 'too_new' | 'too_large' | 'invalid'
