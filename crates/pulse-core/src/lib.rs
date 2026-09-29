@@ -13,8 +13,10 @@ pub mod migrations;
 pub mod missed_trades;
 pub mod money;
 pub mod rules;
+pub mod screenshots;
 pub mod stats;
 pub mod tags;
+pub mod trade_view;
 pub mod trades;
 pub use rusqlite;
 
