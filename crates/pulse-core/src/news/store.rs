@@ -3,6 +3,7 @@
 
 use super::zones;
 use super::{Importance, NewEvent, Parsed, Skipped, error};
+use crate::alerts::news::NewsEvent;
 use crate::error::Result;
 use crate::stats::time::parse_day;
 use rusqlite::{Connection, OptionalExtension, params};
@@ -207,6 +208,17 @@ pub fn currencies(conn: &Connection) -> Result<Vec<String>> {
 
 pub fn count(conn: &Connection) -> Result<usize> {
     Ok(conn.query_row("SELECT COUNT(*) FROM economic_events", [], |r| r.get::<_, i64>(0))? as usize)
+}
+
+/// High-importance events with a time in `[from, to]` (UTC ms), in time order (ties: title, id).
+pub(crate) fn high_events_between(conn: &Connection, from: i64, to: i64) -> Result<Vec<NewsEvent>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, starts_at, currency, title FROM economic_events
+         WHERE importance = 'high' AND starts_at IS NOT NULL AND starts_at BETWEEN ?1 AND ?2
+         ORDER BY starts_at, title, id",
+    )?;
+    let rows = stmt.query_map(params![from, to], |r| Ok(NewsEvent { id: r.get(0)?, starts_at: r.get(1)?, currency: r.get(2)?, title: r.get(3)? }))?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
 }
 
 /// Paris days kept from a fetched feed, around `now`.

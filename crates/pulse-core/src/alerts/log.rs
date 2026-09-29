@@ -37,9 +37,18 @@ fn chosen_accounts(conn: &Connection, account_ids: &[i64]) -> Result<Vec<Account
 pub fn active_alerts(conn: &Connection, account_ids: &[i64], now: i64, tz_offset_min: i32) -> Result<Vec<Alert>> {
     let behavior = behavior_settings::behavior(conn)?;
     let thresholds = settings::get(conn)?;
+    let news_settings = crate::news::settings::get(conn)?;
+    let news_events = if news_settings.enabled && news_settings.alert {
+        let horizon = now + i64::from(crate::news::settings::MAX_WINDOW_MIN) * 60_000;
+        crate::news::store::high_events_between(conn, i64::MIN, horizon)?
+    } else {
+        Vec::new()
+    };
     let mut alerts = Vec::new();
     for account in chosen_accounts(conn, account_ids)? {
-        alerts.extend(evaluate(&load(conn, &[account.id])?, now, tz_offset_min, &behavior, &thresholds)?);
+        let ledger = load(conn, &[account.id])?;
+        alerts.extend(evaluate(&ledger, now, tz_offset_min, &behavior, &thresholds)?);
+        alerts.extend(super::news::evaluate(&ledger, &news_events, now, tz_offset_min, &news_settings)?);
     }
     super::sort(&mut alerts);
 
