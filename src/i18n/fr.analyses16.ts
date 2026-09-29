@@ -6,6 +6,7 @@ export const frAnalysesMore = {
     opportunity: 'Coût d’opportunité',
     year: 'Année précédente',
     duration: 'Temps en position',
+    scaling: 'Scaling du capital',
   },
   loading: 'Calcul en cours…',
   opportunity: {
@@ -103,5 +104,47 @@ export const frAnalysesMore = {
     },
     emptyTitle: 'Rien à mesurer pour l’instant',
     emptyText: 'Aucun trade clôturé sur cette période : la durée se mesure entre l’heure d’entrée et l’heure de sortie.',
+  },
+  scaling: {
+    intro:
+      'Votre taille de position suit-elle la croissance (ou la baisse) de votre compte ? On regarde le risque pris par trade en pourcentage du solde au moment de l’entrée, sur la première moitié de la période puis sur la seconde. Les dépôts et retraits comptent dans le solde (il s’agit de votre capital réel) mais jamais dans la performance.',
+    verdictTitle: 'Constat',
+    verdicts: {
+      oversized: 'Sur-dimensionné',
+      undersized: 'Sous-dimensionné',
+      stable: 'Stable',
+    },
+    verdictSentences: {
+      oversized: 'Le risque pris par trade a augmenté plus vite que votre capital.',
+      undersized: 'Le risque pris par trade n’a pas suivi votre capital : il a reculé par rapport à votre solde.',
+      stable: 'Le risque pris par rapport à votre solde est resté à peu près stable.',
+    },
+    verdictRule: (band: string) => `Constat posé quand le risque moyen en % du solde varie d’au moins ${band} entre les deux moitiés.`,
+    capitalFlat: (threshold: string) =>
+      `Le solde moyen a varié de moins de ${threshold} entre les deux moitiés : ce changement de taille ne vient pas de la croissance du compte, c’est un constat sur le risque pris.`,
+    notEnoughTitle: 'Pas assez de trades pour un constat',
+    notEnough: (min: number, usable: number) =>
+      `Il faut au moins ${min} trades avec un stop loss valide dans chaque moitié de la période (soit ${min * 2} au total). Vous en avez ${usable} sur cette période.`,
+    halves: { older: 'Première moitié', recent: 'Seconde moitié' },
+    halfRange: (from: string, to: string) => `${from} → ${to}`,
+    halfTrades: (n: number) => `${n} ${n > 1 ? 'trades' : 'trade'}`,
+    avgBalance: (v: string) => `Solde moyen à l’entrée : ${v}`,
+    avgRisk: (v: string) => `Risque moyen : ${v}`,
+    changesTitle: 'Évolution entre les deux moitiés',
+    changesSubtitle: 'Seconde moitié comparée à la première',
+    changeCapital: 'Solde moyen',
+    changeRisk: 'Risque moyen en argent',
+    changeRiskPct: 'Risque moyen en % du solde',
+    chartBalance: 'Solde à l’entrée de chaque trade',
+    chartRisk: 'Risque de chaque trade, en % du solde',
+    chartBalanceLabel: 'Courbe du solde du compte à l’entrée de chaque trade',
+    chartRiskLabel: 'Courbe du risque de chaque trade en pourcentage du solde',
+    excluded: (excluded: number, noStop: number) =>
+      `${excluded} ${excluded > 1 ? 'trades exclus' : 'trade exclu'} faute de donnée : ${noStop} sans stop loss valide${excluded > noStop ? ', les autres avec un solde nul ou négatif à l’entrée' : ''}.`,
+    currentCapital: (v: string) => `Capital actuel : ${v}`,
+    emptyTitle: 'Rien à mesurer pour l’instant',
+    emptyText: 'Aucun trade clôturé sur cette période. Le scaling se mesure sur les trades qui ont un stop loss prévu.',
+    caution:
+      'Un constat sur le passé, pas un ordre : « sous-dimensionné » ne veut pas dire « augmentez votre taille », ni « sur-dimensionné » « réduisez-la ». Un risque qui monte peut être un choix assumé.',
   },
 }

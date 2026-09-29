@@ -207,3 +207,70 @@ describe('faux backend : temps en position (journal M)', () => {
     expect([none.tradeCount, none.winners.avgMs, none.avgRatio]).toEqual([0, null, null])
   })
 })
+
+/**
+ * Journal N (scaling du capital) — capital 10 000, multiplicateur 1, long à 100 avec stop 90 (risque = 10 × taille), un trade par jour
+ * depuis le 1er sept. 2026, sortie au prix d'entrée (à plat : aucun P&L, le solde ne bouge qu'avec les dépôts).
+ * N1 : trades 1–5 taille 10 (risque 100 = 1 %), 6–10 taille 12 (1,2 %) → +20 % pile → surdimensionné ; solde constant.
+ * N2 : taille 10 partout, dépôt de 10 000 avant le trade 6 → 1 % puis 0,5 % (−50 %) → sous-dimensionné ; capital +100 %.
+ * N3 : comme N2 avec taille 20 pour 6–10 (200 sur 20 000 = 1 %) → stable ; risque en argent +100 %.
+ * N4 : 11 trades, le 6e (milieu) en taille 100 → ignoré → stable.
+ */
+describe('faux backend : scaling du capital (journal N)', () => {
+  let ins = 0
+  const account = async (name: string, sizes: number[], deposit = false, sl: string | null = '90') => {
+    const id = (await mock.createAccount({ name, kind: 'personal', broker: '', currency: 'USD', initialCapital: '10000' })).id
+    for (const [i, s] of sizes.entries()) {
+      const entry = SEP_1 + i * DAY + 10 * HOUR
+      await mock.createTrade({
+        accountId: id, instrumentId: ins, direction: 'long', size: String(s), multiplier: '1', entryPrice: '100', exitPrice: '100', entryTime: entry, exitTime: entry + HOUR,
+        tzOffsetMin: 0, plannedSl: sl, fees: '0', thesis: '', postMortem: '', tagIds: [], emotions: [], ruleChecks: [], checklist: [], executionType: null,
+      } as TradeData)
+    }
+    if (deposit) await mock.createCashFlow({ accountId: id, kind: 'deposit', amount: '10000', occurredAt: SEP_1 + 5 * DAY, tzOffsetMin: 0, note: '' })
+    return id
+  }
+  beforeAll(async () => {
+    ins = (await mock.listInstruments())[0].id
+  })
+
+  it('N1 : le risque grandit plus vite que le capital (la borne de 20 % est incluse)', async () => {
+    const r = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N1', [10, 10, 10, 10, 10, 12, 12, 12, 12, 12])] })
+    expect([r.tradeCount, r.usableCount, r.excludedCount, r.withoutStopCount]).toEqual([10, 10, 0, 0])
+    expect([r.older!.avgBalance, r.older!.avgRisk, r.recent!.avgBalance, r.recent!.avgRisk]).toEqual(['10000', '100', '10000', '120'])
+    close(r.older!.avgRiskPct, 0.01)
+    close(r.recent!.avgRiskPct, 0.012)
+    close(r.riskPctChange, 0.2)
+    close(r.capitalChange, 0)
+    close(r.riskChange, 0.2)
+    expect([r.capitalMoved, r.verdict, r.minPerHalf, r.capitalMoveThreshold, r.verdictBand, r.currentCapital]).toEqual([false, 'oversized', 5, 0.1, 0.2, '10000'])
+    expect([r.points[0].tradeId > 0, r.points[0].balanceAtEntry, r.points[0].initialRisk]).toEqual([true, '10000', '100'])
+  })
+
+  it('N2 et N3 : un dépôt relève le solde ; la taille a suivi ou non', async () => {
+    const two = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N2', Array(10).fill(10), true)] })
+    expect([two.older!.avgBalance, two.recent!.avgBalance, two.verdict, two.capitalMoved, two.currentCapital]).toEqual(['10000', '20000', 'undersized', true, '20000'])
+    close(two.capitalChange, 1)
+    close(two.riskChange, 0)
+    close(two.riskPctChange, -0.5)
+    const three = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N3', [10, 10, 10, 10, 10, 20, 20, 20, 20, 20], true)] })
+    expect(three.verdict).toBe('stable')
+    close(three.riskPctChange, 0)
+    close(three.riskChange, 1)
+  })
+
+  it('N4 : le trade du milieu est ignoré ; pas assez de trades : pas de verdict ; trades sans stop exclus', async () => {
+    const four = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N4', [10, 10, 10, 10, 10, 100, 10, 10, 10, 10, 10])] })
+    expect([four.usableCount, four.older!.tradeCount, four.recent!.tradeCount, four.verdict]).toEqual([11, 5, 5, 'stable'])
+    expect(four.older!.to).toBe(four.points[4].exitTime)
+    expect(four.recent!.from).toBe(four.points[6].exitTime)
+    const few = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N5', [10, 10, 10, 10, 10, 12, 12, 12, 12])] })
+    expect([few.verdict, few.older, few.riskPctChange, few.capitalChange, few.capitalMoved, few.points.length]).toEqual(['notEnoughData', null, null, null, false, 9])
+    const one = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N6', [10])] })
+    expect([one.usableCount, one.verdict]).toEqual([1, 'notEnoughData'])
+    const noStop = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N7', [10, 10, 10], false, null)] })
+    expect([noStop.tradeCount, noStop.usableCount, noStop.excludedCount, noStop.withoutStopCount]).toEqual([3, 0, 3, 3])
+    const none = await mockAnalysesMore.getScalingReport({ accountIds: [await account('N8', [])] })
+    expect([none.tradeCount, none.verdict, none.currentCapital]).toEqual([0, 'notEnoughData', '10000'])
+  })
+})

@@ -5,6 +5,7 @@ import { ExecutionPanel } from '../components/analyses/ExecutionPanel'
 import { FeesPanel } from '../components/analyses/FeesPanel'
 import { OpportunityPanel } from '../components/analyses/OpportunityPanel'
 import { DurationPanel } from '../components/analyses/DurationPanel'
+import { ScalingPanel } from '../components/analyses/ScalingPanel'
 import { YearPanel } from '../components/analyses/YearPanel'
 import { useReport } from '../components/analyses/useReport'
 import { StrategiesPanel } from '../components/analyses/StrategiesPanel'
@@ -19,8 +20,8 @@ import type { AssetRow, ExecutionReport, FeeGranularity, FeeReport, StatsQuery, 
 
 type Tab = 'assets' | 'fees' | 'strategies' | 'execution' | MoreTab
 /** Onglets du lot 16 (deuxième rangée). */
-type MoreTab = 'opportunity' | 'year' | 'duration'
-const MORE_TABS: MoreTab[] = ['opportunity', 'year', 'duration']
+type MoreTab = 'opportunity' | 'year' | 'duration' | 'scaling'
+const MORE_TABS: MoreTab[] = ['opportunity', 'year', 'duration', 'scaling']
 const isMore = (tab: Tab): tab is MoreTab => (MORE_TABS as string[]).includes(tab)
 
 /** Page « Analyses » (étape 3) : quatre analyses de pulse-core, sans aucun calcul ici (on formate, on trie, on dessine). */
@@ -42,6 +43,7 @@ export function AnalysesPage() {
   const ready = !loading && chosen.length > 0 && !mixedCurrencies
   const query = useMemo<StatsQuery>(() => ({ accountIds, ...periodRange(period, Date.now(), localTzOffsetMin()) }), [accountIds, period])
   const year = useReport(() => api.getYearComparison({ accountIds, period: ENGINE_PERIOD[period], nowMs: Date.now(), tzOffsetMin: localTzOffsetMin() }), [accountIds, period], ready && tab === 'year')
+  const scaling = useReport(() => api.getScalingReport(query), [query], ready && tab === 'scaling')
   const duration = useReport(() => api.getDurationReport(query), [query], ready && tab === 'duration')
   const opportunity = useReport(() => api.getOpportunityReport(query), [query], ready && tab === 'opportunity')
 
@@ -128,6 +130,7 @@ export function AnalysesPage() {
             { value: 'opportunity', label: more.tabs.opportunity },
             { value: 'year', label: more.tabs.year },
             { value: 'duration', label: more.tabs.duration },
+            { value: 'scaling', label: more.tabs.scaling },
           ]}
         />
       </div>
@@ -137,6 +140,7 @@ export function AnalysesPage() {
       {tab === 'execution' && <ExecutionPanel report={data.execution} currency={currency} />}
       {tab === 'year' && <Lazy state={year} loading={more.loading} error={a.loadError}>{(r) => <YearPanel report={r} currency={currency} />}</Lazy>}
       {tab === 'duration' && <Lazy state={duration} loading={more.loading} error={a.loadError}>{(r) => <DurationPanel report={r} />}</Lazy>}
+      {tab === 'scaling' && <Lazy state={scaling} loading={more.loading} error={a.loadError}>{(r) => <ScalingPanel report={r} currency={currency} />}</Lazy>}
       {tab === 'opportunity' && <Lazy state={opportunity} loading={more.loading} error={a.loadError}>{(r) => <OpportunityPanel report={r} currency={currency} />}</Lazy>}
     </>,
   )

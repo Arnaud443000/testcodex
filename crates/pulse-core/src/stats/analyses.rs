@@ -619,3 +619,149 @@ pub fn durations(ledger: &Ledger, query: &StatsQuery) -> Result<DurationReport> 
 pub fn duration_report(conn: &Connection, query: &StatsQuery) -> Result<DurationReport> {
     durations(&load(conn, &query.account_ids)?, query)
 }
+
+// --- capital scaling (3.3.21) -----------------------------------------------------
+
+/// Trades needed in each half before a verdict is given.
+pub const SCALING_MIN_PER_HALF: usize = MIN_SAMPLE;
+/// The average balance must move by this fraction between the halves for the capital to count as having moved.
+pub const SCALING_CAPITAL_MOVE: f64 = 0.10;
+/// Relative change of the average risk % beyond which the size is called over- or under-sized.
+pub const SCALING_VERDICT_BAND: f64 = 0.20;
+const SCALING_EPSILON: f64 = 1e-9;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScalingVerdict {
+    NotEnoughData,
+    /// The risk taken has fallen behind the capital.
+    Undersized,
+    Stable,
+    /// The risk taken has grown faster than the capital.
+    Oversized,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingPoint {
+    pub trade_id: i64,
+    pub exit_time: i64,
+    pub balance_at_entry: Decimal,
+    pub initial_risk: Decimal,
+    /// Initial risk / balance at entry (0.01 = 1 %).
+    pub risk_pct: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingHalf {
+    pub trade_count: usize,
+    pub avg_balance: Decimal,
+    pub avg_risk: Decimal,
+    pub avg_risk_pct: f64,
+    /// Exit instants of the first and last trade of the half.
+    pub from: i64,
+    pub to: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades with a risk in %.
+    pub usable_count: usize,
+    /// Trades left out: no valid stop, or a balance that is not positive.
+    pub excluded_count: usize,
+    /// Of which without a valid stop.
+    pub without_stop_count: usize,
+    pub min_per_half: usize,
+    pub capital_move_threshold: f64,
+    pub verdict_band: f64,
+    /// Initial capital + flows + realized PnL of the selected accounts, now.
+    pub current_capital: Decimal,
+    /// The usable trades, in exit order.
+    pub points: Vec<ScalingPoint>,
+    /// `None` when there is not enough data for a verdict.
+    pub older: Option<ScalingHalf>,
+    pub recent: Option<ScalingHalf>,
+    /// Recent / older − 1 of the average balance (0.25 = +25 %).
+    pub capital_change: Option<f64>,
+    /// Same for the average risk in money.
+    pub risk_change: Option<f64>,
+    /// Same for the average risk in % of capital: the figure the verdict is read from.
+    pub risk_pct_change: Option<f64>,
+    /// The average balance moved by at least the threshold between the halves.
+    pub capital_moved: bool,
+    pub verdict: ScalingVerdict,
+}
+
+fn scaling_half(points: &[ScalingPoint]) -> Result<ScalingHalf> {
+    let n = Decimal::from(points.len());
+    let (mut balance, mut risk) = (Decimal::ZERO, Decimal::ZERO);
+    for p in points {
+        balance = checked(balance.checked_add(p.balance_at_entry))?;
+        risk = checked(risk.checked_add(p.initial_risk))?;
+    }
+    Ok(ScalingHalf {
+        trade_count: points.len(),
+        avg_balance: checked(balance.checked_div(n))?,
+        avg_risk: checked(risk.checked_div(n))?,
+        avg_risk_pct: points.iter().map(|p| p.risk_pct).sum::<f64>() / points.len() as f64,
+        from: points[0].exit_time,
+        to: points[points.len() - 1].exit_time,
+    })
+}
+
+/// Does the risk taken follow the capital? Reads the risk in % of capital of [`super::risk`], splits the
+/// usable trades in an older and a recent half and compares them (see CLAUDE.md, "Analyses complémentaires (lot 16)").
+pub fn scaling(ledger: &Ledger, query: &StatsQuery) -> Result<ScalingReport> {
+    let risk = super::risk::risk(ledger, query, &crate::settings::BehaviorSettings::default())?;
+    let points: Vec<ScalingPoint> = risk
+        .trades
+        .iter()
+        .filter_map(|t| Some(ScalingPoint { trade_id: t.trade_id, exit_time: t.exit_time, balance_at_entry: t.balance_at_entry, initial_risk: t.initial_risk?, risk_pct: t.risk_pct? }))
+        .collect();
+    let half = points.len() / 2;
+    let mut report = ScalingReport {
+        trade_count: risk.trade_count,
+        usable_count: points.len(),
+        excluded_count: risk.trade_count - points.len(),
+        without_stop_count: risk.without_stop_count,
+        min_per_half: SCALING_MIN_PER_HALF,
+        capital_move_threshold: SCALING_CAPITAL_MOVE,
+        verdict_band: SCALING_VERDICT_BAND,
+        current_capital: risk.current_capital,
+        older: None,
+        recent: None,
+        capital_change: None,
+        risk_change: None,
+        risk_pct_change: None,
+        capital_moved: false,
+        verdict: ScalingVerdict::NotEnoughData,
+        points: Vec::new(),
+    };
+    if half >= SCALING_MIN_PER_HALF {
+        // With an odd count the trade in the middle belongs to neither half.
+        let (older, recent) = (scaling_half(&points[..half])?, scaling_half(&points[points.len() - half..])?);
+        let change = |a: Decimal, b: Decimal| -> Result<Option<f64>> { Ok(ratio(checked(b.checked_sub(a))?, a)) };
+        report.capital_change = change(older.avg_balance, recent.avg_balance)?;
+        report.risk_change = change(older.avg_risk, recent.avg_risk)?;
+        report.risk_pct_change = (older.avg_risk_pct > 0.0).then(|| recent.avg_risk_pct / older.avg_risk_pct - 1.0);
+        report.capital_moved = report.capital_change.is_some_and(|c| c.abs() >= SCALING_CAPITAL_MOVE - SCALING_EPSILON);
+        report.verdict = match report.risk_pct_change {
+            Some(c) if c >= SCALING_VERDICT_BAND - SCALING_EPSILON => ScalingVerdict::Oversized,
+            Some(c) if c <= -SCALING_VERDICT_BAND + SCALING_EPSILON => ScalingVerdict::Undersized,
+            Some(_) => ScalingVerdict::Stable,
+            None => ScalingVerdict::NotEnoughData,
+        };
+        report.older = Some(older);
+        report.recent = Some(recent);
+    }
+    report.points = points;
+    Ok(report)
+}
+
+pub fn scaling_report(conn: &Connection, query: &StatsQuery) -> Result<ScalingReport> {
+    scaling(&load(conn, &query.account_ids)?, query)
+}

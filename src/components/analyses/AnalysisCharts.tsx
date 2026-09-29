@@ -25,25 +25,41 @@ const PAD_BOTTOM = 34
  * Courbes cumulées superposées, sur une échelle de temps commune. Chaque courbe part de zéro : elle reste à plat
  * jusqu'à son premier trade. Trois repères sur l'axe vertical (haut, zéro, bas), cinq dates en bas.
  */
-export function MultiLineChart({ series, label, format, fill = false }: { series: Series[]; label: string; format: (value: number) => string; fill?: boolean }) {
+export function MultiLineChart({
+  series,
+  label,
+  format,
+  fill = false,
+  fromZero = true,
+}: {
+  series: Series[]
+  label: string
+  format: (value: number) => string
+  fill?: boolean
+  /** Faux pour une série qui n'est pas cumulée (solde, risque) : elle ne part pas de zéro. */
+  fromZero?: boolean
+}) {
   const all = series.flatMap((s) => s.points)
   if (all.length === 0) return null
   const t0 = Math.min(...all.map((p) => p.time))
   const t1 = Math.max(...all.map((p) => p.time))
   const tSpan = t1 - t0 || 1
-  const values = [0, ...all.map((p) => p.value)]
+  const values = fromZero ? [0, ...all.map((p) => p.value)] : all.map((p) => p.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
   const span = max - min || 1
   const x = (t: number) => PAD_X + ((t - t0) / tSpan) * (W - 2 * PAD_X)
   const y = (v: number) => PAD_TOP + (1 - (v - min) / span) * (H - PAD_TOP - PAD_BOTTOM)
   const zeroY = y(0)
+  /** Ligne de base du remplissage : le zéro d'une courbe cumulée, le bas du graphique sinon. */
+  const baseY = fromZero ? zeroY : H - PAD_BOTTOM
+  const zeroVisible = min <= 0 && max >= 0
   const grid = [0, 1, 2, 3, 4].map((i) => PAD_TOP + (i * (H - PAD_TOP - PAD_BOTTOM)) / 4)
   const dates = [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + f * tSpan)
   const marks = [
     { v: max, top: y(max) },
-    ...(min < 0 && max > 0 ? [{ v: 0, top: zeroY }] : []),
-    ...(min < 0 ? [{ v: min, top: y(min) }] : []),
+    ...(fromZero && min < 0 && max > 0 ? [{ v: 0, top: zeroY }] : []),
+    ...(min < 0 || (!fromZero && min !== max) ? [{ v: min, top: y(min) }] : []),
   ]
   return (
     <div className="relative" role="img" aria-label={label}>
@@ -59,16 +75,17 @@ export function MultiLineChart({ series, label, format, fill = false }: { series
         {grid.map((g) => (
           <line key={g} x1={PAD_X} x2={W - PAD_X} y1={g} y2={g} stroke="rgba(255,255,255,.05)" />
         ))}
-        <line x1={PAD_X} x2={W - PAD_X} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,.18)" strokeDasharray="4 5" />
+        {zeroVisible && <line x1={PAD_X} x2={W - PAD_X} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,.18)" strokeDasharray="4 5" />}
         {series.map((s) => {
           if (s.points.length === 0) return null
           const first = s.points[0]
-          const coords = [`${x(t0).toFixed(1)},${zeroY.toFixed(1)}`, `${x(first.time).toFixed(1)},${zeroY.toFixed(1)}`, ...s.points.map((p) => `${x(p.time).toFixed(1)},${y(p.value).toFixed(1)}`)]
+          const start = fromZero ? [`${x(t0).toFixed(1)},${zeroY.toFixed(1)}`, `${x(first.time).toFixed(1)},${zeroY.toFixed(1)}`] : []
+          const coords = [...start, ...s.points.map((p) => `${x(p.time).toFixed(1)},${y(p.value).toFixed(1)}`)]
           const line = `M${coords.join(' L')}`
           const last = s.points[s.points.length - 1]
           return (
             <g key={s.id}>
-              {fill && <path d={`${line} L${x(last.time).toFixed(1)},${zeroY.toFixed(1)} Z`} fill={`url(#ml-fill-${s.id})`} />}
+              {fill && <path d={`${line} L${x(last.time).toFixed(1)},${baseY.toFixed(1)} L${x(fromZero ? t0 : first.time).toFixed(1)},${baseY.toFixed(1)} Z`} fill={`url(#ml-fill-${s.id})`} />}
               <path d={line} fill="none" stroke={s.color} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
             </g>
           )

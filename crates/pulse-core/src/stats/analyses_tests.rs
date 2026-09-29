@@ -750,3 +750,105 @@ fn durations_count_open_trades_matching_the_filters_only() {
     let q = StatsQuery { direction: Some(Long), ..all() };
     assert_eq!(durations(&ledger("10000", v, vec![]), &q).unwrap().open_trade_count, 0);
 }
+
+// --- capital scaling (3.3.21) ----------------------------------------------------
+//
+// Journal N — capital 10 000, multiplier 1, long 100 with stop 90 (risk = 10 × size), one trade per day from
+// 1 Sept 2026, exit at the entry price (break-even: no PnL, so the balance only moves with deposits).
+//
+// N1: trades 1–5 size 10 (risk 100 = 1 % of 10 000), trades 6–10 size 12 (risk 120 = 1.2 %).
+//     avg risk % 1 % → 1.2 % : +20 % exactly → oversized. Balance 10 000 throughout: capital change 0, not "moved".
+// N2: same sizes (10) all along, but a 10 000 deposit lands before trade 6: balance 10 000 → 20 000.
+//     risk 100 = 1 % → 0.5 %: −50 % → undersized; capital change +100 % (moved), risk change 0.
+// N3: like N2 with size 20 for trades 6–10 (risk 200 on 20 000 = 1 %): risk % change 0 → stable; risk in money +100 %.
+// N4: 11 trades, size 10 except the middle one (#6) at size 100 (10 %): the middle trade is ignored → stable.
+
+fn scaled(sizes: &[i64]) -> Vec<TradeFacts> {
+    sizes.iter().enumerate().map(|(i, s)| trade(i as i64 + 1, Long, "100", Some("100"), &s.to_string(), Some("90"), "0", i as i64)).collect()
+}
+
+const DEPOSIT_AT: i64 = SEP_1 + 5 * DAY; // before trade 6 opens (day 5, 10:00), after trade 5 closed
+
+#[test]
+fn scaling_n1_risk_grows_faster_than_the_capital() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 12, 12, 12, 12, 12]), vec![]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!((r.trade_count, r.usable_count, r.excluded_count, r.without_stop_count), (10, 10, 0, 0));
+    let (o, n) = (r.older.as_ref().unwrap(), r.recent.as_ref().unwrap());
+    assert_eq!((o.trade_count, o.avg_balance, o.avg_risk), (5, d("10000"), d("100")));
+    assert_eq!((n.trade_count, n.avg_balance, n.avg_risk), (5, d("10000"), d("120")));
+    approx(Some(o.avg_risk_pct), 0.01);
+    approx(Some(n.avg_risk_pct), 0.012);
+    approx(r.risk_pct_change, 0.2);
+    approx(r.capital_change, 0.0);
+    approx(r.risk_change, 0.2);
+    assert!(!r.capital_moved);
+    assert_eq!(r.verdict, ScalingVerdict::Oversized); // the 20 % band is inclusive
+    assert_eq!((r.min_per_half, r.capital_move_threshold, r.verdict_band), (5, 0.10, 0.20));
+    assert_eq!(r.points.len(), 10);
+    assert_eq!((r.points[0].trade_id, r.points[0].balance_at_entry, r.points[0].initial_risk), (1, d("10000"), d("100")));
+    assert_eq!(r.current_capital, d("10000"));
+}
+
+#[test]
+fn scaling_n2_a_deposit_raises_the_balance_and_the_size_did_not_follow() {
+    let l = ledger("10000", scaled(&[10; 10]), vec![(DEPOSIT_AT, "10000")]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!(r.older.as_ref().unwrap().avg_balance, d("10000"));
+    assert_eq!(r.recent.as_ref().unwrap().avg_balance, d("20000"));
+    approx(r.capital_change, 1.0);
+    approx(r.risk_change, 0.0);
+    approx(r.risk_pct_change, -0.5);
+    assert!(r.capital_moved);
+    assert_eq!(r.verdict, ScalingVerdict::Undersized);
+    assert_eq!(r.current_capital, d("20000")); // the deposit is in the balance, never in a PnL
+}
+
+#[test]
+fn scaling_n3_size_that_follows_the_capital_is_stable() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 20, 20, 20, 20, 20]), vec![(DEPOSIT_AT, "10000")]);
+    let r = scaling(&l, &all()).unwrap();
+    approx(r.risk_pct_change, 0.0);
+    approx(r.risk_change, 1.0);
+    approx(r.capital_change, 1.0);
+    assert_eq!(r.verdict, ScalingVerdict::Stable);
+}
+
+#[test]
+fn scaling_n4_the_middle_trade_of_an_odd_series_is_ignored() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 100, 10, 10, 10, 10, 10]), vec![]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!((r.usable_count, r.older.as_ref().unwrap().trade_count, r.recent.as_ref().unwrap().trade_count), (11, 5, 5));
+    assert_eq!(r.older.as_ref().unwrap().to, r.points[4].exit_time);
+    assert_eq!(r.recent.as_ref().unwrap().from, r.points[6].exit_time);
+    approx(r.risk_pct_change, 0.0);
+    assert_eq!(r.verdict, ScalingVerdict::Stable);
+}
+
+#[test]
+fn scaling_needs_five_trades_in_each_half_and_never_invents_a_verdict() {
+    // 9 usable trades: halves of 4, below the minimum.
+    let r = scaling(&ledger("10000", scaled(&[10, 10, 10, 10, 10, 12, 12, 12, 12]), vec![]), &all()).unwrap();
+    assert_eq!(r.verdict, ScalingVerdict::NotEnoughData);
+    assert_eq!((r.older.is_none(), r.recent.is_none(), r.risk_pct_change, r.capital_change, r.capital_moved), (true, true, None, None, false));
+    assert_eq!(r.points.len(), 9); // the series is still there to draw
+
+    // One trade, then none.
+    let one = scaling(&ledger("10000", scaled(&[10]), vec![]), &all()).unwrap();
+    assert_eq!((one.usable_count, one.verdict, one.points.len()), (1, ScalingVerdict::NotEnoughData, 1));
+    let none = scaling(&ledger("10000", vec![], vec![]), &all()).unwrap();
+    assert_eq!((none.trade_count, none.usable_count, none.verdict, none.current_capital), (0, 0, ScalingVerdict::NotEnoughData, d("10000")));
+}
+
+#[test]
+fn scaling_leaves_out_trades_without_a_stop_and_counts_them() {
+    let mut trades = scaled(&[10; 10]);
+    for t in trades.iter_mut().take(3) {
+        t.position.planned_sl = None; // trades 1–3 have no stop: no risk, no risk %
+    }
+    trades.push(trade(11, Long, "100", Some("100"), "10", None, "0", 10));
+    let r = scaling(&ledger("10000", trades, vec![]), &all()).unwrap();
+    assert_eq!((r.trade_count, r.usable_count, r.excluded_count, r.without_stop_count), (11, 7, 4, 4));
+    // 7 usable → halves of 3: below the minimum.
+    assert_eq!(r.verdict, ScalingVerdict::NotEnoughData);
+}

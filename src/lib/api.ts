@@ -320,11 +320,14 @@ export const api = {
   /** Durée moyenne et médiane des gagnants contre les perdants (3.3.20). */
   getDurationReport: (query: StatsQuery): Promise<DurationReport> =>
     inTauri ? invoke('get_duration_report', { query }) : mockAnalysesMore.getDurationReport(query),
+  /** Le risque pris suit-il le capital ? Risque en % du solde, moitié ancienne contre moitié récente (3.3.21). */
+  getScalingReport: (query: StatsQuery): Promise<ScalingReport> =>
+    inTauri ? invoke('get_scaling_report', { query }) : mockAnalysesMore.getScalingReport(query),
   // (fin lot 16)
 }
 
 
 import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
 import { mockAlerts } from './mockBackend'
-import type { DurationReport, OpportunityReport, YearComparison, YearComparisonQuery } from '../types/stats'
+import type { DurationReport, OpportunityReport, ScalingReport, YearComparison, YearComparisonQuery } from '../types/stats'
 import { mockAnalysesMore } from './mockBackend'

@@ -397,3 +397,46 @@ export interface DurationReport {
   avgRatio: number | null
   medianRatio: number | null
 }
+
+export type ScalingVerdict = 'notEnoughData' | 'undersized' | 'stable' | 'oversized'
+
+export interface ScalingPoint {
+  tradeId: number
+  exitTime: number
+  balanceAtEntry: Decimal
+  initialRisk: Decimal
+  /** Risque initial / solde à l'entrée (0,01 = 1 %). */
+  riskPct: number
+}
+
+export interface ScalingHalf {
+  tradeCount: number
+  avgBalance: Decimal
+  avgRisk: Decimal
+  avgRiskPct: number
+  /** Instants de sortie du premier et du dernier trade de la moitié. */
+  from: number
+  to: number
+}
+
+/** Scaling du capital (3.3.21) : le risque pris suit-il le capital ? Un constat, jamais un ordre. */
+export interface ScalingReport {
+  tradeCount: number
+  usableCount: number
+  excludedCount: number
+  withoutStopCount: number
+  /** Seuils du moteur : l'interface les affiche sans les écrire en dur. */
+  minPerHalf: number
+  capitalMoveThreshold: number
+  verdictBand: number
+  currentCapital: Decimal
+  points: ScalingPoint[]
+  older: ScalingHalf | null
+  recent: ScalingHalf | null
+  capitalChange: number | null
+  riskChange: number | null
+  /** Variation relative du risque moyen en % du solde, dont le verdict découle. */
+  riskPctChange: number | null
+  capitalMoved: boolean
+  verdict: ScalingVerdict
+}

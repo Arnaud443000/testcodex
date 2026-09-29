@@ -764,4 +764,5 @@ export const mockAnalysesMore = {
   getOpportunityReport: async (q: StatsQuery) => analysesMore.mockOpportunity(behaviorInput(q.accountIds), q),
   getYearComparison: async (q: YearComparisonQuery) => analysesMore.mockYearComparison(behaviorInput(q.accountIds), q),
   getDurationReport: async (q: StatsQuery) => analysesMore.mockDurations(behaviorInput(q.accountIds), q),
+  getScalingReport: async (q: StatsQuery) => analysesMore.mockScaling(behaviorInput(q.accountIds), q),
 }

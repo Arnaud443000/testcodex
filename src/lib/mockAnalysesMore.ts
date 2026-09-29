@@ -1,9 +1,9 @@
 import type { Decimal } from '../types/money'
 import type { TradeView } from '../types/trade'
-import type { Comparison, DurationGroup, DurationReport, OpportunityReport, OpportunityTrade, StatsQuery, YearComparison, YearComparisonQuery } from '../types/stats'
+import type { Comparison, DurationGroup, DurationReport, OpportunityReport, ScalingHalf, ScalingPoint, ScalingReport, OpportunityTrade, StatsQuery, YearComparison, YearComparisonQuery } from '../types/stats'
 import { summary as summaryOf } from './mockAnalyses'
 import { localDay, ratio, toDec, toScaled } from './mockStats'
-import type { BehaviorInput } from './mockBehavior'
+import { mockRisk, type BehaviorInput } from './mockBehavior'
 
 /**
  * MOCK des analyses complémentaires (lot 16) — uniquement pour `npm run dev` dans un navigateur.
@@ -189,4 +189,52 @@ export function mockDurations(input: BehaviorInput, q: StatsQuery): DurationRepo
     winners, losers, breakevens: durationGroup(flat), comparable,
     avgRatio: quotient(winners.avgMs, losers.avgMs), medianRatio: quotient(winners.medianMs, losers.medianMs),
   }
+}
+
+// --- scaling du capital (3.3.21) ---------------------------------------------------------
+
+const SCALING_MIN_PER_HALF = MIN_SAMPLE
+const SCALING_CAPITAL_MOVE = 0.1
+const SCALING_VERDICT_BAND = 0.2
+const EPSILON = 1e-9
+
+function scalingHalf(points: ScalingPoint[]): ScalingHalf {
+  const n = BigInt(points.length)
+  return {
+    tradeCount: points.length,
+    avgBalance: toDec(points.reduce((a, p) => a + toScaled(p.balanceAtEntry), 0n) / n),
+    avgRisk: toDec(points.reduce((a, p) => a + toScaled(p.initialRisk), 0n) / n),
+    avgRiskPct: points.reduce((a, p) => a + p.riskPct, 0) / points.length,
+    from: points[0].exitTime,
+    to: points[points.length - 1].exitTime,
+  }
+}
+
+export function mockScaling(input: BehaviorInput, q: StatsQuery): ScalingReport {
+  const risk = mockRisk(input, q)
+  const points: ScalingPoint[] = risk.trades.flatMap((t) =>
+    t.initialRisk === null || t.riskPct === null
+      ? []
+      : [{ tradeId: t.tradeId, exitTime: t.exitTime, balanceAtEntry: t.balanceAtEntry, initialRisk: t.initialRisk, riskPct: t.riskPct }],
+  )
+  const half = Math.floor(points.length / 2)
+  const report: ScalingReport = {
+    tradeCount: risk.tradeCount, usableCount: points.length, excludedCount: risk.tradeCount - points.length, withoutStopCount: risk.withoutStopCount,
+    minPerHalf: SCALING_MIN_PER_HALF, capitalMoveThreshold: SCALING_CAPITAL_MOVE, verdictBand: SCALING_VERDICT_BAND, currentCapital: risk.currentCapital,
+    points, older: null, recent: null, capitalChange: null, riskChange: null, riskPctChange: null, capitalMoved: false, verdict: 'notEnoughData',
+  }
+  if (half >= SCALING_MIN_PER_HALF) {
+    const older = scalingHalf(points.slice(0, half))
+    const recent = scalingHalf(points.slice(points.length - half))
+    const change = (a: Decimal, b: Decimal) => ratio(toScaled(b) - toScaled(a), toScaled(a))
+    report.older = older
+    report.recent = recent
+    report.capitalChange = change(older.avgBalance, recent.avgBalance)
+    report.riskChange = change(older.avgRisk, recent.avgRisk)
+    report.riskPctChange = older.avgRiskPct > 0 ? recent.avgRiskPct / older.avgRiskPct - 1 : null
+    report.capitalMoved = report.capitalChange !== null && Math.abs(report.capitalChange) >= SCALING_CAPITAL_MOVE - EPSILON
+    const c = report.riskPctChange
+    report.verdict = c === null ? 'notEnoughData' : c >= SCALING_VERDICT_BAND - EPSILON ? 'oversized' : c <= -SCALING_VERDICT_BAND + EPSILON ? 'undersized' : 'stable'
+  }
+  return report
 }
