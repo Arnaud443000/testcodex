@@ -20,6 +20,7 @@ export const NAV: { to: string; key: keyof Messages['nav']; icon: IconName }[] =
   { to: '/goals', key: 'goals', icon: 'goals' },
   { to: '/replay', key: 'replay', icon: 'replay' },
   { to: '/coach', key: 'coach', icon: 'coach' },
+  { to: '/sizing', key: 'sizing', icon: 'calculator' },
   { to: '/settings', key: 'settings', icon: 'settings' },
 ]
 

@@ -94,6 +94,7 @@ Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparai
 
 - [x] Lot 22 — Verrouillage par mot de passe et chiffrement de la base (3.7.13), optionnel, **désactivé par défaut** : crate `pulse-lock` (Rust pur), module `pulse-core/src/lock/`, écran de déverrouillage, Paramètres > Sécurité ; **aucune migration** ; voir « Verrouillage (lot 22) » (**Opus, élevé**)
 
+- [x] Lot 27 — Calculateur de taille de position (« position sizing »), 100 % local, sans réseau : `pulse-core/src/sizing.rs` (Decimal, taille arrondie vers le bas au pas de l'actif, refus à codes traduisibles), commande `calculate_position_size`, page « Calculateur » (`/sizing`), passerelles avec le formulaire de trade ; **aucune migration** ; voir « Calculateur de position (lot 27) » (**Sonnet, moyen**)
 
 ### Étapes 4 et 5 (suite)
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : coach IA, insights automatiques, analyse de screenshot par IA. Le reste : Sonnet, moyen.
@@ -802,3 +803,17 @@ Le résultat est une donnée : `{status: "ok", …}` ou `{status: "refused", cod
 - Le solde ne tient pas compte des trades ouverts (PnL latent) ni d'un dépôt / retrait futur.
 - Pas de conversion de devise : le montant de risque est dans la devise du compte.
 - Pas de marge, effet de levier ni taille maximale du courtier : rien n'est vérifié contre ce que le courtier autorise.
+
+### Interface et code (lot 27)
+
+- **Rust** : `crates/pulse-core/src/sizing.rs` + `sizing/tests.rs` (17 tests : forex EURUSD, indice avec take profit, crypto à 8 décimales, short, % et montant qui donnent la même taille, arrondi vers le bas — risque réel strictement inférieur —, taille nulle, dépassement de limite, égalité exacte à la limite, arrondi qui « sauve » la limite, stop du mauvais côté, solde nul / négatif, très grands nombres, solde lu en base : capital + dépôt + PnL net des trades clôturés, trade ouvert ignoré). Commande `calculate_position_size` (fin de `src-tauri/src/lib.rs`). `Refusal` porte le code ; le résultat est `SizingOutcome` (`status: "ok" | "refused"`).
+- **TypeScript** : types `src/types/sizing.ts` ; `api.calculatePositionSize` (bloc « Lot 27 » en fin d'objet) ; faux backend `src/lib/mockSizing.ts` (BigInt exact, échelle 30 chiffres) + `mockSizing` en fin de `mockBackend.ts`, vérifié par `mockSizing.test.ts` sur les **mêmes cas** que Rust. Formulaire, contrôles de forme, mémoire et passerelles : `src/lib/sizingForm.ts` (testé). Textes : `src/i18n/fr.sizing.ts` (clé `sizing` de `fr`, plus `nav.sizing`).
+- **Interface** : `pages/SizingPage.tsx` (`/sizing`, entrée « Calculateur » de la barre latérale). Le calcul est demandé à pulse-core dès que la saisie est prête (250 ms de délai de frappe) : l'interface ne calcule **rien**, elle formate. Grande taille, risque réel, avertissements en texte **et** icône (« Attention : … »), détail du calcul, refus en encadré rouge avec le code (`data-code`). Compte, actif, mode et valeur du risque mémorisés dans `localStorage` (`pulse.sizing.v1`, jamais un prix). « Copier la taille » copie la chaîne exacte avec un point (`0.20`). « Utiliser dans un nouveau trade » ouvre `/trades/new` avec un état de navigation `tradePrefill` (compte, actif, sens, entrée, stop, TP, multiplicateur, taille) : **rien n'est enregistré**. Dans le formulaire de trade : lien « Calculer la taille » (état `sizingSeed`), seule modification de `TradeFormPage.tsx` (plus la lecture de `tradePrefill` à l'initialisation).
+- Captures : `docs/captures/lot27-*.png` (1440×900 et 1920×1080 : aucun compte, saisie incomplète, résultat, arrondi, dépassement de limite, taille nulle, stop du mauvais côté, saisie illisible, formulaire prérempli).
+
+### Non testé (lot 27)
+
+- Rendu sur un vrai Windows / WebView2 ; bouton « Copier la taille » (presse-papiers de WebView2) ; commande Tauri appelée pour de vrai (seulement `cargo check -p pulse-app` et le faux backend).
+- Les pas de taille par défaut ne sont **pas** ceux d'un courtier précis : à vérifier.
+- Le faux backend arrondit la division à l'échelle exacte (jamais d'écart d'arrondi) ; Rust, lui, retire un pas si sa division à 28 chiffres arrondissait vers le haut : cas non atteignable par un test à la main.
+- Signalé, non corrigé : dans le sélecteur d'actif (`AssetPicker`), le symbole et le nom complet se chevauchent visuellement quand la liste vient d'être ouverte puis fermée (visible aussi dans le formulaire de trade, hors périmètre du lot).
