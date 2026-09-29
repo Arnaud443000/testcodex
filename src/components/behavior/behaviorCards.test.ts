@@ -30,34 +30,34 @@ const tooSmall: DisciplineReport = {
 }
 
 describe('états vides de la page Comportement', () => {
-  it('score non établi : « — » et message clair, jamais 0', () => {
+  it('score non établi : « — » et message clair, jamais 0', () => {
     const out = html(createElement(DisciplineCard, { report: tooSmall }))
     expect(out).toContain('Pas assez de trades')
-    expect(out).toContain('au moins 5 trades clôturés ; vous en avez 3')
+    expect(out).toContain('au moins 5 trades clôturés ; vous en avez 3')
     expect(out).toContain('Score de discipline non établi')
     expect(out).not.toContain('stroke-dasharray') // pas d'arc dessiné
     expect(out).not.toMatch(/>0</)
     expect(out).toContain('Aucune limite de risque')
   })
 
-  it('score établi : la valeur arrondie et son libellé accessible', () => {
+  it('score établi : la valeur arrondie et son libellé accessible', () => {
     const out = html(createElement(DisciplineCard, { report: { ...tooSmall, score: 77.6, sampleTooSmall: false, scoredTradeCount: 12 } }))
     expect(out).toContain('>78<')
-    expect(out).toContain('Score de discipline : 78 sur 100')
+    expect(out).toContain('Score de discipline : 78 sur 100')
   })
 
-  it('séries : aucune série en cours', () => {
+  it('séries : aucune série en cours', () => {
     const report: StreakReport = { current: null, longestWin: null, longestLoss: null, tradeCount: 0 }
     const out = html(createElement(StreaksCard, { report, currency: 'USD' }))
     expect(out).toContain('Aucune (dernier trade à plat)')
   })
 
-  it('erreurs : message clair sans ligne', () => {
+  it('erreurs : message clair sans ligne', () => {
     const report: MistakeReport = { tradeCount: 10, tradesWithMistake: 0, byCount: [], byCost: [] }
     expect(html(createElement(MistakesCard, { report, currency: 'USD' }))).toContain('Aucune erreur enregistrée')
   })
 
-  it('erreurs : coût affiché comme une perte signée, règle préfixée', () => {
+  it('erreurs : coût affiché comme une perte signée, règle préfixée', () => {
     const report: MistakeReport = {
       tradeCount: 10, tradesWithMistake: 2,
       byCount: [], byCost: [{ source: 'rule', id: 1, label: 'Stop posé', tradeCount: 2, share: 0.2, netPnl: '-50', cost: '50', expectancyR: null, tradeIds: [1, 2] }],
@@ -65,11 +65,11 @@ describe('états vides de la page Comportement', () => {
     const out = html(createElement(MistakesCard, { report, currency: 'USD' }))
     expect(out).toContain('href="/trades?mistake=rule:1"')
     expect(out).toContain('−50,00')
-    expect(out).toContain('Règle non respectée : Stop posé')
+    expect(out).toContain('Règle non respectée : Stop posé')
     expect(out).toContain('Sur 10 trades, 2 portent au moins une erreur')
   })
 
-  it('R sans stop loss : message, pas de barre', () => {
+  it('R sans stop loss : message, pas de barre', () => {
     const report: RDistribution = { binWidth: 0.5, bins: [], rTradeCount: 0, noRCount: 4, meanR: null, medianR: null }
     const out = html(createElement(RDistributionCard, { report }))
     expect(out).toContain('Aucun trade avec un stop loss prévu')
@@ -89,7 +89,7 @@ describe('états vides de la page Comportement', () => {
     expect(out).not.toContain('0,00')
   })
 
-  it('heatmap : le signe est écrit dans la case', () => {
+  it('heatmap : le signe est écrit dans la case', () => {
     const heat: Heatmap = {
       maxAbsNetPnl: '100',
       cells: [
@@ -110,20 +110,20 @@ describe('page Discipline', () => {
     expect(html(createElement(DisciplineCard, { report: tooSmall }))).toContain('href="/discipline"')
   })
 
-  it('score par jour : une barre par jour, jour sans score en « sans score », seuil affiché', () => {
+  it('score par jour : une barre par jour, jour sans score en « sans score », seuil affiché', () => {
     const days = [
       { day: '2026-09-28', tradeCount: 2, score: 82.4 },
       { day: '2026-09-29', tradeCount: 1, score: null },
     ]
     const out = html(createElement(DayBars, { days, threshold: 70, selected: '2026-09-28', onSelect: () => undefined }))
-    expect(out).toContain('2026-09-28 : score 82 sur 100, 2 trades')
-    expect(out).toContain('2026-09-29 : sans score, 1 trade')
+    expect(out).toContain('2026-09-28 : score 82 sur 100, 2 trades')
+    expect(out).toContain('2026-09-29 : sans score, 1 trade')
     expect(out).toContain('aria-pressed="true"')
     expect(out).toContain('height:82.4%')
     expect(out).toContain('height:3px')
   })
 
-  it('les quatre cases affichent nombre et P&L signé, « 0,00 » sans signe quand elles sont vides', () => {
+  it('les quatre cases affichent nombre et P&L signé, « 0,00 » sans signe quand elles sont vides', () => {
     const out = html(
       createElement(QuadrantsGrid, {
         currency: 'USD',
@@ -147,7 +147,7 @@ describe('respect des règles et hésitation', () => {
     ],
   }
 
-  it('règles : taux, tendance signée avec son sens écrit, série par mois', () => {
+  it('règles : taux, tendance signée avec son sens écrit, série par mois', () => {
     const out = html(createElement(RulesCard, { report: rules }))
     expect(out).toContain('Toujours poser un stop')
     expect(out).toContain('▲ +25')
@@ -155,23 +155,23 @@ describe('respect des règles et hésitation', () => {
     expect(out).toContain('Jamais cochée')
     expect(out).toContain('Jamais cochée sur cette période')
     expect(out).toContain('août 2026')
-    expect(out).toContain('sept. 2026 : 100')
+    expect(out).toContain('sept. 2026 : 100')
     expect(out).toContain('height:100%')
     expect(out).toContain('7 respects sur 10 coches, sur 5 trades')
   })
 
-  it('règles : rien de coché → message et lien vers les réglages, pas de 0 %', () => {
+  it('règles : rien de coché → message et lien vers les réglages, pas de 0 %', () => {
     const out = html(createElement(RulesCard, { report: { checks: 0, respected: 0, rate: null, tradesWithChecks: 0, rules: [] } }))
     expect(out).toContain('Aucune règle n’a été cochée')
     expect(out).toContain('href="/settings"')
-    expect(out).not.toContain('0 %')
+    expect(out).not.toContain('0 %')
   })
 
   const patterns = (over: Partial<PatternReport>): PatternReport => ({
     revengeTrades: [], revengeSummary: {} as PatternReport['revengeSummary'], maxTradesPerDay: null, overtradingDays: [], hesitation: [], missedTradeCount: 0, ...over,
   })
 
-  it('hésitation : pris contre manqués par setup, part manquée', () => {
+  it('hésitation : pris contre manqués par setup, part manquée', () => {
     const out = html(
       createElement(HesitationCard, {
         report: patterns({
@@ -190,7 +190,7 @@ describe('respect des règles et hésitation', () => {
     expect(out).toContain('3 trades manqués sur la période.')
   })
 
-  it('hésitation : aucun trade manqué → message clair', () => {
+  it('hésitation : aucun trade manqué → message clair', () => {
     expect(html(createElement(HesitationCard, { report: patterns({}) }))).toContain('Aucun trade manqué enregistré')
   })
 })

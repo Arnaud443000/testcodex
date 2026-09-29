@@ -23,6 +23,18 @@ body,
   height: 100%;
 }
 
+/* Liste de navigation qui défile : barre fine et discrète. */
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* Focus clavier visible partout (lot 26) : même anneau violet que les boutons, quel que soit l'élément. */
+:focus-visible {
+  outline: 2px solid #8b7fe8;
+  outline-offset: 2px;
+}
+
 body {
   @apply bg-bg-deep font-sans text-tx antialiased;
   font-variant-numeric: tabular-nums;
@@ -47,7 +59,10 @@ body {
     background: var(--glass);
     border: 1px solid var(--glass-border);
     @apply rounded-card shadow-card;
-    backdrop-filter: blur(20px);
+    /* Lot 26 : plus de `backdrop-filter` sur les cartes. Derrière elles il n'y a que l'aurore (dégradé lisse, sans
+       contenu) : le flou n'y change aucun pixel de fond, mais chaque carte forçait un rendu séparé (mesuré : 2 à 3 fois
+       moins d'images par seconde au défilement d'un dashboard de 10 à 13 cartes). Le flou reste sur les barres et
+       sous les boîtes de dialogue, où du contenu passe réellement derrière. */
   }
   .control {
     background: var(--control);
@@ -154,8 +169,22 @@ body {
   .btn-sm {
     @apply px-4 py-2 text-[13.5px];
   }
+  /* Lien-bouton : un seul style pour toute action de texte (cible d'au moins 24 px de haut, WCAG 2.2 AA 2.5.8). */
   .btn-link {
-    @apply text-sm font-medium text-tx-accent underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet;
+    @apply inline-flex min-h-[24px] items-center rounded-sm text-sm font-medium text-tx-accent underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet;
+  }
+  .btn-link-danger {
+    @apply text-[#F5A198];
+  }
+  /* Bouton-icône rond (cloche, cadenas…) : 36 px, jamais sans nom accessible. */
+  .btn-icon {
+    background: var(--control);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    @apply grid h-9 w-9 shrink-0 place-items-center rounded-full text-tx2 transition hover:bg-white/10 hover:text-tx;
+  }
+  /* Cible tactile / souris de 24 px minimum pour un bouton de texte de tableau (en-têtes triables…). */
+  .hit {
+    @apply inline-flex min-h-[24px] items-center;
   }
   .hairline-row {
     @apply flex items-center justify-between gap-4 border-b py-2.5 text-sm last:border-b-0;
@@ -163,14 +192,42 @@ body {
   }
 }
 
-/* Reduced effects mode (charte 7) */
+/* Réduire les effets (charte 7 ; lot 26) : `data-effects='reduced'` est posé sur <html> par src/lib/effects.tsx
+   (réglage Paramètres > Affichage ; par défaut il suit la préférence du système). Fond uni, cartes pleines, sans flou,
+   sans halo ni ombre portée lourde, sans transition. Le style de secours reprend le « A » pur de la charte. */
 :root[data-effects='reduced'] .app-shell {
   background: #0b0e27;
 }
 :root[data-effects='reduced'] .glass-bar,
 :root[data-effects='reduced'] .glass-card {
   backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   background: #171b33;
+  box-shadow: none;
+}
+:root[data-effects='reduced'] .glass-bar {
+  background: #0f1330;
+}
+:root[data-effects='reduced'] .backdrop-blur-sm {
+  backdrop-filter: none;
+  background-color: rgba(8, 11, 32, 0.88);
+}
+:root[data-effects='reduced'] .btn-primary,
+:root[data-effects='reduced'] [class*='shadow-['],
+:root[data-effects='reduced'] .cal-g3,
+:root[data-effects='reduced'] .cal-l3 {
+  box-shadow: none !important;
+}
+:root[data-effects='reduced'] [style*='drop-shadow'] {
+  filter: none !important;
+}
+:root[data-effects='reduced'] *,
+:root[data-effects='reduced'] *::before,
+:root[data-effects='reduced'] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
 }
 
 /* Calendrier / heatmap (charte 4.3) : teinte gain/perte à 3 paliers, halo sur le palier fort */
@@ -194,4 +251,16 @@ body {
   .cal-l1 { background: rgba(240, 119, 107, 0.18); }
   .cal-l2 { background: rgba(240, 119, 107, 0.38); }
   .cal-l3 { background: rgba(240, 119, 107, 0.62); box-shadow: 0 0 14px -2px rgba(240, 119, 107, 0.55); }
+}
+
+/* Préférence système « animations réduites » : les transitions s'arrêtent même si le réglage de l'application est sur « effets complets ». */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

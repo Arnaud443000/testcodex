@@ -16,12 +16,12 @@ describe('codes d’erreur du verrou', () => {
 
   it('traduit chaque code, sans jamais répéter un secret', () => {
     expect(lockErrorText(fr, 'lock:wrongPassword')).toBe('Mot de passe incorrect.')
-    expect(lockErrorText(fr, 'lock:retryLater:12000')).toBe('Trop d’essais : réessayez dans 12 s.')
-    expect(lockErrorText(fr, 'lock:retryLater:80000')).toBe('Trop d’essais : réessayez dans 1 min 20 s.')
-    expect(lockErrorText(fr, 'lock:retryLater:300000')).toBe('Trop d’essais : réessayez dans 5 min.')
+    expect(lockErrorText(fr, 'lock:retryLater:12000')).toBe('Trop d’essais : réessayez dans 12 s.')
+    expect(lockErrorText(fr, 'lock:retryLater:80000')).toBe('Trop d’essais : réessayez dans 1 min 20 s.')
+    expect(lockErrorText(fr, 'lock:retryLater:300000')).toBe('Trop d’essais : réessayez dans 5 min.')
     expect(lockErrorText(fr, 'lock:passwordTooShort', 8)).toContain('au moins 8 caractères')
     expect(lockErrorText(fr, 'lock:io:NotFound')).toContain('Rien n’a été changé')
-    expect(lockErrorText(fr, 'lock:somethingNew')).toBe('Erreur : lock:somethingNew')
+    expect(lockErrorText(fr, 'lock:somethingNew')).toBe('Erreur : lock:somethingNew')
     for (const code of ['locked', 'notEncrypted', 'alreadyEncrypted', 'corrupt', 'unsupportedVersion', 'passwordTooLong', 'notConfirmed', 'persistFailed', 'verifyFailed', 'inconsistentFiles', 'backupPasswordRequired', 'invalidIdle', 'random']) {
       expect(lockErrorText(fr, `lock:${code}`)).not.toMatch(/^Erreur/)
     }

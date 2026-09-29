@@ -47,7 +47,7 @@ Les autres styles explorés (B minimal clair, C terminal, D glass, E carnet de b
 |---|---|---|
 | `--tx` | Texte principal | `#F5F2EC` |
 | `--tx2` | Texte atténué (libellés, sous-titres) | `#9AA0C0` |
-| `--tx3` | Texte très atténué (axes, légendes) | `#6B7290` |
+| `--tx3` | Texte très atténué (axes, légendes) | `#8088AA` (lot 26 : éclairci depuis `#6B7290`, qui ne tenait pas 4,5:1 sur une carte) |
 | `--tx-accent` | Texte d'accent / lien / élément actif | `#A79DF2` |
 
 ### 2.3 Sémantique
@@ -131,7 +131,7 @@ Base 4px : `4 · 8 · 12 · 16 · 20 · 24 · 32`. Espace entre cartes : **24px*
 
 ### 4.4 Structure de l'application (fenêtre Windows)
 - **Fenêtre** : taille de référence 1920×1080 ; **taille minimale 1280×720** ; pas de version mobile.
-- **Barre latérale** : 248px, libellés + icônes (Dashboard, Trades, Calendar, Analytics, Behavior, Journal, Goals, Settings) ; pied avec avatar et « Local · N accounts ».
+- **Barre latérale** : 248px, libellés + icônes, **regroupés (lot 26)** : Tableau de bord ; Saisir (Trades, Journal) ; Analyser (Calendrier, Analyses, Comparaisons) ; Comprendre (Comportement, Discipline, Insights, Coach IA) ; Outils (Objectifs, Replay, Calculateur). Titres de groupe en caption ; entrée active = fond dégradé + `aria-current`. « Paramètres » épinglé au-dessus du pied (avatar et « Local · N comptes »). La liste défile seule ; en fenêtre basse, entrées compactées (≤ 940 px) puis titres de groupe masqués (≤ 760 px).
 - **Barre supérieure** : 72px ; sélecteur de compte, sélecteur de période (1D 1W 1M 3M 1Y ALL), notifications, bouton « New trade ».
 - **Zone de contenu** : grille de 12 colonnes, gouttière 24px ; les cartes déclarent leur emprise en colonnes (héro = 8, insights = 4, KPI = 5 × ⅕ de 12, rangée basse = 4 × 3). C'est le système de positionnement du dashboard personnalisable (cahier des charges 3.8).
 
@@ -204,7 +204,7 @@ Trait fin 1,6px, extrémités arrondies, monochrome (couleur du texte), 20px dan
 ## 7. Adaptation à l'application Windows (Tauri)
 
 - **Police embarquée** (Inter en `woff2` local) ; aucune ressource distante.
-- **Effets de verre** : `backdrop-filter` est pris en charge par WebView2 ; prévoir un réglage **« Réduire les effets »** (fond uni `--bg`, cartes `#171B33`, sans flou ni halo) pour les machines modestes et l'accessibilité. Le rendu de secours reprend le style A pur.
+- **Effets de verre** : `backdrop-filter` est pris en charge par WebView2 ; **réglage « Réduire les effets » livré au lot 26** (Paramètres > Affichage : suivre le système par défaut / réduits / complets ; fond uni `--bg`, cartes `#171B33`, sans flou, halo, ombre ni transition). Le rendu de secours reprend le style A pur. Les cartes n'ont plus de flou d'arrière-plan même en effets complets (rien ne passe derrière : voir CLAUDE.md, lot 26) ; le flou reste sur les barres et sous les boîtes de dialogue.
 - **Mode sombre uniquement en v2.0.** Un thème clair est repoussé (cf. cahier des charges, exigence « sombre/clair » : à réévaluer à l'étape 5).
 - **Barre de titre** : barre native Windows dans un premier temps ; barre personnalisée intégrée à la barre supérieure à envisager plus tard.
 - **Écran de démarrage / icône d'application** : icône d'application du logo (carré très arrondi, dégradé pleine surface) aux tailles exigées par Windows (16 à 256px, `.ico`).

@@ -208,7 +208,7 @@ export function TradesPage() {
                                 type="button"
                                 title={t.trades.sortBy(c.label)}
                                 onClick={() => setSortKey(c.key!)}
-                                className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
+                                className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
                               >
                                 {c.label}
                                 {active && <Icon name={sort.dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}

@@ -104,7 +104,7 @@ export function AssetPicker({
         // Le symbole choisi reste lisible comme valeur, pas comme simple placeholder grisé.
         <span className="pointer-events-none absolute inset-y-0 left-4 right-9 flex items-center gap-2 truncate text-sm text-tx">
           <span className="font-semibold">{selected.symbol}</span>
-          {selected.name && <span className="truncate text-tx2">{selected.name}</span>}
+          {selected.name && <span className="truncate text-tx2" title={selected.name}>{selected.name}</span>}
         </span>
       )}
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
@@ -134,7 +134,7 @@ export function AssetPicker({
                         onClick={() => choose(i)}
                       >
                         <span className="w-24 shrink-0 font-semibold text-tx">{i.symbol}</span>
-                        <span className="min-w-0 flex-1 truncate text-tx2">{i.name}</span>
+                        <span className="min-w-0 flex-1 truncate text-tx2" title={i.name}>{i.name}</span>
                         {i.id === value && <span className="text-tx-accent" aria-hidden="true">✓</span>}
                       </li>
                     )

@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
+    "audit:visuel": "node scripts/visual-audit.mjs",
+    "audit:effets": "node scripts/check-effects.mjs",
+    "audit:a11y": "node scripts/check-a11y.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

@@ -135,11 +135,12 @@ export function EditableGrid({
                 isActive ? 'outline-violet shadow-btn' : 'outline-white/20'
               }`}
             >
-              <div className="h-full" inert>
+              {/* Le haut est réservé à la barre de poignée : elle ne doit jamais recouvrir le titre du widget (audit lot 26). */}
+              <div className="h-full pt-[42px]" inert>
                 <WidgetHost instance={it} env={env} />
               </div>
               <div
-                className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg/90 px-3 py-1.5 active:cursor-grabbing"
+                className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg px-3 py-1.5 active:cursor-grabbing"
                 style={{ borderColor: 'var(--hairline)', touchAction: 'none' }}
                 onPointerDown={(e) => {
                   if ((e.target as HTMLElement).closest('button')) return
@@ -151,7 +152,7 @@ export function EditableGrid({
                 title={t.edit.dragHandle(title)}
               >
                 <span className="text-tx3"><Icon name="grip" size={16} /></span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={title}>{title}</span>
                 <button
                   type="button"
                   className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-white/10 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"

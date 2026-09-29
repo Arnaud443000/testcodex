@@ -70,6 +70,7 @@ export function AlertBanner() {
     <div className="mb-5">
       <Notice
         level={critical ? 'bad' : 'warn'}
+        inline
         actions={
           <>
             {hidden > 0 && (
@@ -78,16 +79,18 @@ export function AlertBanner() {
             {expanded && alerts.length > FIRST && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setExpanded(false)}>{a.showLess}</button>
             )}
-            {location.pathname !== '/alerts' && (
-              <Link to="/alerts" className="btn btn-secondary btn-sm">{t.alertHistory.bannerLink}</Link>
-            )}
             {alerts.length > 1 && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => void dismiss(alerts.map((x) => x.id))}>{a.dismissAll}</button>
             )}
           </>
         }
       >
-        <strong>{a.bannerTitle(alerts.length)}</strong>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <strong>{a.bannerTitle(alerts.length)}</strong>
+          {location.pathname !== '/alerts' && (
+            <Link to="/alerts" className="btn-link !text-[13px]">{t.alertHistory.bannerLink}</Link>
+          )}
+        </div>
         <ul className="mt-2 flex flex-col gap-2">
           {shown.map((x) => {
             const account = allAccounts.find((acc) => acc.id === x.accountId)

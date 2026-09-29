@@ -40,7 +40,7 @@ export function AiSettingsPanel() {
   }
 
   if (loadError) return <section id="ia" className="glass-card p-6"><div className="nt nt-bad" role="alert">{loadError}</div></section>
-  if (!status) return <section id="ia" className="glass-card p-6" aria-busy="true"><h3 className="text-base font-semibold">{s.title}</h3></section>
+  if (!status) return <section id="ia" className="glass-card p-6" aria-busy="true"><h2 className="text-base font-semibold">{s.title}</h2></section>
 
   const { settings } = status
   const suggested = status.suggestedModels
@@ -74,10 +74,10 @@ export function AiSettingsPanel() {
     <section id="ia" className="glass-card flex flex-col gap-5 p-6" aria-labelledby="ai-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-[80ch]">
-          <h3 id="ai-title" className="mb-1 flex flex-wrap items-center gap-2 text-base font-semibold">
+          <h2 id="ai-title" className="mb-1 flex flex-wrap items-center gap-2 text-base font-semibold">
             {s.title}
             {simulation && <span className="badge badge-warn">{s.simulation}</span>}
-          </h3>
+          </h2>
           <p id="ai-intro" className="text-[13px] leading-relaxed text-tx2">{s.intro}</p>
         </div>
         <div className="flex items-center gap-3">

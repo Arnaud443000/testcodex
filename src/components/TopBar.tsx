@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { PERIOD_KEYS, usePeriod } from '../lib/period'
@@ -15,13 +15,13 @@ export function TopBar() {
     <header
       className="glass-bar flex h-[72px] shrink-0 items-center gap-3.5 border-b px-7"
     >
-      <label className="control relative flex items-center gap-3 !rounded-full px-4 py-2 text-tx2">
+      <label className="control relative flex items-center gap-3 !rounded-full px-4 py-2 text-tx2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-violet">
         <Icon name="wallet" />
         <span className="leading-tight">
           <small className="block text-[11px] text-tx3">{t.topbar.account}</small>
           <select
             aria-label={t.topbar.account}
-            className="cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-tx outline-none"
+            className="min-h-[24px] cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-tx outline-none"
             value={selectedId ?? ''}
             onChange={(e) => select(e.target.value === '' ? null : Number(e.target.value))}
           >
@@ -41,6 +41,7 @@ export function TopBar() {
         {PERIOD_KEYS.map((p) => (
           <button
             key={p}
+            type="button"
             onClick={() => setPeriod(p)}
             aria-pressed={period === p}
             className={`rounded-full px-3.5 py-[7px] text-[13px] font-semibold transition ${
@@ -54,10 +55,11 @@ export function TopBar() {
       </div>
 
       <div className="flex-1" />
-      <button className="control grid h-11 w-11 place-items-center !rounded-full text-tx2" aria-label={t.topbar.notifications}>
+      {/* La cloche ouvre l'historique des alertes (avant le lot 26 : bouton sans action). */}
+      <Link to="/alerts" className="btn-icon !h-11 !w-11" aria-label={t.topbar.notifications} title={t.topbar.notifications}>
         <Icon name="bell" />
-      </button>
-      <button className="btn btn-primary" onClick={() => navigate('/trades/new')}>
+      </Link>
+      <button type="button" className="btn btn-primary" onClick={() => navigate('/trades/new')}>
         <Icon name="plus" size={18} /> {t.topbar.newTrade}
       </button>
     </header>

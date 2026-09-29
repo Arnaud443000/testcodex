@@ -116,7 +116,7 @@ function AccountEditForm({ account: a, onDone }: { account: Account; onDone: () 
   )
 }
 
-const link = 'text-[13px] font-medium text-tx-accent hover:underline'
+const link = 'btn-link !text-[13px]'
 
 /** Ligne d'un compte actif : modifier, archiver, supprimer (seulement s'il est vide). */
 export function AccountRow({ account: a }: { account: Account }) {

@@ -39,6 +39,7 @@ export function ReminderBanner() {
     <div className="mb-5">
       <Notice
         level="warn"
+        inline
         actions={
           <>
             <Link to={`/journal?day=${due.day}`} className="btn btn-primary btn-sm">{r.bannerOpen}</Link>

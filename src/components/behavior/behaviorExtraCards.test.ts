@@ -26,7 +26,7 @@ const size = (over: Partial<SizeChangeReport> = {}): SizeChangeReport => ({
 })
 
 describe('formats des compléments', () => {
-  it('« — » quand la valeur manque, vrai signe moins sinon', () => {
+  it('« — » quand la valeur manque, vrai signe moins sinon', () => {
     expect(formatSizeChange(null)).toBe('—')
     expect(formatSizeChange(0.23)).toBe('+23 %')
     expect(formatSizeChange(-0.1)).toBe('−10 %')
@@ -40,12 +40,12 @@ describe('formats des compléments', () => {
   })
 })
 
-describe('Séries : après 2 pertes et taille après une perte', () => {
-  it('échantillon trop petit : « — » et message, jamais 0', () => {
+describe('Séries : après 2 pertes et taille après une perte', () => {
+  it('échantillon trop petit : « — » et message, jamais 0', () => {
     const out = html(createElement(StreaksCard, { report: streaks, currency: 'USD', afterLosses: afterLosses({ afterTwoLosses: group({ summary: summary({ tradeCount: 2 }) }) }), sizeChange: size({ afterLoss: sizeGroup({ caseCount: 3 }) }) }))
     expect(out).toContain('Moyenne après 2 pertes')
-    expect(out).toContain('Échantillon trop petit : 2 sur 5 minimum.')
-    expect(out).toContain('Échantillon trop petit : 3 sur 5 minimum.')
+    expect(out).toContain('Échantillon trop petit : 2 sur 5 minimum.')
+    expect(out).toContain('Échantillon trop petit : 3 sur 5 minimum.')
     expect(out).not.toMatch(/>0[,.]?0*\s?R</)
   })
   it('aucun trade après deux pertes', () => {
@@ -58,10 +58,10 @@ describe('Séries : après 2 pertes et taille après une perte', () => {
       sizeChange: size({ afterLoss: sizeGroup({ caseCount: 8, meanChange: 0.23, medianChange: 0.2 }), afterWin: sizeGroup({ previousOutcome: 'win', caseCount: 9, meanChange: 0.05 }) }),
     }))
     expect(out).toContain('−0,40')
-    expect(out).toContain('autres trades : +0,35')
+    expect(out).toContain('autres trades : +0,35')
     expect(out).toContain('+23')
     expect(out).toContain('médiane +20')
-    expect(out).toContain('après un gain : +5')
+    expect(out).toContain('après un gain : +5')
     expect(out).toContain('n’affirme pas que les pertes causent')
   })
 })
@@ -71,19 +71,19 @@ const scenario = (over: object = {}) => ({ excludedTradeCount: 0, excludedNetPnl
 const sim = (over: Partial<PlanSimulation> = {}): PlanSimulation => ({ declaredTradeCount: 0, actual: result(), withoutOffPlan: scenario(), withoutOffPlanOrPartial: scenario(), ...over }) as PlanSimulation
 
 describe('Simulation du plan', () => {
-  it('toujours étiquetée « Simulation », avec l’avertissement', () => {
+  it('toujours étiquetée « Simulation », avec l’avertissement', () => {
     const out = html(createElement(PlanCard, { report: { groups: [] } as never, currency: 'USD', simulation: sim({ declaredTradeCount: 8, withoutOffPlan: scenario({ excludedTradeCount: 3, difference: '1730', excludedNetPnl: '-1730', result: result({ netPnl: '2230' }) }) }) }))
     expect(out).toContain('Simulation')
     expect(out).toContain('supérieur d’environ')
     expect(out).toContain('ni une prévision ni un conseil')
     expect(out).toContain('3 retirés')
   })
-  it('aucun plan renseigné : message clair, pas de tableau', () => {
+  it('aucun plan renseigné : message clair, pas de tableau', () => {
     const out = html(createElement(PlanCard, { report: { groups: [] } as never, currency: 'USD', simulation: sim() }))
     expect(out).toContain('Simulation impossible')
     expect(out).not.toContain('<table')
   })
-  it('trades hors plan gagnants : formulation inverse', () => {
+  it('trades hors plan gagnants : formulation inverse', () => {
     const out = html(createElement(PlanCard, { report: { groups: [] } as never, currency: 'USD', simulation: sim({ withoutOffPlan: scenario({ excludedTradeCount: 1, difference: '-300' }) }) }))
     expect(out).toContain('a en réalité rapporté')
     expect(out).toContain('−')
@@ -99,18 +99,18 @@ const factor = (key: FactorReport['key'], over: Partial<FactorReport> = {}): Fac
 const report = (factors: FactorReport[], over: Partial<ExternalFactorReport> = {}): ExternalFactorReport => ({ factors, tradeCount: 20, tradingDayCount: 20, journalDayCount: 12, minDayCount: 5, minRTradeCount: 5, ...over })
 
 describe('Facteurs externes', () => {
-  it('sans journal : état vide avec lien vers le Journal', () => {
+  it('sans journal : état vide avec lien vers le Journal', () => {
     const out = html(createElement(FactorsCard, { report: report([], { journalDayCount: 0 }), currency: 'USD' }))
     expect(out).toContain('Pas encore de journal')
     expect(out).toContain('href="/journal"')
   })
-  it('échantillon trop petit : message clair, aucun verdict ni chiffre inventé', () => {
+  it('échantillon trop petit : message clair, aucun verdict ni chiffre inventé', () => {
     const out = html(createElement(FactorsCard, { report: report([factor('poorSleep', { present: side(2, null, null), absent: side(9, 70, 0.3) })]), currency: 'USD' }))
     expect(out).toContain('Échantillon trop petit pour conclure')
     expect(out).toContain('vous en avez 2 et 9')
     expect(out).not.toContain('était plus')
   })
-  it('verdict prudent : « en même temps », jamais « parce que »', () => {
+  it('verdict prudent : « en même temps », jamais « parce que »', () => {
     const f = factor('poorSleep', {
       present: side(6, 60, -0.2), absent: side(8, 78, 0.3),
       discipline: cmp(60, 78, -18, 'lower'), expectancyR: cmp(-0.2, 0.3, -0.5, 'lower'), avgNetPnlDifference: '-42.5',
@@ -121,7 +121,7 @@ describe('Facteurs externes', () => {
     expect(out).toContain('ne prouvent pas que le facteur en est la cause')
     expect(out).not.toMatch(/parce que|à cause/i)
   })
-  it('discipline sans note d’un côté : « — » et explication, pas de 0', () => {
+  it('discipline sans note d’un côté : « — » et explication, pas de 0', () => {
     const f = factor('lowMood', { present: side(6, null, 0.1), absent: side(8, 70, 0.3), expectancyR: cmp(0.1, 0.3, null, 'notEnoughData') })
     const out = html(createElement(FactorsCard, { report: report([f]), currency: 'USD' }))
     expect(out).toContain('Pas assez de trades notés')

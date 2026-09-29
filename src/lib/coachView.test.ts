@@ -31,7 +31,7 @@ describe('vue du coach', () => {
     expect(coachErrorMessage(new Error('ai:questionInvalid'), texts)).toBe(fr.coach.errors.questionInvalid)
     expect(coachErrorMessage(new Error('ai:truncated'), texts)).toBe(fr.coach.errors.truncated)
     expect(coachErrorMessage(new Error('ai:rateLimited'), texts)).toBe(fr.ai.errors.rateLimited)
-    expect(coachErrorMessage(new Error('boom'), texts)).toBe('Erreur : boom')
+    expect(coachErrorMessage(new Error('boom'), texts)).toBe('Erreur : boom')
     const failed = { status: 'failed', errorCode: 'ai:timeout' } as CoachTurn
     expect(turnErrorMessage(failed, texts)).toBe(fr.ai.errors.timeout)
     expect(turnErrorMessage({ ...failed, status: 'answered' }, texts)).toBeNull()

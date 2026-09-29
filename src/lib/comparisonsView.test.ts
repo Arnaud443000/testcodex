@@ -14,11 +14,11 @@ describe('comparisonsView', () => {
     expect(toggleSelection([1], 3)).toEqual([1, 3])
   })
 
-  it('texte des pistes : nom des comptes, écart, jamais de conclusion', () => {
+  it('texte des pistes : nom des comptes, écart, jamais de conclusion', () => {
     const rows = [{ accountId: 1, name: 'Principal' }, { accountId: 2, name: 'Prop' }] as never
     const fees = hintText({ kind: 'fees', accountId: 2, otherAccountId: 1, gap: 0.3, sharedInstruments: 1 }, { rows }, fr)
-    expect(fees).toContain('« Prop »')
-    expect(fees).toContain('« Principal »')
+    expect(fees).toContain('« Prop »')
+    expect(fees).toContain('« Principal »')
     expect(fees).toContain('30\u00a0pts')
     expect(fees).toContain('Piste')
     const exec = hintText({ kind: 'execution', accountId: 1, otherAccountId: 2, gap: 0.36, sharedInstruments: 2 }, { rows }, fr)
@@ -26,7 +26,7 @@ describe('comparisonsView', () => {
     expect(exec).toContain('Piste')
   })
 
-  it('points du graphique : positions relatives, dépassements, échelle', () => {
+  it('points du graphique : positions relatives, dépassements, échelle', () => {
     const r = riskChartPoints([tr(1, 0.005, true), tr(2, 0.015, false), tr(3, null, null), tr(4, 0.01, true)], 0.01)
     expect(r.top).toBeCloseTo(0.015 * 1.15, 12)
     expect(r.points.map((p) => p.tradeId)).toEqual([1, 2, 4])

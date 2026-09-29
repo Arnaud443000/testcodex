@@ -137,7 +137,7 @@ export function AlertSettingsPanel() {
   return (
     <section className="glass-card p-6" aria-labelledby="alert-settings-title" id="alertes">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-3">
-        <h3 id="alert-settings-title" className="text-base font-semibold">{s.title}</h3>
+        <h2 id="alert-settings-title" className="text-base font-semibold">{s.title}</h2>
         <Link to="/alerts" className="btn-link text-sm">{s.historyLink}</Link>
       </div>
       <p className="mb-4 max-w-[80ch] text-[13px] leading-relaxed text-tx2">{s.intro}</p>

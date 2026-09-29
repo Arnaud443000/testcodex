@@ -38,7 +38,7 @@ export function ScopeBar({
         {scope.effective !== 'follow' && <span className="text-xs text-tx3">{t.ignoresTopBar}</span>}
         {own > 0 && <span className="text-xs text-tx3">{t.widgetOwnAccount(own)}</span>}
         {onChange && !isPreset && (
-          <button type="button" className="text-xs text-violet underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet" onClick={onChange}>
+          <button type="button" className="btn-link !text-xs" onClick={onChange}>
             {t.change}
           </button>
         )}

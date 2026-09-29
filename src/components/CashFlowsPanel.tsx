@@ -84,7 +84,7 @@ export function CashFlowsPanel() {
   const c = t.settings.cashFlows
   return (
     <section className="glass-card p-6">
-      <h3 className="text-base font-semibold">{c.title}</h3>
+      <h2 className="text-base font-semibold">{c.title}</h2>
       <p className="mb-4 mt-1 max-w-[80ch] text-sm text-tx2">{c.intro}</p>
       {current === null ? (
         <p className="rounded-inner border border-dashed px-4 py-5 text-center text-sm text-tx2" style={{ borderColor: 'var(--glass-border)' }}>{c.noAccount}</p>

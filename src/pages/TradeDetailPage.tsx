@@ -209,8 +209,8 @@ export function TradeDetailPage() {
                 <p className="mt-1 text-xs text-tx3">
                   {formatDateTime(trade.entryTime)}
                   {trade.exitTime != null && ` → ${formatDateTime(trade.exitTime)}`}
-                  {session && ` · ${session.name}`}
-                  {timeframe && ` · ${timeframe.name}`}
+                  {session && <span className="whitespace-nowrap"> · {session.name}</span>}
+                  {timeframe && <span className="whitespace-nowrap"> · {timeframe.name}</span>}
                 </p>
               </div>
               <OutcomeBadge outcome={f?.outcome ?? 'open'} />
@@ -220,7 +220,7 @@ export function TradeDetailPage() {
               <div>
                 <Pnl value={f.netPnl} currency={trade.currency} className="text-[40px] font-semibold leading-tight tracking-tight" />
                 <p className="mt-1 text-sm text-tx2">
-                  {f.rMultiple !== null ? formatR(f.rMultiple) : '—'} · {d.net(formatMoney(f.fees, trade.currency))}
+                  {f.rMultiple !== null && `${formatR(f.rMultiple)} · `}{d.net(formatMoney(f.fees, trade.currency))}
                 </p>
               </div>
             ) : (
