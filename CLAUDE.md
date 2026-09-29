@@ -69,6 +69,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étapes 3 à 5
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : alertes à seuils (à relier aux réglages du lot 8 et aux règles personnelles), coach IA. Le reste : Sonnet, moyen.
+- [ ] Lot 12 — Alertes à seuils (garde-fous, 3.6.1 à 3.6.7) : moteur dans `pulse-core` (`alerts/`), seuils `alerts.*` + réglages `behavior.*` repris, historique et alertes masquées (migration v8), commandes Tauri, types TS, faux backend, bannière dans la coque ; voir « Alertes à seuils (lot 12) » (**Opus, élevé**)
 
 ## Argent, prix et temps (décision du lot 2)
 
@@ -206,3 +207,56 @@ Code : `behavior/factors.rs`, `behavior/sequences.rs`, `behavior/simulation.rs` 
 - **Rappel** (`reminder.rs`, boucle d'une minute dans `src-tauri`) : une fois par jour local, après l'heure réglée (20:00 par défaut, activé par défaut), s'il y a eu au moins un trade **entré** dans la journée et qu'il reste du travail (pas de journal, ou trade de saisie rapide incomplet : thèse ou émotions manquantes). Le clic sur la notification n'est pas fiable sous Windows : une bannière dans l'application prend le relais (`get_reminder_pending`). Aucune icône de zone de notification : la notification n'apparaît que si Pulse est ouvert (même réduit).
 - **Objectifs** (`goals.rs`) : métriques `net_pnl`, `win_rate` (cible en %), `profit_factor`, `expectancy_r`, `execution_quality` (1–5), `max_drawdown` (plafond), `discipline_score` (0–100). Un trade compte dans le mois local où il est clôturé. Statuts : atteint / en cours / manqué (mois fini, cible non atteinte) / dépassé (plafond franchi) / pas de données (aucun trade clôturé). Métrique `discipline_score` (cible 1–100, moyenne du score du mois, indéfinie sous 5 trades) ajoutée en v7.
 - **Replay** (`replay.rs`) : filtre l'historique par note manuelle (à revoir 1–2 ★, bonnes 4–5 ★, sans note), résultat, actif, capture, notes ; « l'échelle des niveaux » d'un trade exprime chaque niveau saisi (stop, objectif, sortie, prix après sortie) en R de prix, frais exclus. Aucune donnée de marché externe.
+
+## Alertes à seuils (lot 12) — interprétation
+
+Code : `crates/pulse-core/src/alerts/` (`mod.rs` évaluation pure, `settings.rs` seuils, `log.rs` historique et alertes masquées, `tests.rs` journaux calculés à la main). Point d'entrée pur : `alerts::evaluate(&Ledger, now, tz_offset_min, &BehaviorSettings, &AlertSettings)` pour **un seul compte** ; enveloppe SQLite : `alerts::active_alerts(conn, account_ids, now, tz_offset_min)` (chaque compte évalué **séparément** ; liste vide = comptes actifs, archivés exclus). Commandes : `get_active_alerts`, `dismiss_alert`, `get_alert_history`, `get_alert_settings` / `set_alert_settings`.
+
+Principes (mêmes que les lots 3 et 8) : tout est recalculé depuis les données sources ; argent en `Decimal` (comparaisons exactes), ratios en `f64` ; dépôts/retraits jamais comptés comme gain ou perte ; **seuil absent = alerte désactivée** ; **jamais d'alerte sans donnée suffisante** (solde de référence ≤ 0, historique trop court, trade précédent non comparable → pas d'alerte, jamais une alerte « par défaut »). Un compte n'influence jamais les alertes d'un autre.
+
+**Instant d'évaluation** : l'évaluation se fait « à l'instant `now` » : un trade entré après `now` est ignoré, un trade sorti après `now` est considéré comme ouvert, un dépôt/retrait daté après `now` est ignoré. **Aujourd'hui** = jour local de `now` avec le décalage `tz_offset_min` fourni par l'appelant (l'interface envoie son décalage, la coque celui du PC). Un trade est « entré aujourd'hui » / « clôturé aujourd'hui » si le jour local de son entrée / sa sortie (avec **son propre** décalage, comme partout) est ce jour-là. **Semaine** = semaine ISO locale (lundi → dimanche) contenant aujourd'hui.
+
+### Seuils (table `settings`, 3.6.7)
+
+Réglages repris du lot 8, **sans doublon** : `behavior.max_trades_per_day` (limite de trades par jour ; absent → alerte désactivée, comme la détection de surtrading), `behavior.revenge_window_min` et `behavior.revenge_size_factor` (définition de la revanche). Ils restent modifiables par `get/set_behavior_settings` (Paramètres > Seuils de discipline). Nouveaux réglages `alerts.*` : ligne absente → **valeur par défaut** ci-dessous ; valeur `off` → alerte désactivée (ce qui permet de couper une alerte dont le défaut est actif).
+
+| Clé | Sens | Par défaut | Valeurs acceptées |
+|---|---|---|---|
+| `alerts.consecutive_losses` | nombre de pertes d'affilée dans la journée qui déclenche l'alerte | 3 | entier 2 à 20, ou `off` |
+| `alerts.burst_max_trades` | nombre **maximum** de trades entrés dans la fenêtre glissante | 3 | entier 1 à 100, ou `off` |
+| `alerts.burst_window_min` | durée de la fenêtre glissante, en minutes | 60 | entier 1 à 1440 |
+| `alerts.daily_loss_percent` | perte du jour, en % du solde de début de journée (`3` = 3 %) | 3 | décimal > 0 et ≤ 100, ou `off` |
+| `alerts.daily_loss_amount` | perte du jour, en argent (devise **de chaque compte**) | désactivé | décimal > 0, ou `off` |
+| `alerts.weekly_loss_percent` | perte de la semaine, en % du solde de début de semaine | 6 | décimal > 0 et ≤ 100, ou `off` |
+| `alerts.weekly_loss_amount` | perte de la semaine, en argent | désactivé | décimal > 0, ou `off` |
+| `alerts.revenge` | alerte de revanche active | `on` | `on` / `off` |
+| `alerts.trading_hours` | plage horaire locale autorisée, `HH:MM-HH:MM` (début inclus, fin exclue ; `22:00-02:00` passe minuit) | désactivé | début ≠ fin, ou `off` |
+| `alerts.unusual_session` | alerte de session inhabituelle active | `on` | `on` / `off` |
+| `alerts.no_stop_loss` | alerte de trade sans stop loss active | `on` | `on` / `off` |
+
+Validation dans `pulse-core` (`alerts::set_settings` refuse tout, n'écrit rien, si une valeur est hors bornes). Les seuils en argent sont communs à tous les comptes et lus dans la devise de chacun (limite connue : pour des comptes de tailles très différentes, préférer les seuils en %).
+
+### Définition de chaque alerte
+
+Gravité : `critical` quand une limite réglée par le trader est **dépassée** (ou que la perte du jour / de la semaine atteint son plafond), ou qu'une position **ouverte** n'a pas de stop ; `warning` sinon. Chaque alerte porte une clé de traduction (`messageKey`), les valeurs utiles, le seuil franchi, l'instant de l'événement déclencheur (`at`) et, le cas échéant, le trade concerné.
+
+| Alerte (`kind`) | Définition exacte | Gravité | Seuil exactement atteint |
+|---|---|---|---|
+| Pertes consécutives (`consecutiveLosses`, 3.6.1) | trades du compte **clôturés aujourd'hui**, dans l'ordre de sortie (égalité : id) ; `n` = nombre de trades perdants (PnL net < 0) à la fin de cette suite ; un gain ou un breakeven remet à zéro (comme les séries du lot 8). Alerte si `n ≥ seuil`. Les pertes de la veille ne comptent pas (« dans la journée »). | warning | alerte |
+| Trades par jour (`tradesPerDay`, 3.6.2) | `n` = trades du compte **entrés aujourd'hui**, ouverts compris. `n = max` → « limite atteinte » ; `n > max` → « limite dépassée » (même sens que le surtrading du lot 8 : le trade de rang `max + 1` est en trop). | atteinte : warning ; dépassée : critical | warning « limite atteinte » |
+| Fréquence (`tradesPerWindow`, 3.6.2) | `n` = trades du compte entrés dans `]now − durée ; now]` (tous jours confondus). `n = max` → atteinte, `n > max` → dépassée. Alerte temps réel : des trades saisis après coup, hors de la fenêtre, ne la déclenchent pas. | atteinte : warning ; dépassée : critical | warning « limite atteinte » |
+| Stop pour aujourd'hui (`dailyLoss`, 3.6.3) | `perte` = − (somme des PnL nets des trades **clôturés aujourd'hui**) quand cette somme est négative (sinon aucune alerte). Solde de référence `B` = solde réel du compte au **début du jour local** (capital initial + dépôts/retraits + PnL nets de tout ce qui est survenu avant 00:00). Seuil en argent atteint si `perte ≥ montant` ; seuil en % atteint si `perte × 100 ≥ pourcentage × B` (comparaison exacte en `Decimal`), seulement si `B > 0`. Une seule alerte portant les deux indicateurs (`amountReached`, `percentReached`) et `lossPct = perte / B` (`None` si `B ≤ 0`). Les dépôts/retraits du jour ne sont ni un gain ni une perte. | critical | alerte |
+| Stop pour la semaine (`weeklyLoss`, 3.6.3) | idem sur les trades clôturés depuis le lundi local ; `B` = solde au début du lundi. | critical | alerte |
+| Revanche (`revenge`, 3.6.4) | pour chaque trade **entré aujourd'hui**, ouvert ou clôturé : **exactement la détection du lot 8** (`behavior::Context::revenge` : trade précédent du même compte perdant, entrée dans `revenge_window_min`, exposition ≥ `revenge_size_factor` × celle du trade perdant ; risque initial, sinon taille × multiplicateur sur le même actif, sinon non comparable → pas d'alerte). Le cahier parle de « taille anormale par rapport à la moyenne » : on garde la comparaison au trade perdant du lot 8 pour que la page Comportement et l'alerte disent la même chose. | warning | alerte (rapport = facteur) |
+| Hors horaires (`outsideHours`, 3.6.5) | pour chaque trade entré aujourd'hui : heure locale d'entrée (son propre décalage) hors de `alerts.trading_hours`. | warning | l'heure de début est dans la plage, l'heure de fin non |
+| Session inhabituelle (`unusualSession`, 3.6.5) | pour chaque trade entré aujourd'hui : sa session = nom de son tag `session` s'il en a un, sinon la session déduite de l'heure (`trade_view::session_for`) ; comparaison insensible à la casse. Historique = trades du compte entrés **avant** lui (ordre d'entrée, égalité : id), tous jours. Il faut au moins **20** trades d'historique ; la session est inhabituelle si elle représente **moins de 10 %** de cet historique (comparaison entière `nombre × 10 < historique`). | warning | 10 % tout juste → habituelle, pas d'alerte |
+| Sans stop loss (`noStopLoss`, 3.6.6) | trades du compte **sans SL prévu valide** qui sont **ouverts** (quel que soit le jour d'entrée) ou **entrés aujourd'hui**. Le contrôle « avant validation » existe déjà dans l'aperçu du formulaire (`Preview.stopLoss = missing`). | ouvert : critical ; clôturé : warning | — |
+
+Ordre de la liste : gravité (critical d'abord), puis l'ordre du tableau, puis l'id du trade.
+
+### Identité, historique et alertes masquées (migration v8)
+
+- Chaque alerte a un identifiant stable `id` = `kind:compte:portée` : `consecutiveLosses:1:<dernier trade perdant>`, `tradesPerDay:1:<dernier trade entré>`, `tradesPerWindow:1:<dernier trade entré>`, `dailyLoss:1:<jour>:<amount|percent|amount+percent>`, `weeklyLoss:1:<lundi>:<…>`, `revenge|outsideHours|unusualSession|noStopLoss:1:<trade>`. Une alerte **masquée** (`dismiss_alert`) ne réapparaît jamais sous le même identifiant ; une **aggravation** crée un nouvel identifiant et donc une nouvelle alerte (une perte de plus, un trade de plus au-delà de la limite, le seuil en % franchi en plus du seuil en argent). Quand la situation se résorbe (gain, nouveau jour, stop ajouté), l'alerte disparaît d'elle-même.
+- **Migration v8** : table `alert_log` (`alert_id` unique, compte avec suppression en cascade, `kind`, `severity`, `trade_id` sans clé étrangère pour survivre à la suppression du trade, `payload` = l'alerte en JSON telle qu'affichée la première fois, `first_seen_at`, `dismissed_at`). `active_alerts` y inscrit chaque alerte la première fois qu'elle est vue (c'est un **journal d'événements**, pas un cache : les alertes actives sont toujours recalculées) et ne renvoie pas les alertes masquées. `alert_history` relit ce journal (plus récentes d'abord).
+- **Quand** : la coque évalue le compte du trade juste après `create_trade` / `update_trade` (inscription dans l'historique à l'instant de la saisie ; une erreur d'évaluation n'empêche jamais l'enregistrement) ; l'interface appelle `get_active_alerts` à l'ouverture, à chaque changement de page, au retour sur la fenêtre et toutes les minutes.
+- Interface (lot 12) : seulement une bannière dans la coque (`AlertBanner`, même style que la bannière du rappel du journal) avec « Voir le trade » et « Masquer ». La page de réglages des seuils sera faite ensuite.
