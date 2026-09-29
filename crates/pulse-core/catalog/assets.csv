@@ -1,0 +1,113 @@
+# symbole;nom complet;classe;multiplicateur par défaut
+# Source unique du catalogue d'actifs. Régénérer avec `python3 scripts/gen-catalog.py`.
+#
+# Les multiplicateurs sont des valeurs COURANTES (1 lot standard en CFD/forex, 1 unité pour
+# indices, crypto et actions) : à vérifier auprès du courtier, qui peut utiliser une autre taille de
+# contrat. Pour les paires en yen (xxxJPY) et les croisées, la valeur d'un point est exprimée dans la
+# devise de cotation, pas forcément dans la devise du compte : corriger le multiplicateur dans le trade.
+US500;S&P 500;index;1
+NAS100;Nasdaq 100;index;1
+US30;Dow Jones 30;index;1
+GER40;DAX 40;index;1
+FRA40;CAC 40;index;1
+UK100;FTSE 100;index;1
+JP225;Nikkei 225;index;1
+EU50;Euro Stoxx 50;index;1
+BTCUSD;Bitcoin;crypto;1
+ETHUSD;Ethereum;crypto;1
+XRPUSD;XRP;crypto;1
+BNBUSD;BNB;crypto;1
+SOLUSD;Solana;crypto;1
+DOGEUSD;Dogecoin;crypto;1
+TRXUSD;TRON;crypto;1
+ADAUSD;Cardano;crypto;1
+HYPEUSD;Hyperliquid;crypto;1
+LINKUSD;Chainlink;crypto;1
+BCHUSD;Bitcoin Cash;crypto;1
+XLMUSD;Stellar;crypto;1
+AVAXUSD;Avalanche;crypto;1
+LTCUSD;Litecoin;crypto;1
+SUIUSD;Sui;crypto;1
+HBARUSD;Hedera;crypto;1
+SHIBUSD;Shiba Inu;crypto;1
+TONUSD;Toncoin;crypto;1
+DOTUSD;Polkadot;crypto;1
+XMRUSD;Monero;crypto;1
+UNIUSD;Uniswap;crypto;1
+AAVEUSD;Aave;crypto;1
+ENAUSD;Ethena;crypto;1
+NEARUSD;NEAR Protocol;crypto;1
+PEPEUSD;Pepe;crypto;1
+ETCUSD;Ethereum Classic;crypto;1
+ICPUSD;Internet Computer;crypto;1
+APTUSD;Aptos;crypto;1
+ONDOUSD;Ondo;crypto;1
+ARBUSD;Arbitrum;crypto;1
+ALGOUSD;Algorand;crypto;1
+ATOMUSD;Cosmos;crypto;1
+POLUSD;Polygon;crypto;1
+FILUSD;Filecoin;crypto;1
+VETUSD;VeChain;crypto;1
+OPUSD;Optimism;crypto;1
+INJUSD;Injective;crypto;1
+RENDERUSD;Render;crypto;1
+TAOUSD;Bittensor;crypto;1
+TIAUSD;Celestia;crypto;1
+SEIUSD;Sei;crypto;1
+BONKUSD;Bonk;crypto;1
+WLDUSD;Worldcoin;crypto;1
+FETUSD;Artificial Superintelligence Alliance;crypto;1
+JUPUSD;Jupiter;crypto;1
+LDOUSD;Lido DAO;crypto;1
+QNTUSD;Quant;crypto;1
+STXUSD;Stacks;crypto;1
+KASUSD;Kaspa;crypto;1
+CROUSD;Cronos;crypto;1
+ARUSD;Arweave;crypto;1
+RUNEUSD;THORChain;crypto;1
+EURUSD;Euro / Dollar américain;forex;100000
+GBPUSD;Livre sterling / Dollar américain;forex;100000
+USDJPY;Dollar américain / Yen japonais;forex;100000
+USDCHF;Dollar américain / Franc suisse;forex;100000
+USDCAD;Dollar américain / Dollar canadien;forex;100000
+AUDUSD;Dollar australien / Dollar américain;forex;100000
+NZDUSD;Dollar néo-zélandais / Dollar américain;forex;100000
+EURGBP;Euro / Livre sterling;forex;100000
+EURJPY;Euro / Yen japonais;forex;100000
+EURCHF;Euro / Franc suisse;forex;100000
+EURAUD;Euro / Dollar australien;forex;100000
+EURCAD;Euro / Dollar canadien;forex;100000
+EURNZD;Euro / Dollar néo-zélandais;forex;100000
+GBPJPY;Livre sterling / Yen japonais;forex;100000
+GBPCHF;Livre sterling / Franc suisse;forex;100000
+GBPAUD;Livre sterling / Dollar australien;forex;100000
+GBPCAD;Livre sterling / Dollar canadien;forex;100000
+GBPNZD;Livre sterling / Dollar néo-zélandais;forex;100000
+AUDJPY;Dollar australien / Yen japonais;forex;100000
+AUDCAD;Dollar australien / Dollar canadien;forex;100000
+AUDCHF;Dollar australien / Franc suisse;forex;100000
+AUDNZD;Dollar australien / Dollar néo-zélandais;forex;100000
+NZDJPY;Dollar néo-zélandais / Yen japonais;forex;100000
+NZDCAD;Dollar néo-zélandais / Dollar canadien;forex;100000
+NZDCHF;Dollar néo-zélandais / Franc suisse;forex;100000
+CADJPY;Dollar canadien / Yen japonais;forex;100000
+CADCHF;Dollar canadien / Franc suisse;forex;100000
+CHFJPY;Franc suisse / Yen japonais;forex;100000
+XAUUSD;Or (once) / Dollar américain;commodity;100
+XAGUSD;Argent (once) / Dollar américain;commodity;5000
+USOIL;Pétrole WTI;commodity;1000
+UKOIL;Pétrole Brent;commodity;1000
+NATGAS;Gaz naturel;commodity;10000
+COPPER;Cuivre;commodity;25000
+AAPL;Apple;stock;1
+MSFT;Microsoft;stock;1
+NVDA;Nvidia;stock;1
+AMZN;Amazon;stock;1
+GOOGL;Alphabet (Google);stock;1
+META;Meta Platforms;stock;1
+TSLA;Tesla;stock;1
+NFLX;Netflix;stock;1
+AMD;Advanced Micro Devices;stock;1
+JPM;JPMorgan Chase;stock;1
+COIN;Coinbase;stock;1
+PLTR;Palantir;stock;1

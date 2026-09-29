@@ -21,12 +21,15 @@ export interface Tag {
 export interface Instrument {
   id: number
   symbol: string
+  /** Nom complet (« Solana ») ; vide pour un actif personnalisé créé sans nom. */
+  name: string
   assetClass: AssetClass
   defaultMultiplier: Decimal
 }
 
 export interface NewInstrument {
   symbol: string
+  name?: string
   assetClass: AssetClass
   defaultMultiplier: Decimal
 }

@@ -257,6 +257,8 @@ pub const MIGRATIONS: &[&str] = &[
             SELECT 1 FROM tag_renames r JOIN tags o ON o.kind = r.kind AND o.name_key = r.new_key
             WHERE r.kind = tags.kind AND r.old_name = tags.name);
     DROP TABLE tag_renames;",
+    // v4 — instrument full names + built-in asset catalog (generated, see catalog/).
+    include_str!("../catalog/v4_asset_catalog.sql"),
 ];
 
 pub fn latest_version() -> u32 {
@@ -360,12 +362,18 @@ mod tests {
         .unwrap();
         let account = account_v2(&conn);
         let doubt_id: i64 = conn.query_row("SELECT id FROM tags WHERE name = 'My doubt'", [], |r| r.get(0)).unwrap();
-        let eu = instrument(&conn, "EURUSD", "100000");
-        let t = trades::TradeData::new(account, eu, trades::Direction::Long, 1.into(), 1.into(), 0);
-        let trade = trades::create(&conn, &t).unwrap();
-        conn.execute("INSERT INTO trade_emotions (trade_id, moment, tag_id) VALUES (?1,'before',?2)", rusqlite::params![trade.id, doubt_id]).unwrap();
+        conn.execute("INSERT INTO instruments (symbol, symbol_key, asset_class, default_multiplier) VALUES ('EURUSD','EURUSD','forex','100000')", []).unwrap();
+        let eu = conn.last_insert_rowid();
+        conn.execute(
+            "INSERT INTO trades (account_id, instrument_id, direction, size, multiplier, entry_price, entry_time, fees)
+             VALUES (?1, ?2, 'long', '1', '1', '1', 0, '0')",
+            rusqlite::params![account, eu],
+        )
+        .unwrap();
+        let trade_id = conn.last_insert_rowid();
+        conn.execute("INSERT INTO trade_emotions (trade_id, moment, tag_id) VALUES (?1,'before',?2)", rusqlite::params![trade_id, doubt_id]).unwrap();
 
-        migrate(&mut conn).unwrap();
+        migrate_to(&mut conn, 3).unwrap();
         assert_eq!(current_version(&conn).unwrap(), 3);
 
         let names = |kind: &str| -> Vec<String> {
@@ -448,5 +456,58 @@ mod tests {
                 .is_err()
         );
         assert!(conn.execute("INSERT INTO cash_flows (account_id, kind, amount, occurred_at) VALUES (?1, 'deposit', '-5', 0)", [a]).is_err());
+    }
+
+    #[test]
+    fn v4_seeds_catalog_without_touching_existing_instruments() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 3).unwrap();
+        // The user already created SOLUSD by hand (as an "other" asset, multiplier 10) and
+        // has a trade on EURUSD.
+        conn.execute_batch(
+            "INSERT INTO instruments (symbol, symbol_key, asset_class, default_multiplier)
+             VALUES ('sol/usd', 'SOLUSD', 'other', '10'), ('EURUSD', 'EURUSD', 'forex', '50000');",
+        )
+        .unwrap();
+        let account = account_v2(&conn);
+        let eu: i64 = conn.query_row("SELECT id FROM instruments WHERE symbol_key = 'EURUSD'", [], |r| r.get(0)).unwrap();
+        conn.execute(
+            "INSERT INTO trades (account_id, instrument_id, direction, size, multiplier, entry_price, entry_time, fees)
+             VALUES (?1, ?2, 'long', '1', '1', '1', 0, '0')",
+            rusqlite::params![account, eu],
+        )
+        .unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 4);
+
+        let row = |key: &str| -> (i64, String, String, String, String) {
+            conn.query_row(
+                "SELECT id, symbol, name, asset_class, default_multiplier FROM instruments WHERE symbol_key = ?1",
+                [key],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            )
+            .unwrap()
+        };
+        // User values win; only the empty name is completed.
+        let sol = row("SOLUSD");
+        assert_eq!((sol.1.as_str(), sol.2.as_str(), sol.3.as_str(), sol.4.as_str()), ("sol/usd", "Solana", "other", "10"));
+        let eur = row("EURUSD");
+        assert_eq!(eur.0, eu, "existing instrument keeps its id, so its trades stay linked");
+        assert_eq!((eur.3.as_str(), eur.4.as_str()), ("forex", "50000"));
+        // No duplicate symbol, catalog fully present, trade intact.
+        let (total, distinct): (i64, i64) = conn
+            .query_row("SELECT COUNT(*), COUNT(DISTINCT symbol_key) FROM instruments", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(total, distinct);
+        let catalog_rows = include_str!("../catalog/assets.csv").lines().filter(|l| !l.is_empty() && !l.starts_with('#')).count();
+        assert_eq!(total as usize, catalog_rows);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM trades WHERE instrument_id = ?1", [eu], |r| r.get::<_, i64>(0)).unwrap(), 1);
+        // Fresh database: same catalog, and a second migrate run changes nothing.
+        let mut fresh = Connection::open_in_memory().unwrap();
+        migrate(&mut fresh).unwrap();
+        migrate(&mut fresh).unwrap();
+        assert_eq!(fresh.query_row("SELECT COUNT(*) FROM instruments", [], |r| r.get::<_, i64>(0)).unwrap() as usize, catalog_rows);
     }
 }

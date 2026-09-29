@@ -204,9 +204,10 @@ export function Notice({ level, children, actions }: { level: 'ok' | 'warn' | 'b
 }
 
 /** Carte à numéro (sections du formulaire). */
-export function StepCard({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+/** `raised` : la carte contient un menu déroulant qui doit passer au-dessus des cartes suivantes. */
+export function StepCard({ n, title, children, raised = false }: { n: number; title: string; children: ReactNode; raised?: boolean }) {
   return (
-    <section className="glass-card flex flex-col gap-4 px-6 py-[22px]" aria-labelledby={`step-${n}`}>
+    <section className={`glass-card flex flex-col gap-4 px-6 py-[22px] ${raised ? 'relative z-20' : ''}`} aria-labelledby={`step-${n}`}>
       <h2 id={`step-${n}`} className="flex items-center gap-3 text-[15px] font-semibold">
         <span
           aria-hidden="true"

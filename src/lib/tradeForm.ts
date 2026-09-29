@@ -30,6 +30,8 @@ export interface TradeForm {
   entryPrice: string
   exitPrice: string
   size: string
+  /** Valeur d'un point pour une taille de 1 : pré-remplie par l'actif, modifiable. Vide = celle de l'actif. */
+  multiplier: string
   plannedSl: string
   plannedTp: string
   fees: string
@@ -69,6 +71,7 @@ export function emptyForm(accountId: number | null, now: number): TradeForm {
     entryPrice: '',
     exitPrice: '',
     size: '',
+    multiplier: '',
     plannedSl: '',
     plannedTp: '',
     fees: '',
@@ -117,6 +120,7 @@ export function formFromTrade(t: TradeView, tags: Tag[], checklistItems: Checkli
     entryPrice: t.entryPrice,
     exitPrice: text(t.exitPrice),
     size: t.size,
+    multiplier: t.multiplier ?? '',
     plannedSl: text(t.plannedSl),
     plannedTp: text(t.plannedTp),
     fees: t.fees === '0' ? '' : t.fees,
@@ -145,6 +149,7 @@ export type FormErrorCode =
   | 'exitTime'
   | 'entryPrice'
   | 'size'
+  | 'multiplier'
   | 'exitPrice'
   | 'exitPair'
   | 'exitBeforeEntry'
@@ -181,6 +186,7 @@ export function buildTradeData(f: TradeForm, ctx: BuildContext): { data: TradeDa
   if (entryTime === null) errors.entryTime = true
   if (!isPlainDecimal(f.entryPrice)) errors.entryPrice = true
   if (!isPositiveDecimal(f.size)) errors.size = true
+  if (f.multiplier.trim() !== '' && !isPositiveDecimal(f.multiplier)) errors.multiplier = true
 
   const exitPrice = optional(f.exitPrice)
   const exitTime = f.exitTime === '' ? null : fromLocalInput(f.exitTime)
@@ -220,6 +226,7 @@ export function buildTradeData(f: TradeForm, ctx: BuildContext): { data: TradeDa
       instrumentId: f.instrumentId!,
       direction: f.direction,
       size: normalizeDecimalInput(f.size),
+      multiplier: f.multiplier.trim() === '' ? null : normalizeDecimalInput(f.multiplier),
       entryPrice: normalizeDecimalInput(f.entryPrice),
       exitPrice: exitPrice ?? null,
       entryTime: entryTime!,

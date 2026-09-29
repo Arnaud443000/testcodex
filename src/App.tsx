@@ -23,6 +23,8 @@ export default function App() {
           <main className="flex min-w-0 flex-1 flex-col">
             <TopBar />
             <div className="flex-1 overflow-y-auto px-7 py-6">
+              {/* Largeur max du contenu : au-delà, les grilles s’étireraient et les cartes se déséquilibreraient. */}
+              <div className="mx-auto w-full max-w-[1480px]">
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/trades" element={<TradesPage />} />
@@ -36,6 +38,7 @@ export default function App() {
                 <Route path="/goals" element={<PlaceholderPage title={t.pages.goals.title} subtitle={t.pages.goals.subtitle} step={2} />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
+              </div>
             </div>
           </main>
         </div>
