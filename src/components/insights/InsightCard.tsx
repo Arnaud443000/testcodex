@@ -59,7 +59,6 @@ export function InsightCard({ insight, accountName, isNew = false, onDismiss, bu
               {ev.tradeIds.map((id) => (
                 <Link key={id} to={`/trades/${id}`} className="btn-link">{x.tradeLink(id)}</Link>
               ))}
-              {ev.moreTrades > 0 && <span>{x.moreTrades(ev.moreTrades)}</span>}
             </span>
           )}
         </div>

@@ -116,13 +116,15 @@ describe('piste, phrase « pas une cause », fenêtre', () => {
 describe('liens de preuve', () => {
   it('filtre erreur / setup vers /trades, sinon les trades en cause (limités), toujours le rapport', () => {
     expect(insightEvidence(make({ filter: { kind: 'mistake', source: 'tag', id: 12 }, source: 'mistakes', tradeIds: [1, 2] }))).toEqual({
-      filterTo: '/trades?mistake=tag:12', tradeIds: [], moreTrades: 0, reportTo: '/behavior',
+      filterTo: '/trades?mistake=tag:12', tradeIds: [], reportTo: '/behavior',
     })
     expect(insightEvidence(make({ filter: { kind: 'mistake', source: 'rule', id: 3 }, source: 'ruleAdherence' })).filterTo).toBe('/trades?mistake=rule:3')
     expect(insightEvidence(make({ filter: { kind: 'setup', tagId: 7 }, source: 'segments' }))).toMatchObject({ filterTo: '/trades?setup=7', reportTo: '/analytics?tab=strategies' })
-    const many = insightEvidence(make({ filter: null, source: 'discipline', tradeIds: [1, 2, 3, 4, 5, 6, 7] }))
-    expect(many).toEqual({ filterTo: null, tradeIds: [1, 2, 3, 4, 5], moreTrades: 2, reportTo: '/discipline' })
-    expect(insightEvidence(make({ filter: null, source: 'patterns', tradeIds: [] }))).toEqual({ filterTo: null, tradeIds: [], moreTrades: 0, reportTo: '/behavior' })
+    // Jusqu'à 5 trades en cause : liens directs. Au-delà (une fenêtre entière), le rapport lié est la preuve.
+    expect(insightEvidence(make({ filter: null, source: 'patterns', tradeIds: [4, 9] }))).toEqual({ filterTo: null, tradeIds: [4, 9], reportTo: '/behavior' })
+    expect(insightEvidence(make({ filter: null, source: 'discipline', tradeIds: [1, 2, 3, 4, 5] })).tradeIds).toEqual([1, 2, 3, 4, 5])
+    expect(insightEvidence(make({ filter: null, source: 'discipline', tradeIds: [1, 2, 3, 4, 5, 6] }))).toEqual({ filterTo: null, tradeIds: [], reportTo: '/discipline' })
+    expect(insightEvidence(make({ filter: null, source: 'patterns', tradeIds: [] }))).toEqual({ filterTo: null, tradeIds: [], reportTo: '/behavior' })
   })
 
   it('page du rapport selon la source', () => {

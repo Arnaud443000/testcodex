@@ -111,7 +111,6 @@ export const frInsights = {
   stateActive: 'Non masqué',
   periodRange: (from: string, to: string) => `du ${from} au ${to}`,
   tradeLink: (id: number) => `Trade n° ${id}`,
-  moreTrades: (n: number) => `et ${n} autre${n > 1 ? 's' : ''}`,
   tradesLabel: 'Trades concernés',
   /** Lien vers le rapport qui a produit l’insight, par `source`. */
   reports: {

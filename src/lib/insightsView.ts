@@ -123,7 +123,10 @@ export function reportLink(source: InsightSource): string {
   }
 }
 
-/** Trades montrés en liens directs quand l'insight n'a pas de filtre de liste (au-delà, on n'en liste pas). */
+/**
+ * Trades montrés en liens directs quand l'insight n'a pas de filtre de liste. Au-delà, on n'en liste aucun : les
+ * 20 trades d'une fenêtre de tendance ne « prouvent » rien un par un, le rapport lié est la vraie preuve.
+ */
 export const MAX_TRADE_LINKS = 5
 
 export interface Evidence {
@@ -131,15 +134,14 @@ export interface Evidence {
   filterTo: string | null
   /** Liens directs vers des trades, quand il n'y a pas de filtre. */
   tradeIds: number[]
-  moreTrades: number
   reportTo: string
 }
 
 /** Les liens de preuve : filtre vers /trades quand il existe, sinon les trades en cause ; puis le rapport. */
 export function insightEvidence(i: Insight): Evidence {
   const filterTo = i.filter === null ? null : i.filter.kind === 'mistake' ? mistakeLink({ source: i.filter.source, id: i.filter.id }) : `/trades?setup=${i.filter.tagId}`
-  const ids = filterTo === null ? i.tradeIds : []
-  return { filterTo, tradeIds: ids.slice(0, MAX_TRADE_LINKS), moreTrades: Math.max(0, ids.length - MAX_TRADE_LINKS), reportTo: reportLink(i.source) }
+  const ids = filterTo === null && i.tradeIds.length <= MAX_TRADE_LINKS ? i.tradeIds : []
+  return { filterTo, tradeIds: ids, reportTo: reportLink(i.source) }
 }
 
 // --- Repère « nouveau » --------------------------------------------------------------------------
