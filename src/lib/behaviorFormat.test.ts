@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDayShort, formatLoss, formatPercentValue, formatScore, heatTier, isLossBin, rBinLabel } from './behaviorFormat'
+import { formatDayShort, formatMonthKey, formatLoss, formatPercentValue, formatScore, heatTier, isLossBin, rBinLabel } from './behaviorFormat'
 
 const NBSP = '\u00a0'
 
@@ -56,5 +56,13 @@ describe('formatDayShort', () => {
   it('met un jour en jj/mm pour les axes', () => {
     expect(formatDayShort('2026-09-29')).toBe('29/09')
     expect(formatDayShort('n’importe quoi')).toBe('n’importe quoi')
+  })
+})
+
+describe('formatMonthKey', () => {
+  it('écrit le mois en français', () => {
+    expect(formatMonthKey('2026-09')).toBe('sept. 2026')
+    expect(formatMonthKey('2026-01')).toBe('janv. 2026')
+    expect(formatMonthKey('bizarre')).toBe('bizarre')
   })
 })

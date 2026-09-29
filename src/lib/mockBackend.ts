@@ -235,6 +235,7 @@ function behaviorInput(accountIds: number[] = []): behavior.BehaviorInput {
     tags,
     rules,
     settings: behaviorSettings,
+    missed: missedTrades.filter((m) => ids.has(m.accountId)),
   }
 }
 

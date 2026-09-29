@@ -47,3 +47,13 @@ export function formatDayShort(day: string): string {
   const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(day)
   return m ? `${m[2]}/${m[1]}` : day
 }
+
+/** Mois « AAAA-MM » en clair : « sept. 2026 ». Valeur inattendue renvoyée telle quelle. */
+export function formatMonthKey(month: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(month)
+  if (!m) return month
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
+/** Nombre minimal de coches pour qu'une règle ait une tendance (`MIN_CHECKS_FOR_TREND` de pulse-core), pour le message d'aide. */
+export const MIN_CHECKS_FOR_TREND = 4

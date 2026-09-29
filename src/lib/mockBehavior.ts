@@ -50,6 +50,8 @@ export interface BehaviorInput {
   tags: Tag[]
   rules: Rule[]
   settings: BehaviorSettings
+  /** Trades manqués des comptes choisis (jamais de P&L). */
+  missed?: { accountId: number; occurredAt: number; tagIds: number[] }[]
 }
 
 type Closed = TradeView & { exitTime: number; figures: NonNullable<TradeView['figures']> }
@@ -367,26 +369,28 @@ export function mockPatterns(input: BehaviorInput, q: StatsQuery): PatternReport
       days.set(k, d)
     }
   }
-  // Le faux backend n'enregistre pas de trades manqués : seules les prises comptent.
   const hesitation = new Map<number, Hesitation>()
-  for (const t of list) {
-    for (const id of t.tagIds) {
+  const bump = (tagIds: number[], field: 'taken' | 'missed') => {
+    for (const id of tagIds) {
       const tag = input.tags.find((g) => g.id === id)
       if (tag && (tag.kind === 'setup' || tag.kind === 'session')) {
         const h = hesitation.get(id) ?? { tagId: id, kind: tag.kind, name: tag.name, taken: 0, missed: 0, missedShare: null }
-        h.taken++
+        h[field]++
         h.missedShare = h.missed / (h.taken + h.missed)
         hesitation.set(id, h)
       }
     }
   }
+  for (const t of list) bump(t.tagIds, 'taken')
+  const missed = (input.missed ?? []).filter((m) => (q.from == null || m.occurredAt >= q.from) && (q.to == null || m.occurredAt < q.to))
+  for (const m of missed) bump(m.tagIds, 'missed')
   return {
     revengeTrades,
     revengeSummary: summarize(list.filter((t) => revengeTrades.some((r) => r.tradeId === t.id)).map(asMock)),
     maxTradesPerDay: limit,
     overtradingDays: [...days.values()].sort((a, b) => a.day.localeCompare(b.day) || a.accountId - b.accountId),
     hesitation: [...hesitation.values()].sort((a, b) => Number(a.kind === 'session') - Number(b.kind === 'session') || a.name.localeCompare(b.name)),
-    missedTradeCount: 0,
+    missedTradeCount: missed.length,
   }
 }
 

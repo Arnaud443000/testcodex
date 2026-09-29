@@ -4,7 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { DisciplineReport, MistakeReport, StreakReport } from '../../types/behavior'
 import type { Heatmap, RDistribution, RiskReport } from '../../types/stats'
+import type { PatternReport, RuleAdherenceReport } from '../../types/behavior'
 import { DayBars } from './DayBars'
+import { HesitationCard } from './HesitationCard'
+import { RulesCard } from './RulesCard'
 import { DisciplineCard } from './DisciplineCard'
 import { QuadrantsGrid } from './ScoreRing'
 import { MistakesCard } from './MistakesCard'
@@ -130,5 +133,63 @@ describe('page Discipline', () => {
     expect(out).toContain('+120,50')
     expect(out).toContain('−80,00')
     expect(out).toContain('Bien exécuté = score de 70 ou plus.')
+  })
+})
+
+describe('respect des règles et hésitation', () => {
+  const rules: RuleAdherenceReport = {
+    checks: 10, respected: 7, rate: 0.7, tradesWithChecks: 5,
+    rules: [
+      { ruleId: 1, text: 'Toujours poser un stop', archived: false, checks: 6, respected: 5, rate: 5 / 6, trend: 0.25, monthly: [{ month: '2026-08', checks: 2, respected: 1, rate: 0.5 }, { month: '2026-09', checks: 4, respected: 4, rate: 1 }] },
+      { ruleId: 2, text: 'Pas de trade après 2 pertes', archived: false, checks: 4, respected: 2, rate: 0.5, trend: -0.5, monthly: [] },
+      { ruleId: 3, text: 'Jamais cochée', archived: false, checks: 0, respected: 0, rate: null, trend: null, monthly: [] },
+    ],
+  }
+
+  it('règles : taux, tendance signée avec son sens écrit, série par mois', () => {
+    const out = html(createElement(RulesCard, { report: rules }))
+    expect(out).toContain('Toujours poser un stop')
+    expect(out).toContain('▲ +25')
+    expect(out).toContain('▼ −50')
+    expect(out).toContain('Jamais cochée')
+    expect(out).toContain('Jamais cochée sur cette période')
+    expect(out).toContain('août 2026')
+    expect(out).toContain('sept. 2026 : 100')
+    expect(out).toContain('height:100%')
+    expect(out).toContain('7 respects sur 10 coches, sur 5 trades')
+  })
+
+  it('règles : rien de coché → message et lien vers les réglages, pas de 0 %', () => {
+    const out = html(createElement(RulesCard, { report: { checks: 0, respected: 0, rate: null, tradesWithChecks: 0, rules: [] } }))
+    expect(out).toContain('Aucune règle n’a été cochée')
+    expect(out).toContain('href="/settings"')
+    expect(out).not.toContain('0 %')
+  })
+
+  const patterns = (over: Partial<PatternReport>): PatternReport => ({
+    revengeTrades: [], revengeSummary: {} as PatternReport['revengeSummary'], maxTradesPerDay: null, overtradingDays: [], hesitation: [], missedTradeCount: 0, ...over,
+  })
+
+  it('hésitation : pris contre manqués par setup, part manquée', () => {
+    const out = html(
+      createElement(HesitationCard, {
+        report: patterns({
+          missedTradeCount: 3,
+          hesitation: [
+            { tagId: 1, kind: 'setup', name: 'Breakout NY', taken: 6, missed: 2, missedShare: 0.25 },
+            { tagId: 2, kind: 'session', name: 'Londres', taken: 4, missed: 1, missedShare: 0.2 },
+          ],
+        }),
+      }),
+    )
+    expect(out).toContain('Breakout NY')
+    expect(out).toContain('6 pris · 2 manqués')
+    expect(out).toContain('25\u00a0% manqués')
+    expect(out).not.toContain('Londres') // la vue par défaut est « Setup »
+    expect(out).toContain('3 trades manqués sur la période.')
+  })
+
+  it('hésitation : aucun trade manqué → message clair', () => {
+    expect(html(createElement(HesitationCard, { report: patterns({}) }))).toContain('Aucun trade manqué enregistré')
   })
 })
