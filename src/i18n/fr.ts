@@ -1,3 +1,4 @@
+import { frDashboardBuilder } from './fr.dashboard'
 /**
  * Textes de l'interface. Le français est la langue par défaut.
  * Pour ajouter une langue : créer un objet du même type `Messages` et le
@@ -1219,6 +1220,8 @@ export const fr = {
       empty: 'Aucun trade avec un stop loss prévu : le risque ne peut pas être calculé.',
     },
   },
+  // Lot 13 : dashboard personnalisable
+  dashboardBuilder: frDashboardBuilder,
 }
 
 export type Messages = typeof fr
