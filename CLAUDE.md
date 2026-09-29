@@ -93,6 +93,7 @@ Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparai
 - [x] Lot 21 — Coach IA conversationnel (3.5.5), optionnel, à la demande : outils locaux en lecture seule (`pulse-core/src/coach/`), boucle d'outils dans `pulse-ai`, historique local (migration v13, à renuméroter à la fusion), page « Coach » ; voir « Coach IA (lot 21) » (**Opus, élevé**)
 
 - [x] Lot 22 — Verrouillage par mot de passe et chiffrement de la base (3.7.13), optionnel, **désactivé par défaut** : crate `pulse-lock` (Rust pur), module `pulse-core/src/lock/`, écran de déverrouillage, Paramètres > Sécurité ; **aucune migration** ; voir « Verrouillage (lot 22) » (**Opus, élevé**)
+- [ ] Lot 23 — Export PDF d'un bilan de période (3.7.3), 100 % local, généré en Rust (`pulse-core/src/export_pdf/`, polices Inter embarquées), **aucune migration** ; voir « Export PDF (lot 23) » (**Sonnet, moyen**)
 
 
 ### Étapes 4 et 5 (suite)
@@ -758,4 +759,22 @@ Règle unique au démarrage : **si `pulse.db` existe, il fait foi** (il n'est ja
 - Performance sur une grosse base (réécriture complète après chaque modification) : non mesurée au-delà des tests ; Argon2id mesuré à ≈ 0,33 s en release sur le conteneur Linux, pas sur le PC de l'utilisateur (plus lent en build de développement).
 - WebView2 : l'enregistrement automatique des mots de passe est désactivé par défaut dans WebView2 (réglage `IsPasswordAutosaveEnabled`), non vérifié dans Pulse installé.
 - Le faux backend ne simule pas l'échec d'écriture (bandeau « Vos dernières modifications ne sont pas enregistrées » jamais affiché en capture).
+
+## Export PDF (lot 23) — décision technique
+
+Cahier 3.7.3 : bilan de période pour la déclaration fiscale. Il suit les règles de l'export CSV (`export.rs`) : montants exacts en `Decimal`, dépôts/retraits jamais dans les performances, écriture par le chemin choisi dans la boîte de dialogue native, aucun réseau. **Décision : génération du PDF en Rust, dans `pulse-core`, avec trois petites dépendances en Rust pur.**
+
+| Critère | A. Générer le PDF en Rust (retenu) | B. Imprimer depuis l'interface (`window.print()` → « Enregistrer en PDF ») |
+|---|---|---|
+| Dépendances | `pdf-writer` (MIT/Apache-2.0, écriture d'objets PDF, sans dépendance lourde), `ttf-parser` (MIT/Apache-2.0, mesure des largeurs de glyphes), `miniz_oxide` (MIT/Zlib/Apache-2.0, compression des flux). Aucune n'appelle de code C, aucun outil de compilation exotique : elle se construit sur `windows-latest` comme le reste. | Aucune nouvelle dépendance Rust. Mais dépend du composant WebView2 de Windows et de sa boîte d'impression, que **je ne peux pas tester ici** (Linux). |
+| Logique métier | Dans `pulse-core`, testable sans interface : on relit le PDF produit et on vérifie les chiffres. | Dans React : mise en page d'impression en CSS, pagination et répétition d'en-tête laissées au navigateur, non vérifiables automatiquement. |
+| Accents, « − », espaces insécables | Police **Inter embarquée** (la même que l'interface), sous-ensemble en Regular et Bold (2 × 18 ko) ; « − » (U+2212), « é », espace insécable, « € » présents ; les caractères hors sous-ensemble sont remplacés par « ? » (limite connue). | Police de l'interface (déjà embarquée) mais rendu par le moteur d'impression du système. |
+| Fichier écrit | Par Rust au chemin choisi, avec contrôle « fichier existant » (aucun écrasement silencieux). | Le navigateur choisit lui-même l'emplacement : incompatible avec « comme le CSV », et le titre / nom de fichier / en-têtes de page ajoutés par le navigateur ne sont pas maîtrisés. |
+| `build-windows.yml` | **Aucun changement** : `cargo test -p pulse-core` (déjà lancé) exécute les tests du PDF sur Windows. | Aucun changement, mais rien ne prouve le résultat. |
+| Poids | Environ +150 ko dans le binaire ; +3 crates (et `lopdf`, **dev-dépendance seulement**, pour relire le PDF dans les tests). | Nul. |
+| Coût de développement | Plus élevé : disposition, mesure du texte, sauts de page, tableau à répéter à faire soi-même. | Plus faible en apparence, mais le contrôle qualité (pages coupées, en-têtes) serait manuel. |
+
+Justification : A ne dépend ni d'un navigateur ni d'un composant externe, est entièrement testable ici, et donne un fichier identique sous Linux et Windows. Le prix est un moteur de mise en page maison volontairement simple (une colonne, tableaux à colonnes fixes, retour à la ligne des cellules trop longues).
+
+Limites assumées : pas de crénage ni de mise en forme complexe de la police (écriture latine seulement) ; les noms d'actifs ou de compte en alphabet non latin s'affichent avec des « ? » ; pas de PDF/A ; polices `Inter-Regular.ttf` / `Inter-Bold.ttf` dans `crates/pulse-core/assets/fonts/` (voir le `README.md` du dossier : licence OFL, fabrication).
 
