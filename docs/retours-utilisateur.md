@@ -48,3 +48,8 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - Les liens « Voir les trades » des erreurs listent les trades de toutes les périodes (la période du rapport n'est pas transmise) : le nombre peut dépasser celui de la carte.
 - Le trade de démonstration marqué « Trade de revanche » (étiquette) n'est pas compté en revanche par le moteur : celui-ci détecte sur les horaires et la taille, pas sur l'étiquette (choix du lot 8).
 - Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2, ni avec la vraie base SQLite (la migration v7 est testée en Rust sur une base en mémoire).
+
+## Lot 8 ter (affichage des compléments) — points à vérifier
+- « Moyenne après 2 pertes », « Taille après une perte », simulation du plan et facteurs externes s'affichent sur la page Comportement. La simulation est étiquetée « Simulation » : elle retire des trades passés, elle ne rejoue pas les sorties.
+- Les facteurs externes sont sur la page Comportement (pas dans l'onglet Journal) : à confirmer que cet emplacement vous convient.
+- Rendu vérifié en Chromium headless (1440×900, 1920×1080) avec des données de démonstration du faux backend uniquement ; **pas** sur un vrai Windows / WebView2, ni avec la vraie base SQLite.

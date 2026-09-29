@@ -7,6 +7,7 @@ import { MistakesCard } from '../components/behavior/MistakesCard'
 import { RulesCard } from '../components/behavior/RulesCard'
 import { FirstTradeCard, PlanCard } from '../components/behavior/PlanCard'
 import { HeatmapCard, LongShortCard, RDistributionCard, RiskCard } from '../components/behavior/StatsCards'
+import { FactorsCard } from '../components/behavior/FactorsCard'
 import { StreaksCard } from '../components/behavior/StreaksCard'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -17,7 +18,7 @@ import { buildAlerts, type BehaviorAlert } from '../lib/behaviorAlerts'
 import { formatSignedMoney } from '../lib/format'
 import { localTzOffsetMin, periodRange, usePeriod } from '../lib/period'
 import type { Heatmap, LongShort, RDistribution, RiskReport } from '../types/stats'
-import type { DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, RuleAdherenceReport, StreakReport } from '../types/behavior'
+import type { DisciplineReport, EmotionReport, FirstTradeReport, AfterLossesReport, ExternalFactorReport, MistakeReport, PatternReport, PlanSimulation, SizeChangeReport, PlanReport, RuleAdherenceReport, StreakReport } from '../types/behavior'
 
 /** Tout ce que la page affiche, chargé d'un bloc : une seule requête par rapport, aucun calcul ici. */
 interface Data {
@@ -33,6 +34,10 @@ interface Data {
   heatmap: Heatmap
   longShort: LongShort
   risk: RiskReport
+  afterLosses: AfterLossesReport
+  sizeChange: SizeChangeReport
+  simulation: PlanSimulation
+  factors: ExternalFactorReport
   alerts: BehaviorAlert[]
 }
 
@@ -68,10 +73,14 @@ export function BehaviorPage() {
       api.getHeatmap(query),
       api.getLongShort(query),
       api.getRisk(query),
+      api.getAfterLosses(query),
+      api.getSizeChange(query),
+      api.getPlanSimulation(query),
+      api.getExternalFactors(query),
     ])
-      .then(([discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, ruleAdherence, rDistribution, heatmap, longShort, risk]) => {
+      .then(([discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, ruleAdherence, rDistribution, heatmap, longShort, risk, afterLosses, sizeChange, simulation, factors]) => {
         if (cancelled) return
-        setData({ discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, ruleAdherence, rDistribution, heatmap, longShort, risk, alerts: buildAlerts(patterns, now, tzOffsetMin) })
+        setData({ discipline, emotions, streaks, plan, firstTrade, mistakes, patterns, ruleAdherence, rDistribution, heatmap, longShort, risk, afterLosses, sizeChange, simulation, factors, alerts: buildAlerts(patterns, now, tzOffsetMin) })
         setError(null)
       })
       .catch((e) => !cancelled && setError(String(e)))
@@ -126,14 +135,15 @@ export function BehaviorPage() {
       <div className="grid grid-cols-12 gap-6">
         <DisciplineCard report={data.discipline} />
         <EmotionsCard report={data.emotions} currency={currency} />
-        <StreaksCard report={data.streaks} currency={currency} />
-        <PlanCard report={data.plan} currency={currency} />
+        <StreaksCard report={data.streaks} currency={currency} afterLosses={data.afterLosses} sizeChange={data.sizeChange} />
+        <PlanCard report={data.plan} currency={currency} simulation={data.simulation} />
         <FirstTradeCard report={data.firstTrade} currency={currency} />
         <MistakesCard report={data.mistakes} currency={currency} />
         <RulesCard report={data.ruleAdherence} />
         <HesitationCard report={data.patterns} />
         <RDistributionCard report={data.rDistribution} />
         <RiskCard report={data.risk} currency={currency} />
+        <FactorsCard report={data.factors} currency={currency} />
         <HeatmapCard report={data.heatmap} currency={currency} />
         <LongShortCard report={data.longShort} currency={currency} />
       </div>

@@ -1,7 +1,7 @@
 import type { Decimal } from '../types/money'
 import type { RBin } from '../types/stats'
 import { signOf } from './decimal'
-import { formatDecimal, formatMoney, formatNumber, formatSignedMoney } from './format'
+import { formatDecimal, formatMoney, formatNumber, formatSignedMoney, formatSignedMoneyRounded, formatSignedNumber, formatSignedRatioPercent } from './format'
 
 /** Formats de la page Comportement. Aucun calcul métier : uniquement de l'affichage (« — » quand la valeur manque). */
 
@@ -57,3 +57,28 @@ export function formatMonthKey(month: string): string {
 
 /** Nombre minimal de coches pour qu'une règle ait une tendance (`MIN_CHECKS_FOR_TREND` de pulse-core), pour le message d'aide. */
 export const MIN_CHECKS_FOR_TREND = 4
+
+// --- Lot 8 bis : affichage des compléments (aucun calcul, uniquement du format ; « — » quand la valeur manque) ---
+
+/** Variation de taille (0,23 → « +23 % ») ; « — » si non établie. */
+export function formatSizeChange(change: number | null | undefined): string {
+  return change === null || change === undefined ? '—' : formatSignedRatioPercent(change, 0)
+}
+
+/** Écart de score de discipline, en points sur 100 : « −14 pts » (« pt » au singulier) ; « — » s'il manque. */
+export function formatScoreGap(gap: number | null | undefined): string {
+  if (gap === null || gap === undefined) return '—'
+  const rounded = Math.round(gap)
+  const unit = Math.abs(rounded) >= 2 ? 'pts' : 'pt'
+  return `${formatSignedNumber(rounded, 0)} ${unit}`
+}
+
+/** Écart d'expectancy en R : « −0,42 R » ; « — » s'il manque. */
+export function formatRGap(gap: number | null | undefined): string {
+  return gap === null || gap === undefined ? '—' : `${formatSignedNumber(gap, 2)} R`
+}
+
+/** Différence d'argent arrondie, signe explicite ; « — » si absente. */
+export function formatMoneyGap(gap: Decimal | null | undefined, currency: string): string {
+  return gap === null || gap === undefined ? '—' : formatSignedMoneyRounded(gap, currency)
+}
