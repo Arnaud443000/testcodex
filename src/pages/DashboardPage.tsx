@@ -143,6 +143,7 @@ export function DashboardPage() {
   )
 
   const show = (next: DashboardLayout) => {
+    setTransferError(null)
     setLayout(next)
     sessionKey = next.key
   }
@@ -407,7 +408,11 @@ export function DashboardPage() {
       <>
         {scopeBar}
         <section className="glass-card">
-          <EmptyState title={t.dashboard.mixedCurrenciesTitle}>{t.dashboard.mixedCurrenciesText}</EmptyState>
+          {resolved && resolved.scope.effective !== 'follow' ? (
+            <EmptyState title={b.scope.mixedEmptyTitle}>{b.scope.mixedEmptyText}</EmptyState>
+          ) : (
+            <EmptyState title={t.dashboard.mixedCurrenciesTitle}>{t.dashboard.mixedCurrenciesText}</EmptyState>
+          )}
         </section>
         {dialogs()}
       </>,

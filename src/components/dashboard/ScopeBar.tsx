@@ -1,7 +1,6 @@
 import { useT } from '../../i18n'
 import type { Account } from '../../types/account'
 import type { ResolvedDashboard } from '../../types/dashboardLayout'
-import { Icon } from '../Icon'
 
 /**
  * Indique clairement ce que lit le dashboard affiché (3.8.9). Tout vient de `resolve_dashboard_scope` : ce
@@ -33,7 +32,6 @@ export function ScopeBar({
     <div className="flex flex-col gap-2" data-testid="dashboard-scope">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
         <span className="badge" title={t.title}>
-          <Icon name="wallet" size={14} />
           <span className="text-tx3">{t.label} :</span> {label}
           {archived && <span className="ml-1 text-tx3">({t.archivedTag})</span>}
         </span>
@@ -48,7 +46,6 @@ export function ScopeBar({
       {scope.notices.map((n) => (
         <div key={n} className="nt nt-warn" role="status">{t.notice[n]}</div>
       ))}
-      {scope.mixedCurrency && scope.effective !== 'follow' && <div className="nt nt-warn" role="status">{t.mixedCurrencies}</div>}
     </div>
   )
 }
