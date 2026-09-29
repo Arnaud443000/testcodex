@@ -104,6 +104,8 @@ const PATHS = {
   ),
   reset: <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5" />,
   star: <path d="M12 4l2.5 5.2 5.6.8-4.1 4 1 5.6L12 17l-5 2.6 1-5.6-4.1-4 5.6-.8z" />,
+  // Lot 21 : coach IA (bulle de discussion).
+  coach: <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 9.5h8M8 12.5h5" />,
 } as const
 
 export type IconName = keyof typeof PATHS

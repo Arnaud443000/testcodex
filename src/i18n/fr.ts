@@ -20,6 +20,7 @@ export const fr = {
     goals: 'Objectifs',
     replay: 'Replay',
     settings: 'Paramètres',
+    coach: 'Coach IA',
   },
   sidebar: {
     user: 'Trader',
@@ -1537,8 +1538,11 @@ export const fr = {
   insights: frInsights,
   // Lot 20 : IA optionnelle
   ai: frAi,
+  // Lot 21 : coach IA
+  coach: frCoach,
 }
 
 export type Messages = typeof fr
 
 import { frInsights } from './fr.insights'
+import { frCoach } from './fr.coach'
