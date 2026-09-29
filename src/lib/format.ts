@@ -66,11 +66,16 @@ function currencySymbol(currency: string): string {
 }
 
 /**
- * Montant exact (chaîne de pulse-core) avec devise : « 341,60 $ ». Les zéros de fin
- * superflus sont retirés ("341.600000") sans jamais arrondir.
+ * Montant exact (chaîne de pulse-core) avec devise : « 341,60 $ ».
+ * Lot 26 : **arrondi au centime à l'affichage seulement** (moitié éloignée de zéro, sur la chaîne, jamais via un
+ * flottant) : un prix à 4 décimales multiplié par une taille donne des montants à 5 décimales, qui s'affichaient
+ * « +213,453 $ » à côté de « −17,80 $ ». Exception : un montant non nul inférieur au centime (frais minuscules)
+ * garde sa précision plutôt que de s'afficher « 0,00 ». La valeur exacte reste celle de pulse-core.
  */
 export function formatMoney(value: Decimal, currency: string): string {
-  return `${formatDecimal(trimDecimal(value, 2), 2)}${NBSP}${currencySymbol(currency)}`
+  const cents = roundDecimal(value, 2)
+  const shown = /^-?0(\.0+)?$/.test(cents) && /[1-9]/.test(value) ? trimDecimal(value, 2) : cents
+  return `${formatDecimal(shown, 2)}${NBSP}${currencySymbol(currency)}`
 }
 
 /** P&L exact signé : « +341,60 $ » / « −80,00 $ » (signe explicite, vrai signe moins, jamais « −0 »). */
@@ -146,10 +151,10 @@ export function formatSignedRatioPercent(fraction: number, digits = 1): string {
   return formatPercent(fraction * 100, digits)
 }
 
-/** Montant signé sans devise pour les petites cases du calendrier : « +1 038,5 » / « −602 ». */
+/** Montant signé sans devise pour les petites cases du calendrier : « +1 038,5 » / « −602 » (arrondi au centime, lot 26). */
 export function formatSignedAmount(value: Decimal): string {
   const s = signOf(value)
-  const abs = formatDecimal(trimDecimal(s < 0 ? value.slice(1) : value, 0), 0)
+  const abs = formatDecimal(trimDecimal(roundDecimal(s < 0 ? value.slice(1) : value, 2), 0), 0)
   return s > 0 ? `+${abs}` : s < 0 ? `${MINUS}${abs}` : abs
 }
 

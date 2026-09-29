@@ -159,7 +159,7 @@ export function StarRating({ value, onChange, label }: { value: number | null; o
             aria-label={t.form.star(n)}
             aria-pressed={value === n}
             onClick={() => onChange(value === n ? null : n)}
-            className="px-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
+            className="min-w-[24px] px-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
           >
             {star}
           </button>
@@ -188,16 +188,19 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome | 'open' }) {
   return <span className={`badge ${cls}`}>{t.common.outcomes[outcome]}</span>
 }
 
-/** Bandeau (charte 5.6). */
-export function Notice({ level, children, actions }: { level: 'ok' | 'warn' | 'bad'; children: ReactNode; actions?: ReactNode }) {
+/**
+ * Bandeau (charte 5.6). `inline` : le texte et les boutons tiennent sur la même ligne quand la place le permet
+ * (bandeaux de la coque, affichés au-dessus de chaque page : ils ne doivent pas manger la hauteur d'une fenêtre 720 px).
+ */
+export function Notice({ level, children, actions, inline = false }: { level: 'ok' | 'warn' | 'bad'; children: ReactNode; actions?: ReactNode; inline?: boolean }) {
   return (
     <div role={level === 'bad' ? 'alert' : 'status'} className={`nt nt-${level}`}>
       <span className="mt-px shrink-0">
         <Icon name={level === 'ok' ? 'check' : 'alert'} size={16} />
       </span>
-      <div className="min-w-0 flex-1">
-        <div>{children}</div>
-        {actions && <div className="mt-2.5 flex flex-wrap gap-2">{actions}</div>}
+      <div className={`min-w-0 flex-1 ${inline ? 'flex flex-wrap items-center gap-x-4 gap-y-2' : ''}`}>
+        <div className={inline ? 'min-w-0 flex-1 basis-[320px]' : ''}>{children}</div>
+        {actions && <div className={`flex flex-wrap gap-2 ${inline ? '' : 'mt-2.5'}`}>{actions}</div>}
       </div>
     </div>
   )

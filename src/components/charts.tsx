@@ -94,13 +94,13 @@ export function Sparkline({ values, tone, id }: { values: (number | null)[]; ton
   const color = tone === 'gain' ? '#5FCB9E' : tone === 'loss' ? '#F0776B' : '#8B7FE8'
   const w = 240
   const h = 34
-  if (pts.length === 0) return <div className="h-[34px]" />
+  if (pts.length === 0) return <div className="h-full" />
   const min = Math.min(...pts)
   const span = Math.max(...pts) - min || 1
   const coords = (pts.length === 1 ? [pts[0], pts[0]] : pts).map((v, i, a) => `${((i / (a.length - 1)) * w).toFixed(1)},${(3 + (1 - (v - min) / span) * (h - 6)).toFixed(1)}`)
   const line = `M${coords.join(' L')}`
   return (
-    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true" className="block">
+    <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true" className="block h-full w-full">
       <defs>
         <linearGradient id={`sp-${id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={color} stopOpacity=".25" />

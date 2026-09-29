@@ -196,7 +196,7 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
                 <li key={e.day} className="hairline-row">
                   <button
                     type="button"
-                    className={`text-left font-medium first-letter:uppercase hover:underline ${e.day === day ? 'text-tx-accent' : ''}`}
+                    className={`min-h-[28px] text-left font-medium first-letter:uppercase hover:underline ${e.day === day ? 'text-tx-accent' : ''}`}
                     aria-current={e.day === day ? 'date' : undefined}
                     aria-label={d.historyOpen(formatDayTitle(e.day))}
                     onClick={() => setDay(e.day)}

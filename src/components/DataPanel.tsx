@@ -100,7 +100,7 @@ export function DataPanel() {
 
   return (
     <section className="glass-card p-6">
-      <h3 className="mb-1 text-base font-semibold">{d.title}</h3>
+      <h2 className="mb-1 text-base font-semibold">{d.title}</h2>
       <p className="mb-5 text-sm text-tx3">{d.intro}</p>
 
       <div className="flex flex-col gap-5">

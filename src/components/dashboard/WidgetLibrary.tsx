@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../Icon'
 import { WidgetHost } from './WidgetHost'
 import { useT } from '../../i18n'
@@ -43,18 +43,29 @@ export function WidgetLibrary({
   const categories = useMemo(() => [...new Set(catalog.map((d) => d.category))], [catalog])
   const [category, setCategory] = useState<string>(categories[0] ?? 'all')
   const shown = category === 'all' ? catalog : catalog.filter((d) => d.category === category)
+  // Panneau non modal (le tableau reste utilisable à côté), mais le focus y entre à l'ouverture et revient à la fermeture.
+  const panel = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    panel.current?.focus()
+    return () => previous?.focus?.()
+  }, [])
   return (
     <aside
-      className="glass-card fixed bg-bg bottom-4 right-4 top-[88px] z-40 flex w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
-      aria-label={t.library.title}
+      ref={panel}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="widget-library-title"
+      tabIndex={-1}
+      className="glass-card fixed bg-bg bottom-4 right-4 top-[88px] z-40 flex w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden outline-none"
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div className="flex items-start justify-between gap-3 border-b p-5" style={{ borderColor: 'var(--hairline)' }}>
         <div>
-          <h2 className="text-base font-semibold">{t.library.title}</h2>
+          <h2 id="widget-library-title" className="text-base font-semibold">{t.library.title}</h2>
           <p className="mt-1 text-xs leading-relaxed text-tx3">{t.library.intro}</p>
         </div>
-        <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-tx2 hover:bg-white/10 hover:text-tx" aria-label={t.library.close} title={t.library.close} onClick={onClose}>
+        <button type="button" className="btn-icon !h-8 !w-8 !border-transparent !bg-transparent" aria-label={t.library.close} title={t.library.close} onClick={onClose}>
           <Icon name="cross" size={16} />
         </button>
       </div>

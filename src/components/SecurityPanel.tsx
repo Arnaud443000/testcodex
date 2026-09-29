@@ -150,10 +150,10 @@ export function SecurityPanel() {
     <section id="securite" className="glass-card scroll-mt-6 p-6" aria-labelledby="security-title" data-testid="security-panel">
       <div className="mb-4 flex items-start justify-between gap-6">
         <div>
-          <h3 id="security-title" className="mb-1 flex items-center gap-2 text-base font-semibold">
+          <h2 id="security-title" className="mb-1 flex items-center gap-2 text-base font-semibold">
             <Icon name="lock" size={18} />
             {s.title}
-          </h3>
+          </h2>
           <p className="max-w-[78ch] text-sm text-tx3">{s.intro}</p>
         </div>
         <span className={`badge shrink-0 ${status.enabled ? 'badge-gain' : 'badge-neutral'}`}>{status.enabled ? s.on : s.off}</span>

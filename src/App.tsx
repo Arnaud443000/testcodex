@@ -28,6 +28,7 @@ import { NewsAutoRefresh } from './lib/newsAutoRefresh'
 import { LockProvider, useLock } from './lib/lock'
 import { LockScreen, LockSplash } from './components/LockScreen'
 import { LockWarningBanner, PersistBanner } from './components/PersistBanner'
+import { EffectsProvider } from './lib/effects'
 import type { ReactNode } from 'react'
 
 /**
@@ -44,6 +45,7 @@ function LockGate({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
+    <EffectsProvider>
     <LockProvider>
     <LockGate>
     <AccountsProvider>
@@ -93,5 +95,6 @@ export default function App() {
     </AccountsProvider>
     </LockGate>
     </LockProvider>
+    </EffectsProvider>
   )
 }

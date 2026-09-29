@@ -16,7 +16,7 @@ export const CARD_TOKENS = {
   violet: '#8B7FE8',
   tx: '#F5F2EC',
   tx2: '#9AA0C0',
-  tx3: '#6B7290',
+  tx3: '#8088AA',
   txAccent: '#A79DF2',
   gain: '#5FCB9E',
   gainBg: '#16302A',

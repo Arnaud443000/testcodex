@@ -135,11 +135,12 @@ export function EditableGrid({
                 isActive ? 'outline-violet shadow-btn' : 'outline-white/20'
               }`}
             >
-              <div className="h-full" inert>
+              {/* Le haut est réservé à la barre de poignée : elle ne doit jamais recouvrir le titre du widget (audit lot 26). */}
+              <div className="h-full pt-[42px]" inert>
                 <WidgetHost instance={it} env={env} />
               </div>
               <div
-                className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg/90 px-3 py-1.5 active:cursor-grabbing"
+                className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg px-3 py-1.5 active:cursor-grabbing"
                 style={{ borderColor: 'var(--hairline)', touchAction: 'none' }}
                 onPointerDown={(e) => {
                   if ((e.target as HTMLElement).closest('button')) return

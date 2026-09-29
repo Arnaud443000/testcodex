@@ -63,7 +63,6 @@ export function EconomicCalendarPage() {
   const simulation = data?.events.some((e) => e.source === 'simulation') ?? false
   const header = (
     <>
-      <CalendarTabs />
       <PageHeader
         title={n.page.title}
         subtitle={n.page.subtitle}
@@ -79,6 +78,7 @@ export function EconomicCalendarPage() {
           </div>
         }
       />
+      <CalendarTabs />
     </>
   )
 

@@ -195,7 +195,7 @@ function Kpi({
   const better = lowerIsBetter ? -sign : sign
   const tone: Tone = delta === null || sign === 0 ? 'accent' : better > 0 ? 'gain' : 'loss'
   return (
-    <div className="glass-card relative flex h-full flex-col overflow-hidden pt-[18px]">
+    <div className="glass-card relative flex h-full flex-col overflow-hidden pt-4">
       <div className="px-[22px]">
         <div className="flex items-center gap-1.5 text-[13px] font-medium text-tx2">
           {label}
@@ -218,7 +218,7 @@ function Kpi({
           )}
         </div>
       </div>
-      <div className="mt-auto pt-1">
+      <div className="mt-auto min-h-[12px] max-h-[38px] flex-1 pt-1">
         <Sparkline values={spark} tone={tone} id={id} />
       </div>
     </div>

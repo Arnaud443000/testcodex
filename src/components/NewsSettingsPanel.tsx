@@ -64,7 +64,7 @@ export function NewsSettingsPanel() {
   }, [s, n])
 
   if (loadError) return <section id="news" className="glass-card p-6"><div className="nt nt-bad" role="alert">{loadError}</div></section>
-  if (!status || !form) return <section id="news" className="glass-card p-6" aria-busy="true"><h3 className="text-base font-semibold">{s.title}</h3></section>
+  if (!status || !form) return <section id="news" className="glass-card p-6" aria-busy="true"><h2 className="text-base font-semibold">{s.title}</h2></section>
 
   const reset = () => {
     setError(null)
@@ -127,7 +127,7 @@ export function NewsSettingsPanel() {
     <section id="news" className="glass-card flex flex-col gap-5 p-6" aria-labelledby="news-title">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 id="news-title" className="text-base font-semibold">{s.title}</h3>
+          <h2 id="news-title" className="text-base font-semibold">{s.title}</h2>
           <p className="mt-1 max-w-[80ch] text-[13px] leading-relaxed text-tx2">{s.intro}</p>
         </div>
         <div className="flex shrink-0 items-center gap-3">

@@ -107,7 +107,7 @@ export function DisciplinePage() {
           <p className="mt-2 text-center text-xs text-tx3">{b.basedOn(report.scoredTradeCount)}</p>
         )}
         <Note>
-          {d.settingsNote} <Link to="/settings" className="text-tx-accent underline underline-offset-2">{d.settingsLink}</Link>
+          {d.settingsNote} <Link to="/settings" className="btn-link">{d.settingsLink}</Link>
         </Note>
       </Card>
 

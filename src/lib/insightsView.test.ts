@@ -34,8 +34,8 @@ describe('phrases des insights : valeurs formatées par l’interface', () => {
     expect(text(r)).toContain('« Pas de trade après 16h » est moins souvent respectée : −67 pts')
     const f = make({ kind: 'feesUp', messageKey: 'feesUp', olderAvgFees: '2', recentAvgFees: '2.5', change: 0.25, recent: half(10) })
     expect(text(f)).toBe('Vos frais moyens par trade sont passés de 2,00 $ à 2,50 $ (+25 %) sur vos 10 trades les plus récents.')
-    // Devise de l'insight, décimaux exacts jamais arrondis par un flottant.
-    expect(text(make({ ...f, currency: 'EUR', olderAvgFees: '0.1', recentAvgFees: '12345.678' }))).toContain('de 0,10 € à 12 345,678 €')
+    // Devise de l'insight ; depuis le lot 26 l'affichage est arrondi au centime, sur la chaîne (12345.678 → 12 345,68), jamais par un flottant.
+    expect(text(make({ ...f, currency: 'EUR', olderAvgFees: '0.1', recentAvgFees: '12345.678' }))).toContain('de 0,10 € à 12 345,68 €')
   })
 
   it('taille après une perte, revanche (signe du résultat), surtrading', () => {

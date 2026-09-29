@@ -6,6 +6,8 @@ export default {
   safelist: [{ pattern: /^cal-(g|l)[123]$/ }],
   theme: {
     extend: {
+      // Fenêtre basse (charte 4.4 : minimum 1280×720) : la barre latérale se compacte.
+      screens: { short: { raw: '(max-height: 820px)' } },
       colors: {
         bg: '#0B0E27',
         'bg-deep': '#080B20',
@@ -14,7 +16,7 @@ export default {
         cream: '#F0EDE4',
         tx: '#F5F2EC',
         tx2: '#9AA0C0',
-        tx3: '#6B7290',
+        tx3: '#8088AA',
         'tx-accent': '#A79DF2',
         gain: '#5FCB9E',
         loss: '#F0776B',

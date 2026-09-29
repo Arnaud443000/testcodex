@@ -73,7 +73,6 @@ export function CalendarPage() {
   const title = formatMonthTitle(ym.year, ym.month)
   const header = (
     <>
-    <CalendarTabs />
     <PageHeader
       title={t.pages.calendar.title}
       subtitle={t.pages.calendar.subtitle}
@@ -90,6 +89,7 @@ export function CalendarPage() {
         </div>
       }
     />
+    <CalendarTabs />
     </>
   )
 

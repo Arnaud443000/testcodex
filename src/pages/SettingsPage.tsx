@@ -7,11 +7,12 @@ import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
 import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
 import { DataPanel } from '../components/DataPanel'
+import { DisplayPanel } from '../components/DisplayPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
 import { SecurityPanel } from '../components/SecurityPanel'
-import { useT } from '../i18n'
+import { useT, type Messages } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
 import { parseDecimalInput } from '../lib/decimal'
@@ -140,6 +141,29 @@ function ChecklistSection() {
   )
 }
 
+/** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
+const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
+  ['accounts', 'comptes'], ['rules', 'regles'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
+  ['reminder', 'rappel'], ['display', 'affichage'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
+]
+function SectionShortcuts() {
+  const t = useT()
+  return (
+    <nav aria-label={t.settings.sectionsLabel} className="flex flex-wrap gap-2">
+      {SECTION_IDS.map(([key, id]) => (
+        <button
+          key={id}
+          type="button"
+          className="chip"
+          onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
+          {t.settings.sections[key]}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
 export function SettingsPage() {
   const { accounts, allAccounts } = useAccounts()
   const archived = allAccounts.filter((a) => a.archived)
@@ -159,9 +183,10 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
+      <SectionShortcuts />
 
-      <section className="glass-card p-6">
-        <h3 className="mb-4 text-base font-semibold">{t.settings.accountsTitle}</h3>
+      <section id="comptes" className="glass-card p-6">
+        <h2 className="mb-4 text-base font-semibold">{t.settings.accountsTitle}</h2>
         {accounts.length > 0 && (
           <ul className="mb-5 divide-y" style={{ borderColor: 'var(--hairline)' }}>
             {accounts.map((a) => (
@@ -175,7 +200,7 @@ export function SettingsPage() {
 
       {archived.length > 0 && (
         <section className="glass-card p-6">
-          <h3 className="mb-1 text-base font-semibold">{t.accountAdmin.archivedTitle}</h3>
+          <h2 className="mb-1 text-base font-semibold">{t.accountAdmin.archivedTitle}</h2>
           <p className="mb-3 text-[13px] text-tx3">{t.accountAdmin.archivedIntro}</p>
           <ul className="divide-y" style={{ borderColor: 'var(--hairline)' }}>
             {archived.map((a) => (
@@ -185,19 +210,22 @@ export function SettingsPage() {
         </section>
       )}
 
-      <RulesSection />
-      <ChecklistSection />
-      <BehaviorSettingsPanel />
-      <AlertSettingsPanel />
-      <CashFlowsPanel />
-      <ReminderPanel />
-      <DataPanel />
+      <div id="regles" className="scroll-mt-4 flex flex-col gap-5">
+        <RulesSection />
+        <ChecklistSection />
+      </div>
+      <div id="discipline" className="scroll-mt-4"><BehaviorSettingsPanel /></div>
+      <div className="scroll-mt-4"><AlertSettingsPanel /></div>
+      <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>
+      <div id="rappel" className="scroll-mt-4"><ReminderPanel /></div>
+      <DisplayPanel />
+      <div id="donnees" className="scroll-mt-4"><DataPanel /></div>
       <SecurityPanel />
-      <AiSettingsPanel />
-      <NewsSettingsPanel />
+      <div className="scroll-mt-4"><AiSettingsPanel /></div>
+      <div className="scroll-mt-4"><NewsSettingsPanel /></div>
 
-      <section className="glass-card p-6">
-        <h3 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h3>
+      <section id="apropos" className="glass-card p-6">
+        <h2 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h2>
         <dl className="grid grid-cols-[160px_1fr] gap-y-2 text-sm">
           <dt className="text-tx3">{t.settings.version}</dt>
           <dd>{info?.version ?? '…'}</dd>

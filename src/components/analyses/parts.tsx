@@ -33,7 +33,7 @@ export function SortTh<K extends string>({
         type="button"
         title={hint ?? t.sortBy(label)}
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${on ? 'text-tx' : ''}`}
+        className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${on ? 'text-tx' : ''}`}
       >
         {label}
         {on && <Icon name={dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}

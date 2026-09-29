@@ -53,7 +53,7 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                     {' · '}
                     <Link
                       to={mistakeLink({ source: m.source === 'rule' ? 'rule' : 'tag', id: m.id })}
-                      className="text-tx-accent underline underline-offset-2"
+                      className="btn-link"
                       aria-label={t.seeTradesAria(m.source === 'rule' ? t.ruleBroken(m.label) : m.label)}
                     >
                       {t.seeTrades}

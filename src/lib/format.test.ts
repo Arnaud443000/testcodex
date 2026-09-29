@@ -39,6 +39,21 @@ describe('formatDecimal', () => {
   })
 })
 
+describe('formatMoney : arrondi au centime à l\'affichage (lot 26)', () => {
+  it('arrondit sur la chaîne, moitié éloignée de zéro, sans flottant', () => {
+    expect(norm(formatMoney('213.45300', 'USD'))).toBe('213,45 $')
+    expect(norm(formatMoney('11.9345', 'USD'))).toBe('11,93 $')
+    expect(norm(formatMoney('11.935', 'USD'))).toBe('11,94 $')
+    expect(norm(formatMoney('-17.805', 'USD'))).toBe('−17,81 $')
+    expect(norm(formatSignedMoney('62213.453', 'USD'))).toBe('+62 213,45 $')
+    expect(norm(formatMoney('60000', 'USD'))).toBe('60 000,00 $')
+  })
+  it('un montant non nul plus petit que le centime garde sa précision (jamais « 0,00 »)', () => {
+    expect(norm(formatMoney('0.0042', 'USD'))).toBe('0,0042 $')
+    expect(norm(formatMoney('-0.004', 'USD'))).toBe('−0,004 $')
+  })
+})
+
 describe('formatSignedMoney', () => {
   it('signe un montant exact et retire les zéros de fin de pulse-core', () => {
     expect(norm(formatSignedMoney('341.600000', 'USD'))).toBe('+341,60 $')

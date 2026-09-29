@@ -50,16 +50,16 @@ function Ladder({ levels }: { levels: Level[] }) {
     <div className="flex flex-col gap-2">
       <ol className="flex flex-col">
         {levels.map((l) => (
-          <li key={l.kind} className="hairline-row !gap-3" aria-label={`${r.levels[l.kind]} ${l.price}`}>
-            <span className={`w-[150px] shrink-0 font-medium ${tone(l)}`}>{r.levels[l.kind]}</span>
-            <span className="w-[100px] shrink-0 tabular-nums">{l.price}</span>
-            <span className="relative h-1.5 flex-1 rounded-full" style={{ background: 'rgba(255,255,255,.1)' }} aria-hidden="true">
+          <li key={l.kind} className="grid grid-cols-[minmax(90px,1.4fr)_auto_minmax(36px,1fr)_auto] items-center gap-3 border-b py-2.5 text-sm last:border-b-0" style={{ borderColor: 'var(--hairline)' }} aria-label={`${r.levels[l.kind]} ${l.price}`}>
+            <span className={`min-w-0 font-medium ${tone(l)}`}>{r.levels[l.kind]}</span>
+            <span className="tabular-nums">{l.price}</span>
+            <span className="relative h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,.1)' }} aria-hidden="true">
               <span
                 className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{ left: `${((Number(l.price) - min) / span) * 100}%`, background: l.kind === 'entry' ? 'var(--grad)' : 'rgba(255,255,255,.7)' }}
               />
             </span>
-            <span className="w-[70px] shrink-0 text-right font-semibold tabular-nums">{formatR(l.r)}</span>
+            <span className="min-w-[52px] text-right font-semibold tabular-nums">{formatR(l.r)}</span>
           </li>
         ))}
       </ol>

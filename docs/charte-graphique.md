@@ -47,7 +47,7 @@ Les autres styles explorés (B minimal clair, C terminal, D glass, E carnet de b
 |---|---|---|
 | `--tx` | Texte principal | `#F5F2EC` |
 | `--tx2` | Texte atténué (libellés, sous-titres) | `#9AA0C0` |
-| `--tx3` | Texte très atténué (axes, légendes) | `#6B7290` |
+| `--tx3` | Texte très atténué (axes, légendes) | `#8088AA` (lot 26 : éclairci depuis `#6B7290`, qui ne tenait pas 4,5:1 sur une carte) |
 | `--tx-accent` | Texte d'accent / lien / élément actif | `#A79DF2` |
 
 ### 2.3 Sémantique

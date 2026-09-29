@@ -23,6 +23,8 @@ export const fr = {
     settings: 'Paramètres',
     coach: 'Coach IA',
     sizing: 'Calculateur',
+    groups: { capture: 'Saisir', analyse: 'Analyser', understand: 'Comprendre', tools: 'Outils' },
+    label: 'Navigation principale',
   },
   sidebar: {
     user: 'Trader',
@@ -34,7 +36,7 @@ export const fr = {
     allAccounts: 'Tous les comptes',
     period: 'Période',
     periods: { '1D': '1J', '1W': '1S', '1M': '1M', '3M': '3M', '1Y': '1A', ALL: 'Tout' } as Record<string, string>,
-    notifications: 'Notifications',
+    notifications: 'Alertes et notifications (historique)',
     newTrade: 'Nouveau trade',
   },
   dashboard: {
@@ -440,6 +442,34 @@ export const fr = {
   settings: {
     title: 'Paramètres',
     subtitle: 'Comptes, règles, checklist, dépôts, retraits et données',
+    sectionsLabel: 'Aller à une section',
+    sections: {
+      accounts: 'Comptes',
+      rules: 'Règles et checklist',
+      discipline: 'Discipline',
+      alerts: 'Alertes',
+      cashflows: 'Dépôts et retraits',
+      reminder: 'Rappel',
+      display: 'Affichage',
+      data: 'Données',
+      security: 'Sécurité',
+      ai: 'IA',
+      news: 'Actualités',
+      about: 'À propos',
+    },
+    display: {
+      title: 'Affichage',
+      intro:
+        'Pulse dessine des cartes en verre sur un fond lumineux. Sur un PC modeste, ou si vous êtes sensible aux effets visuels, vous pouvez les réduire : fond uni, cartes pleines, sans flou, sans halo ni ombre marquée, sans animation. Aucune information ne change, seule l’apparence.',
+      label: 'Réduire les effets',
+      options: { auto: 'Suivre le système', reduced: 'Réduits', full: 'Complets' },
+      state: {
+        reduced: 'Effets réduits actuellement.',
+        full: 'Effets complets actuellement.',
+      },
+      autoHint: 'Suivre le système : Pulse réduit les effets quand Windows demande moins d’animations ou de transparence.',
+      stored: 'Ce choix est gardé sur ce PC, dans l’application, et n’est envoyé nulle part.',
+    },
     accountsTitle: 'Comptes de trading',
     name: 'Nom',
     namePlaceholder: 'Compte principal',
