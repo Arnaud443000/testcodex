@@ -50,6 +50,19 @@ const PATHS = {
     </>
   ),
   chevron: <path d="M6 9l6 6 6-6" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  cross: <path d="M6 6l12 12M18 6L6 18" />,
+  alert: (
+    <>
+      <path d="M12 4l9 16H3z" />
+      <path d="M12 10v4M12 17h.01" />
+    </>
+  ),
+  upload: <path d="M12 16V5M7 10l5-5 5 5M5 19h14" />,
+  left: <path d="M15 6l-6 6 6 6" />,
+  right: <path d="M9 6l6 6-6 6" />,
+  sortUp: <path d="M7 14l5-5 5 5" />,
+  sortDown: <path d="M7 10l5 5 5-5" />,
 } as const
 
 export type IconName = keyof typeof PATHS

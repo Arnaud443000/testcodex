@@ -16,7 +16,7 @@ export function DashboardPage() {
         {loading ? null : hasAccount ? (
           <EmptyState
             title={t.dashboard.noTradesTitle}
-            action={<Link to="/trades" className="btn btn-primary">{t.dashboard.addFirstTrade}</Link>}
+            action={<Link to="/trades/new" className="btn btn-primary">{t.dashboard.addFirstTrade}</Link>}
           >
             {t.dashboard.noTradesText}
           </EmptyState>

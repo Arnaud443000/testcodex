@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDecimal, formatPercent, formatPnl } from './format'
+import { formatDecimal, formatDuration, formatMoney, formatPercent, formatPnl, formatR, formatSignedMoney } from './format'
 
 // Intl met une espace insécable fine (U+202F) entre les milliers et une insécable (U+00A0) avant $ et %.
 const norm = (s: string) => s.replace(/[  ]/g, ' ')
@@ -36,5 +36,43 @@ describe('formatDecimal', () => {
   it('utilise un vrai signe moins et n’affiche jamais un zéro négatif', () => {
     expect(norm(formatDecimal('-1500.5', 2))).toBe('−1 500,50')
     expect(formatDecimal('-0.00')).toBe('0,00')
+  })
+})
+
+describe('formatSignedMoney', () => {
+  it('signe un montant exact et retire les zéros de fin de pulse-core', () => {
+    expect(norm(formatSignedMoney('341.600000', 'USD'))).toBe('+341,60 $')
+    expect(norm(formatSignedMoney('-80', 'USD'))).toBe('−80,00 $')
+    expect(norm(formatSignedMoney('1234.5', 'EUR'))).toBe('+1 234,50 €')
+  })
+  it('n’affiche ni signe ni « −0 » pour zéro', () => {
+    expect(norm(formatSignedMoney('0.000', 'USD'))).toBe('0,00 $')
+    expect(norm(formatSignedMoney('-0.00', 'USD'))).toBe('0,00 $')
+  })
+  it('garde les décimales significatives sans arrondir', () => {
+    expect(norm(formatMoney('0.00420000', 'USD'))).toBe('0,0042 $')
+  })
+})
+
+describe('formatR', () => {
+  it('signe le multiple de risque', () => {
+    expect(norm(formatR(2.1))).toBe('+2,1 R')
+    expect(norm(formatR(-1.6))).toBe('−1,6 R')
+    expect(norm(formatR(0))).toBe('0,0 R')
+  })
+  it('n’affiche jamais « −0,0 R » et gère l’absence de stop', () => {
+    expect(norm(formatR(-0.001))).toBe('0,0 R')
+    expect(formatR(null)).toBe('—')
+  })
+})
+
+describe('formatDuration', () => {
+  it('formate en jours, heures et minutes', () => {
+    expect(formatDuration(72 * 60_000)).toBe('1 h 12 min')
+    expect(formatDuration(45 * 60_000)).toBe('45 min')
+    expect(formatDuration(3 * 3_600_000)).toBe('3 h')
+    expect(formatDuration((26 * 60 + 5) * 60_000)).toBe('1 j 2 h')
+    expect(formatDuration(20_000)).toBe('< 1 min')
+    expect(formatDuration(null)).toBe('—')
   })
 })
