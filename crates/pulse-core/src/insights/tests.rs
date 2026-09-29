@@ -338,6 +338,80 @@ fn revenge_and_overtrading_repeated_over_the_window() {
     assert_eq!(keys(&run(&ledger(journal_v(&[-3, -1])))), ["revengePattern"]);
 }
 
+// --- 3.5.2 Best / weakest segment ------------------------------------------------------------
+
+/// Journal B — 25 trades, one a day (days −24 … 0), size 1:
+/// setup Breakout (10): exits 120 × 6 (+2 R) and 95 × 4 (−0.5 R) → expectancy (12 − 2) / 10 = 1.0;
+/// setup Range (10): exits 110 × 3 (+1 R) and 90 × 7 (−1 R) → −0.4;
+/// setup News (3): exits 130 (+3 R) → 3.0, but only 3 trades with an R (not eligible);
+/// no setup (2): exits 100 (0 R).
+/// Baseline: (10 − 4 + 9 + 0) / 25 = 0.6. Sessions: Breakout and News in Londres
+/// (13 trades, (10 + 9) / 13 = 1.4615), Range and the others in New York (12, −4 / 12 = −0.3333).
+fn journal_b(with_range: bool) -> Vec<TradeFacts> {
+    let breakout = tag(10, TagKind::Setup, "Breakout");
+    let range = tag(11, TagKind::Setup, "Range");
+    let news = tag(12, TagKind::Setup, "News");
+    let london = tag(20, TagKind::Session, "Londres");
+    let new_york = tag(21, TagKind::Session, "New York");
+    let mut plan: Vec<(&str, Vec<TagRef>)> = Vec::new();
+    for k in 0..10 {
+        plan.push((if k < 6 { "120" } else { "95" }, vec![breakout.clone(), london.clone()]));
+        if with_range {
+            plan.push((if k < 3 { "110" } else { "90" }, vec![range.clone(), new_york.clone()]));
+        }
+    }
+    for _ in 0..3 {
+        plan.push(("130", vec![news.clone(), london.clone()]));
+    }
+    for _ in 0..2 {
+        plan.push(("100", vec![new_york.clone()]));
+    }
+    let n = plan.len() as i64;
+    plan.into_iter()
+        .enumerate()
+        .map(|(k, (exit, tags))| {
+            let mut t = trade(k as i64 + 1, k as i64 + 1 - n, "1", exit);
+            t.tags = tags;
+            t
+        })
+        .collect()
+}
+
+#[test]
+fn best_and_weakest_setup_and_session() {
+    let v = run(&ledger(journal_b(true)));
+    // Nothing else stands out: same risk on every trade (balances move by less than 1 %), score 100.
+    assert_eq!(keys(&v), ["weakSegment.setup", "weakSegment.session", "bestSegment.setup", "bestSegment.session"]);
+    let get = |key: &str| match &find(&v, key).detail {
+        InsightDetail::BestSegment(h) | InsightDetail::WeakSegment(h) => (**h).clone(),
+        _ => panic!(),
+    };
+    let best = get("bestSegment.setup");
+    assert_eq!((best.tag_id, best.name.as_str(), best.summary.trade_count, best.eligible_count), (10, "Breakout", 10, 2), "News has only 3 trades");
+    approx(best.summary.expectancy_r.unwrap(), 1.0);
+    approx(best.baseline_expectancy_r, 0.6);
+    approx(best.gap, 0.4);
+    assert_eq!(best.baseline_r_trade_count, 25);
+    let i = find(&v, "bestSegment.setup");
+    assert_eq!((i.situation.as_str(), i.level, i.priority, i.category), ("bestSegment:1:setup:10", 0, Priority::Low, Category::Highlight));
+    assert_eq!(i.filter, Some(EvidenceFilter::Setup { tag_id: 10 }));
+    assert_eq!(i.trade_ids.len(), 10);
+    let weak = get("weakSegment.setup");
+    assert_eq!(weak.tag_id, 11);
+    approx(weak.summary.expectancy_r.unwrap(), -0.4);
+    approx(weak.gap, -1.0);
+    assert_eq!(find(&v, "weakSegment.setup").priority, Priority::Medium);
+    let london = get("bestSegment.session");
+    assert_eq!((london.tag_id, london.summary.trade_count), (20, 13));
+    approx(london.summary.expectancy_r.unwrap(), 19.0 / 13.0);
+    assert_eq!(find(&v, "bestSegment.session").filter, None, "no session filter in the trade list");
+    let ny = get("weakSegment.session");
+    approx(ny.summary.expectancy_r.unwrap(), -4.0 / 12.0);
+
+    // Without Range: one eligible setup, one eligible session (New York has 2 trades) → no highlight.
+    assert!(run(&ledger(journal_b(false))).iter().all(|i| i.category != Category::Highlight));
+}
+
 #[test]
 fn no_trade_no_insight() {
     assert!(run(&ledger(Vec::new())).is_empty());

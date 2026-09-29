@@ -7,6 +7,7 @@
 //! a [`Ledger`], an instant and the user's settings it returns the insights of
 //! each account of the ledger, each account on its own.
 
+mod highlights;
 pub mod log;
 mod trends;
 
@@ -452,6 +453,7 @@ pub fn evaluate(
             },
         };
         trends::collect(&scope, &mut out)?;
+        highlights::collect(&scope, &mut out)?;
     }
     sort(&mut out);
     Ok(out)
