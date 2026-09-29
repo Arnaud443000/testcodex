@@ -81,6 +81,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étape 4 — Intelligence et approfondissement (à découper en lots)
 Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparaisons, verrouillage…).
+- [ ] Lot 20 — Infrastructure IA optionnelle (réglages, clé dans le coffre Windows, client HTTPS isolé, consentement) et analyse de screenshot d'un trade (3.5.4) ; voir « IA optionnelle (lot 20) » (**Opus, élevé**)
 
 
 ### Étapes 4 et 5 (suite)
@@ -422,3 +423,57 @@ Trois analyses : comparaison entre comptes / brokers (3.7.6), benchmark du risqu
 - Filtre « catégorie d'actif » dans la liste des trades (le lien de l'exposition renvoie vers la page Analyses ; celui des dépassements vers le détail du trade).
 
 **Interface (lot 17)** : page `/comparisons` (entrée « Comparaisons » de la barre latérale), trois onglets. « Comptes » : choix de comptes propre à l'onglet (tous les comptes actifs par défaut), tableau un compte par colonne, lignes en argent grisées et marquées quand les devises diffèrent, pistes à vérifier. « Risque max » et « Exposition » suivent le compte de la barre du haut et affichent un état vide si les devises sont mélangées. Sans limite : état vide avec lien vers `/settings#behavior-settings-title`. Un dépassement est un losange plein (forme + libellé, jamais la couleur seule). Captures : `docs/captures/lot17-*.png`. Limite du faux backend : son drawdown en % est vide (« — ») dans le navigateur ; le vrai calcul est celui de pulse-core.
+
+## IA optionnelle (lot 20) — sécurité et confidentialité
+
+Décisions prises **avant** d'écrire le code ; elles valent aussi pour le futur coach IA (3.5.5).
+
+**Principe** : Pulse reste 100 % local. L'IA est une option **désactivée par défaut**, déclenchée **à la demande uniquement**, jamais en tâche de fond. Aucune télémétrie, aucune mise à jour, aucun autre appel réseau dans l'application.
+
+### Où vit quoi
+| Crate | Rôle | Réseau |
+|---|---|---|
+| `pulse-core` (`ai/`) | réglages (`ai.*` de la table `settings`), **liste exacte** de ce qui est envoyé pour un trade, texte de la demande (prompt), stockage des commentaires | **aucun** (reste testable partout, sans dépendance UI ni réseau) |
+| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles | **le seul code réseau de l'application** |
+| `crates/pulse-vault` | clé API dans le **Gestionnaire d'identifiants Windows** (`keyring-core` + `windows-native-keyring-store`, compilés **seulement sous Windows**) ; ailleurs, le coffre répond « indisponible » | aucun |
+| `src-tauri` | commandes fines qui assemblent les trois (ajoutées en fin de `lib.rs`) | via `pulse-ai` |
+
+Pourquoi un crate à part pour le réseau : `pulse-core` garde zéro dépendance réseau (règle du projet) ; `pulse-ai` se teste sous Linux contre un **faux serveur local** (jamais le vrai service) ; `src-tauri` ne contient que la colle.
+
+### Désactivation
+- Réglage `ai.enabled` : ligne absente = **désactivée**. Interrupteur dans Paramètres > IA.
+- Les deux seules commandes qui peuvent ouvrir une connexion (`test_ai_connection`, `analyze_screenshot`) vérifient `ai.enabled` **avant** de lire la clé ou de construire le client : désactivée → erreur `ai:disabled`, aucune connexion.
+- Tout couper : éteindre l'interrupteur (effet immédiat) ; « Supprimer la clé » l'efface du coffre ; chaque commentaire se supprime. Sous Windows, l'entrée est aussi visible (et supprimable) dans le Gestionnaire d'identifiants : identifiant générique `anthropic-api-key.Pulse`.
+
+### Clé API
+- Stockée **uniquement** dans le coffre Windows (persistance « Local » : ne suit pas un profil itinérant). **Jamais** dans la base, les réglages, les sauvegardes, les exports, les journaux (`eprintln!`), les messages d'erreur ni l'interface : aucune commande ne la renvoie ; l'interface sait seulement si une clé est enregistrée.
+- En mémoire : type `ApiKey` dont le contenu est effacé à la libération (`zeroize`) et dont `Debug` affiche `ApiKey(***)` ; lue dans le coffre juste avant l'appel, jamais gardée.
+- Saisie masquée ; « Remplacer », « Supprimer », « Tester la connexion ». Contrôle de forme minimal (non vide, sans espace, ≤ 256 caractères) : aucun message ne répète la clé.
+- **Coffre indisponible** (hors Windows, ou refus du système) → erreur `ai:vaultUnavailable` affichée clairement ; **jamais** de repli vers un fichier, la base ou une variable d'environnement.
+
+### Ce qui est envoyé (analyse de screenshot, 3.5.4) — et rien d'autre
+- **Vers** : Anthropic, API Messages (`https://api.anthropic.com/v1/messages`), en HTTPS, avec la clé de l'utilisateur (coût facturé sur son compte Anthropic, données soumises à la politique d'Anthropic).
+- **Contenu** : l'image du screenshot du trade (fichier tel qu'enregistré), la **thèse**, le **sens** (achat / vente), l'**actif** (symbole et nom), et les **niveaux** saisis s'il y en a : prix d'entrée, stop loss prévu, take profit prévu. La liste exacte, avec les valeurs, est calculée par `pulse-core` (`ai::screenshot_context`) et montrée **telle quelle** dans la confirmation avant chaque envoi ; elle est recopiée dans le commentaire (« Envoyé : … »).
+- **Jamais envoyé** : compte (nom, courtier, capital, devise), taille, frais, P&L, résultat, R, émotions, notes post-mortem, règles, checklist, journal, dates, autres trades, statistiques, scores, alertes, chemins de fichiers, **anciens commentaires de l'IA** (un commentaire n'est jamais renvoyé à l'IA : une relance repart du trade seul).
+- **Test de connexion** : `GET /v1/models/{modèle}` ; n'envoie aucune donnée de trading, vérifie la clé et l'accès au modèle.
+
+### Consentement
+- Avant le **premier** envoi : fenêtre d'explication (quoi, vers qui, coût, pas de conseil, rien d'automatique) avec une case à cocher ; l'instant est enregistré (`ai.consent_at`).
+- Puis **à chaque** envoi d'image : confirmation listant ce qui part, vers qui, et rappelant que rien n'est envoyé automatiquement. **Aucune** option « Ne plus demander ».
+- Garde côté Rust : `analyze_screenshot` refuse sans `confirmed = true` et sans `ai.consent_at` (`ai:consentRequired`).
+
+### Le commentaire de l'IA
+- C'est un **commentaire**, jamais une donnée de trading : aucune statistique, aucun score, aucune alerte, aucun objectif ne le lit.
+- Table `ai_screenshot_notes` (**migration v11**, à renuméroter si une autre branche ajoute aussi une v11) : rattachée au trade, **supprimée avec le trade** (clé étrangère en cascade), consultable et supprimable. Garde le modèle qui a répondu, le fournisseur et la liste de ce qui a été envoyé.
+- **Exclue** de l'export CSV (qui ne lit que les trades) ; **incluse** dans la sauvegarde (copie complète de la base) ; jamais renvoyée à l'IA.
+- Interface : étiquette « Généré par IA » et avertissement « ce n'est pas un conseil » ; texte affiché comme du texte (jamais interprété comme du HTML).
+
+### Fournisseur et modèle (identifiants pris dans la documentation du skill `claude-api`, aucun deviné)
+- Défaut : `claude-opus-5-5`. Choix proposés : `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-4-5` ; un autre identifiant peut être saisi (forme `claude-…` vérifiée, l'API dira s'il n'existe pas).
+- Requête : non diffusée en continu, `max_tokens` 16000, ni `thinking` ni `temperature` (valeurs par défaut du modèle), en-tête `anthropic-version: 2023-06-01`. Pour `claude-opus-5-5` et `claude-sonnet-5-5` : repli côté Anthropic en cas de refus de sécurité (`fallbacks: "default"`, bêta `server-side-fallback-2026-07-01`) ; le modèle qui a réellement répondu est enregistré.
+- Délais : connexion 15 s ; test 30 s ; analyse 180 s.
+- Image : PNG, JPEG, WebP ou GIF ; au plus 10 Mo une fois encodée en base64 (limite de l'API), donc ≈ 7,5 Mo de fichier : au-delà, refus **avant** l'envoi (`ai:imageTooLarge`).
+- Erreurs (codes `ai:…` traduits par l'interface, sans aucun contenu de la requête ni de la réponse) : `disabled`, `consentRequired`, `noKey`, `vaultUnavailable`, `noScreenshot`, `imageTooLarge`, `invalidKey` (401), `forbidden` (403), `billing` (402), `modelNotFound` (404), `rateLimited` (429), `overloaded` (529), `serverError` (5xx), `rejected` (autre 400), `offline` (connexion impossible), `timeout`, `refused` (refus du modèle), `truncated` (réponse coupée), `unexpectedResponse`.
+
+### Faux backend (navigateur)
+Réponse simulée, fournisseur `simulation`, texte commençant par « [Simulation] », **aucun appel réseau** ; badge « Simulation » dans l'interface.
