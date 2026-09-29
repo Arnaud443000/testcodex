@@ -27,11 +27,8 @@ export const MAX_WINDOW_MIN = 240
 export const MIN_FETCH_GAP_MS = 5 * MIN
 const MAX_URL_LEN = 2048
 
-/** Mêmes devises que `pulse_core::news::CURRENCIES`. */
-export const CURRENCIES = [
-  'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'CNH', 'HKD', 'SGD', 'SEK', 'NOK', 'DKK', 'PLN',
-  'CZK', 'HUF', 'TRY', 'ZAR', 'MXN', 'BRL', 'INR', 'KRW', 'RUB', 'ILS', 'THB', 'TWD', 'IDR', 'SAR', 'AED',
-]
+export { CURRENCIES } from './newsView'
+import { CURRENCIES } from './newsView'
 
 export const DEFAULT_NEWS_SETTINGS: NewsSettings = {
   enabled: false,

@@ -1260,6 +1260,11 @@ export const fr = {
         `Trade pris en session ${session}, où vous tradez rarement (${count} sur vos ${history} trades précédents, ${share}).`,
       noStopLossOpen: 'Position ouverte sans stop loss prévu.',
       noStopLossClosed: 'Trade du jour pris sans stop loss prévu.',
+      // Lot 25 (3.6.8) : constat, jamais une cause.
+      newsEvent: (title: string, currency: string, time: string) => `${title}${currency ? ` ${currency}` : ''} à ${time}`,
+      newsMore: (n: number) => `et ${n} ${n > 1 ? 'autres' : 'autre'}`,
+      newsTrade: (events: string, news: string, others: string, newsCount: number, otherCount: number) =>
+        `Trade pris pendant une news majeure (${events}). Sur votre historique, vos trades pris pendant les news ont eu une espérance plus basse : ${news} contre ${others} pour les autres (${newsCount} et ${otherCount} trades avec R). C’est un constat, pas une cause.`,
     },
   },
 
@@ -1390,6 +1395,7 @@ export const fr = {
       outsideHours: 'Hors de vos horaires',
       unusualSession: 'Session inhabituelle',
       noStopLoss: 'Trade sans stop loss',
+      newsTrade: 'Trade pendant une news',
     } as Record<string, string>,
     count: (shown: number, total: number) => (shown === total ? `${shown} ${shown > 1 ? 'alertes' : 'alerte'}` : `${shown} sur ${total} alertes`),
     truncated: (n: number) => `Seules les ${n} alertes les plus récentes sont chargées.`,
@@ -1543,6 +1549,8 @@ export const fr = {
   coach: frCoach,
   // Lot 22 : verrouillage par mot de passe
   lock: frLock,
+  // Lot 25 : calendrier économique
+  news: frNews,
 }
 
 export type Messages = typeof fr
@@ -1550,3 +1558,4 @@ export type Messages = typeof fr
 import { frInsights } from './fr.insights'
 import { frCoach } from './fr.coach'
 import { frLock } from './fr.lock'
+import { frNews } from './fr.news'

@@ -25,6 +25,7 @@ export type AlertMessageKey =
   | 'unusualSession'
   | 'noStopLoss.open'
   | 'noStopLoss.closed'
+  | 'newsTrade'
 
 /** Perte du jour ou de la semaine face à ses limites (3.6.3). */
 export interface LossDetail {
@@ -54,6 +55,7 @@ export type AlertDetail =
   | { kind: 'outsideHours'; localTime: string; tradingHours: string }
   | { kind: 'unusualSession'; session: string; sessionCount: number; historyCount: number; share: number }
   | { kind: 'noStopLoss'; open: boolean }
+  | ({ kind: 'newsTrade' } & NewsTradeDetail)
 
 export type AlertKind = AlertDetail['kind']
 
@@ -107,3 +109,41 @@ export interface AlertSettings {
   unusualSession: boolean
   noStopLoss: boolean
 }
+
+// --- Lot 25 : alerte 3.6.8 « trade pris pendant une news majeure » (pulse-core/src/alerts/news.rs) ---
+
+/** Une news forte (avec heure) dont la fenêtre contient l'entrée du trade. */
+export interface NewsEventRef {
+  eventId: number
+  title: string
+  /** `''` = non précisée. */
+  currency: string
+  startsAt: number
+  /** Heure de Paris « HH:MM ». */
+  parisTime: string
+}
+
+/** La comparaison qui a permis l'alerte : trades pris pendant les news contre les autres. */
+export interface NewsComparison {
+  newsTradeCount: number
+  newsRTradeCount: number
+  newsExpectancyR: number
+  otherTradeCount: number
+  otherRTradeCount: number
+  otherExpectancyR: number
+  /** news − autres, en R (≤ −0,25 quand l'alerte apparaît). */
+  difference: number
+  byCalendar: number
+  byTag: number
+  byBoth: number
+}
+
+export interface NewsTradeDetail {
+  /** 5 au plus, dans l'ordre de l'heure. */
+  events: NewsEventRef[]
+  eventCount: number
+  windowBeforeMin: number
+  windowAfterMin: number
+  comparison: NewsComparison
+}
+

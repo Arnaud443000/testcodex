@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
+import { NewsSettingsPanel } from '../components/NewsSettingsPanel'
 import { AiSettingsPanel } from '../components/AiSettingsPanel'
 import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
@@ -193,6 +194,7 @@ export function SettingsPage() {
       <DataPanel />
       <SecurityPanel />
       <AiSettingsPanel />
+      <NewsSettingsPanel />
 
       <section className="glass-card p-6">
         <h3 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h3>

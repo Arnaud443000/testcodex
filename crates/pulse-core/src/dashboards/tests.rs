@@ -778,3 +778,20 @@ fn the_default_dashboard_is_never_changed_by_an_import_or_a_copy() {
     import_config(&conn, &export_config(&conn, &mine.key).unwrap()).unwrap();
     assert_eq!(startup(&conn).unwrap().key, mine.key);
 }
+
+#[test]
+fn the_upcoming_news_widget_is_in_the_library_without_period_or_account() {
+    // Lot 25: the economic calendar belongs to no account and follows no period.
+    let d = catalog().into_iter().find(|d| d.kind == "upcoming_news").expect("upcoming news widget");
+    assert_eq!((d.category.as_str(), d.period, d.account), ("temporal", false, false));
+    assert_eq!(d.modes, ["medium", "high", "all"]);
+    let conn = db::open_in_memory().unwrap();
+    let mut w = widget("news", "upcoming_news", 0, 0, d.default_w, d.default_h);
+    validate(&conn, std::slice::from_ref(&w)).unwrap();
+    w.mode = Some("all".into());
+    validate(&conn, std::slice::from_ref(&w)).unwrap();
+    w.mode = Some("urgent".into());
+    assert!(is_invalid(validate(&conn, &[w])));
+    assert!(is_invalid(validate(&conn, &[widget("news", "upcoming_news", 0, 0, d.min_w - 1, d.min_h)])));
+}
+
