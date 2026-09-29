@@ -2,9 +2,9 @@
 //! bookkeeping: off by default, no online source by default, at most one automatic fetch per
 //! Paris day, at most one fetch every 5 minutes. See CLAUDE.md, lot 25.
 
-use super::store::{self, ImportSummary, SOURCE_FILE, SOURCE_ICS_URL};
+use super::store::{self, ImportSummary, SOURCE_FILE, SOURCE_FOREX_FACTORY, SOURCE_ICS_URL};
 use super::zones;
-use super::{Defaults, Importance, Parsed, error, ics, csv, known_currency};
+use super::{Defaults, Importance, Parsed, Skipped, error, ff, ics, csv, known_currency};
 use crate::error::Result;
 use crate::settings::{read, write};
 use rusqlite::Connection;
@@ -15,6 +15,8 @@ const SOURCE: &str = "news.source";
 const ICS_URL: &str = "news.ics_url";
 const ICS_IMPORTANCE: &str = "news.ics_importance";
 const ICS_CURRENCY: &str = "news.ics_currency";
+/// Lot 28: the trader ticked "I have read and accept" for Forex Factory (`on`).
+const FF_CONSENT: &str = "news.ff_consent";
 const WINDOW_BEFORE: &str = "news.window_before_min";
 const WINDOW_AFTER: &str = "news.window_after_min";
 const ALERT: &str = "news.alert";
@@ -28,8 +30,10 @@ const LAST_IMPORT_AT: &str = "news.last_import_at";
 pub const DEFAULT_WINDOW_MIN: u32 = 15;
 pub const MAX_WINDOW_MIN: u32 = 240;
 pub const MAX_URL_LEN: usize = 2048;
-/// Shortest time between two fetches, automatic or not (ms).
+/// Shortest time between two fetches, automatic, manual or test (ms).
 pub const MIN_FETCH_GAP_MS: i64 = 5 * 60_000;
+/// Events shown by "Tester la source".
+pub const PREVIEW_EVENTS: usize = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +42,27 @@ pub enum SourceKind {
     None,
     /// An ICS feed at the address the trader typed.
     IcsUrl,
+    /// Forex Factory's weekly export (lot 28): fixed addresses, consent required.
+    ForexFactory,
+}
+
+impl SourceKind {
+    /// Name stored with the events of this source; `None` for no online source.
+    pub fn id(self) -> Option<&'static str> {
+        match self {
+            SourceKind::None => None,
+            SourceKind::IcsUrl => Some(SOURCE_ICS_URL),
+            SourceKind::ForexFactory => Some(SOURCE_FOREX_FACTORY),
+        }
+    }
+
+    fn parse(s: Option<&str>) -> SourceKind {
+        match s {
+            Some("icsUrl") => SourceKind::IcsUrl,
+            Some("forexFactory") => SourceKind::ForexFactory,
+            _ => SourceKind::None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,6 +77,10 @@ pub struct NewsSettings {
     /// Currency of a feed event without one; `None` = not given.
     #[serde(default)]
     pub ics_currency: Option<String>,
+    /// Forex Factory: the trader accepted what this source is (unofficial, no written licence,
+    /// the site's terms of use). Required to choose it.
+    #[serde(default)]
+    pub ff_consent: bool,
     pub window_before_min: u32,
     pub window_after_min: u32,
     /// Alert 3.6.8 (only while `enabled`).
@@ -66,6 +95,7 @@ impl Default for NewsSettings {
             ics_url: None,
             ics_importance: Importance::Medium,
             ics_currency: None,
+            ff_consent: false,
             window_before_min: DEFAULT_WINDOW_MIN,
             window_after_min: DEFAULT_WINDOW_MIN,
             alert: true,
@@ -74,9 +104,9 @@ impl Default for NewsSettings {
 }
 
 impl NewsSettings {
-    /// Enabled, with an online source and its address.
+    /// Enabled, with an online source ready to be fetched.
     pub fn online_ready(&self) -> bool {
-        self.enabled && self.source == SourceKind::IcsUrl && self.ics_url.is_some()
+        self.enabled && plan_for(self).is_some()
     }
 }
 
@@ -99,13 +129,18 @@ pub struct NewsStatus {
     pub state: FetchState,
     pub event_count: usize,
     pub online_ready: bool,
-    /// Host the feed is fetched from (what leaves the computer goes there only).
+    /// Host the online source is fetched from (what leaves the computer goes there only).
     pub online_host: Option<String>,
+    /// Earliest instant (UTC ms) of the next allowed request (5 minutes after the last attempt);
+    /// `None` = allowed now.
+    pub next_request_at: Option<i64>,
 }
 
 /// What the network side needs for one fetch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FetchPlan {
+    pub source: SourceKind,
+    /// First address requested (ICS: the one typed; Forex Factory: the current week).
     pub url: String,
     pub defaults: Defaults,
 }
@@ -122,10 +157,11 @@ pub fn get(conn: &Connection) -> Result<NewsSettings> {
     let d = NewsSettings::default();
     Ok(NewsSettings {
         enabled: read(conn, ENABLED)?.as_deref() == Some("on"),
-        source: if read(conn, SOURCE)?.as_deref() == Some("icsUrl") { SourceKind::IcsUrl } else { SourceKind::None },
+        source: SourceKind::parse(read(conn, SOURCE)?.as_deref()),
         ics_url: read(conn, ICS_URL)?,
         ics_importance: read(conn, ICS_IMPORTANCE)?.as_deref().and_then(Importance::parse).unwrap_or(d.ics_importance),
         ics_currency: read(conn, ICS_CURRENCY)?,
+        ff_consent: read(conn, FF_CONSENT)?.as_deref() == Some("on"),
         window_before_min: read(conn, WINDOW_BEFORE)?.map(|s| uint(WINDOW_BEFORE, &s)).transpose()?.unwrap_or(d.window_before_min),
         window_after_min: read(conn, WINDOW_AFTER)?.map(|s| uint(WINDOW_AFTER, &s)).transpose()?.unwrap_or(d.window_after_min),
         alert: read(conn, ALERT)?.as_deref() != Some("off"),
@@ -157,9 +193,8 @@ fn check_currency(c: &Option<String>) -> Result<Option<String>> {
     }
 }
 
-/// Validates and saves every setting at once (nothing is written if one is wrong). Changing or
-/// removing the feed address deletes the events of the previous feed.
-pub fn set(conn: &Connection, s: &NewsSettings) -> Result<NewsSettings> {
+/// Checks settings without writing anything; returns them normalized (address trimmed, currency upper case).
+pub fn validate(s: &NewsSettings) -> Result<NewsSettings> {
     let url = match s.ics_url.as_deref().map(str::trim).filter(|u| !u.is_empty()) {
         Some(u) => {
             check_url(u)?;
@@ -170,24 +205,41 @@ pub fn set(conn: &Connection, s: &NewsSettings) -> Result<NewsSettings> {
     if s.source == SourceKind::IcsUrl && url.is_none() {
         return Err(error("noSource"));
     }
+    if s.source == SourceKind::ForexFactory && !s.ff_consent {
+        return Err(error("consentRequired"));
+    }
     if s.window_before_min > MAX_WINDOW_MIN || s.window_after_min > MAX_WINDOW_MIN {
         return Err(error("invalidWindow"));
     }
-    let currency = check_currency(&s.ics_currency)?;
+    Ok(NewsSettings { ics_url: url, ics_currency: check_currency(&s.ics_currency)?, ..s.clone() })
+}
+
+/// Validates and saves every setting at once (nothing is written if one is wrong). Leaving an
+/// online source, or changing the feed address, deletes the events of the previous source (files
+/// stay) and forgets its fetch history, so that the new source is fetched at the next opening.
+pub fn set(conn: &Connection, s: &NewsSettings) -> Result<NewsSettings> {
+    let s = validate(s)?;
     let before = get(conn)?;
-    let feed_changed = before.ics_url != url || (s.source != SourceKind::IcsUrl && before.source == SourceKind::IcsUrl);
+    let url_changed = before.ics_url != s.ics_url;
+    let source_changed = before.source != s.source;
     let tx = conn.unchecked_transaction()?;
     write(&tx, ENABLED, s.enabled.then(|| "on".to_string()))?;
-    write(&tx, SOURCE, (s.source == SourceKind::IcsUrl).then(|| "icsUrl".to_string()))?;
-    write(&tx, ICS_URL, url)?;
+    write(&tx, SOURCE, s.source.id().map(str::to_string))?;
+    write(&tx, ICS_URL, s.ics_url.clone())?;
     write(&tx, ICS_IMPORTANCE, Some(s.ics_importance.as_str().to_string()))?;
-    write(&tx, ICS_CURRENCY, currency)?;
+    write(&tx, ICS_CURRENCY, s.ics_currency.clone())?;
+    write(&tx, FF_CONSENT, s.ff_consent.then(|| "on".to_string()))?;
     write(&tx, WINDOW_BEFORE, Some(s.window_before_min.to_string()))?;
     write(&tx, WINDOW_AFTER, Some(s.window_after_min.to_string()))?;
     write(&tx, ALERT, Some(if s.alert { "on" } else { "off" }.to_string()))?;
-    if feed_changed {
+    if url_changed || (source_changed && before.source == SourceKind::IcsUrl) {
         store::clear_source(&tx, SOURCE_ICS_URL)?;
-        // A new feed is fetched at the next opening; the 5-minute gap still holds.
+    }
+    if source_changed && before.source == SourceKind::ForexFactory {
+        store::clear_source(&tx, SOURCE_FOREX_FACTORY)?;
+    }
+    if url_changed || source_changed {
+        // A new source is fetched at the next opening; the 5-minute gap still holds.
         write(&tx, LAST_ATTEMPT_DAY, None)?;
         write(&tx, LAST_SUCCESS_AT, None)?;
         write(&tx, LAST_ERROR, None)?;
@@ -207,16 +259,51 @@ pub fn state(conn: &Connection) -> Result<FetchState> {
     })
 }
 
+/// Host an online source sends its request to.
+fn host_of(s: &NewsSettings) -> Option<String> {
+    match s.source {
+        SourceKind::None => None,
+        SourceKind::IcsUrl => s.ics_url.as_deref().and_then(|u| check_url(u).ok()),
+        SourceKind::ForexFactory => Some(ff::HOST.to_string()),
+    }
+}
+
 pub fn status(conn: &Connection) -> Result<NewsStatus> {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
+    status_at(conn, now)
+}
+
+pub fn status_at(conn: &Connection, now: i64) -> Result<NewsStatus> {
     let settings = get(conn)?;
-    let online_host = settings.ics_url.as_deref().and_then(|u| check_url(u).ok());
+    let state = state(conn)?;
+    let next_request_at = state.last_attempt_at.map(|t| t + MIN_FETCH_GAP_MS).filter(|&t| t > now && t - now <= MIN_FETCH_GAP_MS);
     Ok(NewsStatus {
         online_ready: settings.online_ready(),
+        online_host: host_of(&settings),
         settings,
-        state: state(conn)?,
+        state,
         event_count: store::count(conn)?,
-        online_host,
+        next_request_at,
     })
+}
+
+/// The request an online source would make with these settings; `None` without one.
+fn plan_for(s: &NewsSettings) -> Option<FetchPlan> {
+    let defaults = Defaults { importance: s.ics_importance, currency: s.ics_currency.clone() };
+    match s.source {
+        SourceKind::None => None,
+        SourceKind::IcsUrl => s.ics_url.clone().map(|url| FetchPlan { source: SourceKind::IcsUrl, url, defaults }),
+        SourceKind::ForexFactory => s.ff_consent.then(|| FetchPlan {
+            source: SourceKind::ForexFactory,
+            url: ff::THIS_WEEK_URL.to_string(),
+            defaults: Defaults { importance: Importance::Medium, currency: None },
+        }),
+    }
+}
+
+/// Less than 5 minutes since the last attempt (a clock set back does not block).
+fn too_soon(conn: &Connection, now: i64) -> Result<bool> {
+    Ok(int64(read(conn, LAST_ATTEMPT_AT)?).is_some_and(|last| now - last < MIN_FETCH_GAP_MS && now >= last))
 }
 
 /// Decides whether a fetch may start now and records the attempt (before anything leaves).
@@ -229,28 +316,125 @@ pub fn prepare_fetch(conn: &Connection, now: i64, manual: bool) -> Result<Option
     if !s.enabled {
         return refuse("disabled");
     }
-    let Some(url) = s.ics_url.clone().filter(|_| s.source == SourceKind::IcsUrl) else { return refuse("noSource") };
+    let Some(plan) = plan_for(&s) else { return refuse("noSource") };
     let today = zones::paris_day(now);
     if !manual && read(conn, LAST_ATTEMPT_DAY)?.as_deref() == Some(today.as_str()) {
         return Ok(None);
     }
-    if int64(read(conn, LAST_ATTEMPT_AT)?).is_some_and(|last| now - last < MIN_FETCH_GAP_MS && now >= last) {
+    if too_soon(conn, now)? {
         return refuse("tooSoon");
     }
     let tx = conn.unchecked_transaction()?;
     write(&tx, LAST_ATTEMPT_AT, Some(now.to_string()))?;
     write(&tx, LAST_ATTEMPT_DAY, Some(today))?;
     tx.commit()?;
-    Ok(Some(FetchPlan { url, defaults: Defaults { importance: s.ics_importance, currency: s.ics_currency } }))
+    Ok(Some(plan))
 }
 
 /// Stores what a fetch received (events of today − 7 to today + 60 only) and records the success.
-pub fn finish_fetch(conn: &Connection, now: i64, parsed: Parsed) -> Result<ImportSummary> {
+/// If the settings changed during the request (another source or address), nothing is stored.
+pub fn finish_fetch(conn: &Connection, now: i64, plan: &FetchPlan, parsed: Parsed) -> Result<ImportSummary> {
+    let current = get(conn)?;
+    let (Some(source), Some(still)) = (plan.source.id(), plan_for(&current)) else { return Ok(ImportSummary::default()) };
+    if still.source != plan.source || still.url != plan.url {
+        return Ok(ImportSummary::default());
+    }
     let received = parsed.events.len();
-    let summary = store::store(conn, SOURCE_ICS_URL, parsed, now, Some(store::fetch_window(now)))?;
+    let summary = store::store(conn, source, parsed, now, Some(store::fetch_window(now)))?;
     write(conn, LAST_SUCCESS_AT, Some(now.to_string()))?;
     write(conn, LAST_ERROR, None)?;
     write(conn, LAST_COUNT, Some(received.to_string()))?;
+    Ok(summary)
+}
+
+/// One event shown by "Tester la source", before anything is stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewEvent {
+    pub day: String,
+    /// Paris clock time; `None` = no time given.
+    pub paris_time: Option<String>,
+    /// 1 = Monday … 7 = Sunday.
+    pub weekday: u8,
+    pub currency: String,
+    pub title: String,
+    pub importance: Importance,
+    pub forecast: Option<String>,
+    pub previous: Option<String>,
+}
+
+/// Result of "Tester la source": what the source answered, nothing stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewsPreview {
+    /// Events read (both weeks for Forex Factory).
+    pub count: usize,
+    /// The first [`PREVIEW_EVENTS`] events not past yet (or the first ones if all are past).
+    pub events: Vec<PreviewEvent>,
+    pub skipped: Vec<Skipped>,
+    pub skipped_count: usize,
+    pub partial: Option<String>,
+}
+
+/// Checks the settings typed in the form (not saved yet) and records a test attempt: the 5-minute
+/// gap applies to tests too (the site limits downloads). Errors: the settings' own ones,
+/// `news:disabled`, `news:noSource`, `news:consentRequired`, `news:tooSoon`.
+pub fn prepare_test(conn: &Connection, now: i64, s: &NewsSettings) -> Result<FetchPlan> {
+    if !get(conn)?.enabled {
+        return Err(error("disabled"));
+    }
+    let s = validate(s)?;
+    let plan = plan_for(&s).ok_or_else(|| error("noSource"))?;
+    if too_soon(conn, now)? {
+        return Err(error("tooSoon"));
+    }
+    write(conn, LAST_ATTEMPT_AT, Some(now.to_string()))?;
+    Ok(plan)
+}
+
+/// What the test shows (pure).
+pub fn preview(parsed: &Parsed, now: i64) -> NewsPreview {
+    let mut events: Vec<&super::NewEvent> = parsed.events.iter().collect();
+    events.sort_by(|a, b| (&a.day, a.starts_at.is_some(), a.starts_at, &a.title).cmp(&(&b.day, b.starts_at.is_some(), b.starts_at, &b.title)));
+    let today = zones::paris_day(now);
+    let upcoming: Vec<&super::NewEvent> =
+        events.iter().copied().filter(|e| e.starts_at.map_or(e.day >= today, |t| t >= now)).collect();
+    let shown = if upcoming.is_empty() { &events } else { &upcoming };
+    NewsPreview {
+        count: parsed.events.len(),
+        events: shown
+            .iter()
+            .take(PREVIEW_EVENTS)
+            .map(|e| PreviewEvent {
+                day: e.day.clone(),
+                paris_time: e.starts_at.map(zones::paris_hhmm),
+                weekday: crate::stats::time::parse_day(&e.day).map_or(0, |d| ((d + 3).rem_euclid(7) + 1) as u8),
+                currency: e.currency.clone(),
+                title: e.title.clone(),
+                importance: e.importance,
+                forecast: e.forecast.clone(),
+                previous: e.previous.clone(),
+            })
+            .collect(),
+        skipped: parsed.skipped.clone(),
+        skipped_count: parsed.skipped_count,
+        partial: parsed.partial.clone(),
+    }
+}
+
+/// Stores the events of a test the trader confirmed, once the tested settings are saved: counts as
+/// today's fetch (no other request at the next opening today). `news:previewOutdated` if the saved
+/// settings no longer match the tested ones.
+pub fn keep_tested(conn: &Connection, now: i64, plan: &FetchPlan, parsed: Parsed) -> Result<ImportSummary> {
+    let s = get(conn)?;
+    if !s.enabled {
+        return Err(error("disabled"));
+    }
+    if plan_for(&s).as_ref() != Some(plan) {
+        return Err(error("previewOutdated"));
+    }
+    let summary = finish_fetch(conn, now, plan, parsed)?;
+    write(conn, LAST_ATTEMPT_DAY, Some(zones::paris_day(now)))?;
     Ok(summary)
 }
 

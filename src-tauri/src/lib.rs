@@ -1476,16 +1476,17 @@ async fn refresh_news(state: State<'_, AppState>, manual: bool) -> Result<NewsRe
         let conn = state.conn()?;
         return Ok(NewsRefresh { fetched: false, summary: None, status: pulse_core::news::settings::status(&conn).map_err(err)? });
     };
+    let request = plan.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
         use pulse_news::CalendarProvider;
-        pulse_news::IcsUrl::new().fetch(&plan)
+        pulse_news::IcsUrl::new().fetch(&request)
     })
     .await
     .map_err(err)?;
     let conn = state.conn()?;
     match result {
         Ok(parsed) => {
-            let summary = pulse_core::news::settings::finish_fetch(&conn, now_ms(), parsed).map_err(err)?;
+            let summary = pulse_core::news::settings::finish_fetch(&conn, now_ms(), &plan, parsed).map_err(err)?;
             Ok(NewsRefresh { fetched: true, summary: Some(summary), status: pulse_core::news::settings::status(&conn).map_err(err)? })
         }
         Err(e) => {

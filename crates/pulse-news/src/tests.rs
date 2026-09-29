@@ -1,7 +1,7 @@
 //! Tests against a fake local server (plain HTTP on 127.0.0.1): no real calendar is ever called.
 
 use super::*;
-use pulse_core::news::{Defaults, Importance};
+use pulse_core::news::{Defaults, Importance, SourceKind};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc;
@@ -75,7 +75,7 @@ fn fast() -> Timeouts {
 }
 
 fn plan(url: String) -> FetchPlan {
-    FetchPlan { url, defaults: Defaults { importance: Importance::Medium, currency: Some("USD".into()) } }
+    FetchPlan { source: SourceKind::IcsUrl, url, defaults: Defaults { importance: Importance::Medium, currency: Some("USD".into()) } }
 }
 
 const FEED: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n\

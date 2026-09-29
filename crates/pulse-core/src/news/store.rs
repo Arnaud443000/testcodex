@@ -20,6 +20,8 @@ pub const MAX_UPCOMING: u32 = 50;
 
 pub const SOURCE_FILE: &str = "file";
 pub const SOURCE_ICS_URL: &str = "icsUrl";
+/// Forex Factory's weekly export (lot 28).
+pub const SOURCE_FOREX_FACTORY: &str = "forexFactory";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,6 +34,11 @@ pub struct ImportSummary {
     pub skipped_count: usize,
     /// Old events deleted by the purge that followed.
     pub purged: usize,
+    /// Forex Factory (lot 28): stored events of the days the answer covers that it no longer
+    /// lists (a rescheduled or withdrawn event), deleted unless they carry an actual value.
+    pub removed: usize,
+    /// A part of the source that could not be read (see [`Parsed::partial`]).
+    pub partial: Option<String>,
 }
 
 /// One event as the interface shows it.
@@ -123,8 +130,47 @@ pub(crate) fn store(conn: &Connection, source: &str, parsed: Parsed, now: i64, w
     };
     let outside_window = total - kept.len();
     let (added, updated) = save(conn, source, &kept, now)?;
+    let removed = if source == SOURCE_FOREX_FACTORY { remove_withdrawn(conn, source, &kept)? } else { 0 };
     let purged = purge(conn, now)?;
-    Ok(ImportSummary { added, updated, outside_window, skipped: parsed.skipped, skipped_count: parsed.skipped_count, purged })
+    Ok(ImportSummary {
+        added,
+        updated,
+        outside_window,
+        skipped: parsed.skipped,
+        skipped_count: parsed.skipped_count,
+        purged,
+        removed,
+        partial: parsed.partial,
+    })
+}
+
+/// Deletes the events of `source` whose Paris day lies between the first and the last day of
+/// `kept` (the days this answer covers) and which it no longer lists. An event whose time changed
+/// is another event (its identity includes the time): without this, it would show twice. An event
+/// with an actual value is kept (a released value is never erased). Nothing outside those days.
+fn remove_withdrawn(conn: &Connection, source: &str, kept: &[NewEvent]) -> Result<usize> {
+    let (Some(first), Some(last)) = (kept.iter().map(|e| e.day.as_str()).min(), kept.iter().map(|e| e.day.as_str()).max()) else {
+        return Ok(0);
+    };
+    let uids: std::collections::HashSet<&str> = kept.iter().map(|e| e.uid.as_str()).collect();
+    let tx = conn.unchecked_transaction()?;
+    let stale: Vec<i64> = {
+        let mut stmt = tx.prepare("SELECT id, uid FROM economic_events WHERE source = ?1 AND day BETWEEN ?2 AND ?3 AND actual IS NULL")?;
+        let rows = stmt.query_map(params![source, first, last], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?;
+        let mut out = Vec::new();
+        for row in rows {
+            let (id, uid) = row?;
+            if !uids.contains(uid.as_str()) {
+                out.push(id);
+            }
+        }
+        out
+    };
+    for id in &stale {
+        tx.execute("DELETE FROM economic_events WHERE id = ?1", [id])?;
+    }
+    tx.commit()?;
+    Ok(stale.len())
 }
 
 const COLUMNS: &str = "id, source, starts_at, day, currency, title, importance, forecast, previous, actual, updated_at";

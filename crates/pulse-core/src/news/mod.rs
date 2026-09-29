@@ -3,12 +3,13 @@
 //! this module parses, stores and answers. See CLAUDE.md, "Calendrier économique (lot 25)".
 
 pub mod csv;
+pub mod ff;
 pub mod ics;
 pub mod settings;
 pub mod store;
 pub mod zones;
 
-pub use settings::{FetchPlan, FetchState, NewsSettings, NewsStatus, SourceKind};
+pub use settings::{FetchPlan, FetchState, NewsPreview, NewsSettings, NewsStatus, PreviewEvent, SourceKind};
 pub use store::{Calendar, CalendarView, EventQuery, EventView, ImportSummary};
 
 use crate::error::CoreError;
@@ -101,6 +102,14 @@ pub enum SkipReason {
     TooManyEvents,
     /// An ICS event cut off before its `END:VEVENT` (truncated file).
     Incomplete,
+    /// Forex Factory (lot 28): no `country` key (the currency).
+    MissingCurrency,
+    /// Forex Factory: no `impact` key.
+    MissingImportance,
+    /// Forex Factory: an element of the list that is not an object.
+    InvalidEntry,
+    /// The same event twice in one answer (same day, time, currency and title): kept once.
+    Duplicate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -118,6 +127,9 @@ pub struct Parsed {
     pub skipped: Vec<Skipped>,
     /// Every skipped event, listed or not.
     pub skipped_count: usize,
+    /// A part of the source that could not be read although the rest was (Forex Factory's next
+    /// week, lot 28): its error code (`news:notFound`…). `None` = everything was read.
+    pub partial: Option<String>,
 }
 
 /// Translatable error of the calendar (`news:<code>`), carried as an invalid-input error.

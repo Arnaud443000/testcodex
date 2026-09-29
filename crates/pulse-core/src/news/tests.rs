@@ -341,7 +341,7 @@ fn fetching_is_off_by_default_once_a_day_and_never_twice_in_five_minutes() {
     let mut p = parsed("in", "2026-10-14");
     p.events.extend(parsed("too-old", "2026-09-20").events);
     p.events.extend(parsed("too-far", "2026-12-15").events);
-    let s = finish_fetch(&conn, now(), p).unwrap();
+    let s = finish_fetch(&conn, now(), &plan, p).unwrap();
     assert_eq!((s.added, s.outside_window), (1, 2));
     let st = settings::state(&conn).unwrap();
     assert_eq!((st.last_success_at, st.last_error, st.last_count), (Some(now()), None, Some(3)));
