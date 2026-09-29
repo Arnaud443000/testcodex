@@ -55,7 +55,7 @@ export function TopBar() {
       <button className="control grid h-11 w-11 place-items-center !rounded-full text-tx2" aria-label={t.topbar.notifications}>
         <Icon name="bell" />
       </button>
-      <button className="btn btn-primary" onClick={() => navigate('/trades')}>
+      <button className="btn btn-primary" onClick={() => navigate('/trades/new')}>
         <Icon name="plus" size={18} /> {t.topbar.newTrade}
       </button>
     </header>

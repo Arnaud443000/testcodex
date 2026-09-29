@@ -61,6 +61,7 @@ const dirSign = (d: 'long' | 'short'): Dec => ({ n: d === 'long' ? 1n : -1n, s: 
 const accounts: Account[] = []
 let nextId = 1
 const id = () => nextId++
+let nextTradeId = 1
 
 const starterTags: [TagKind, string][] = [
   ['session', 'Asia'], ['session', 'London'], ['session', 'New York'],
@@ -238,7 +239,7 @@ export const mock = {
   createTrade: async (d: TradeData): Promise<TradeView> => {
     const multiplier = validate(d)
     const now = new Date().toISOString()
-    const t = { ...d, multiplier, id: id(), createdAt: now, updatedAt: now }
+    const t = { ...d, multiplier, id: nextTradeId++, createdAt: now, updatedAt: now }
     trades.set(t.id, t)
     return view(t)
   },
