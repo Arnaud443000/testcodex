@@ -4,9 +4,17 @@ use pulse_core::behavior::{
     StreakReport, TradeDiscipline,
 };
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
+use pulse_core::confidence::{self, ConfidenceReport};
+use pulse_core::execution_quality::{self, ExecutionScore, QualityReport};
+use pulse_core::journal::{self, DayOverview, JournalEntry};
+use pulse_core::missed_trades::{self, MissedTrade, MissedTradeData};
+use pulse_core::period::PeriodQuery;
+use pulse_core::reminder::{self, ReminderSettings};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::export;
+use pulse_core::goals::{self, Goal, GoalProgress, NewGoal, ProgressQuery};
+use pulse_core::replay::{self, ReplayCard, ReplayFilter, ReplayItem};
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
 use pulse_core::settings::{self, BehaviorSettings};
@@ -352,13 +360,175 @@ fn restore_backup(state: State<AppState>, folder: String, confirmed: bool) -> Re
     backup::restore(&mut conn, &state.data_dir, std::path::Path::new(&folder), confirmed, now_ms()).map_err(err)
 }
 
+// --- Lot 10: journal side (missed trades, daily journal, execution quality, confidence, reminder) ---
+
+#[tauri::command]
+fn list_missed_trades(state: State<AppState>, account_ids: Vec<i64>) -> Result<Vec<MissedTrade>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::list(&conn, &account_ids).map_err(err)
+}
+
+#[tauri::command]
+fn create_missed_trade(state: State<AppState>, missed: MissedTradeData) -> Result<MissedTrade, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::create(&conn, &missed).map_err(err)
+}
+
+#[tauri::command]
+fn update_missed_trade(state: State<AppState>, id: i64, missed: MissedTradeData) -> Result<MissedTrade, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::update(&conn, id, &missed).map_err(err)
+}
+
+#[tauri::command]
+fn delete_missed_trade(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::delete(&conn, id).map_err(err)
+}
+
+/// A blank entry deletes the day's entry and returns `null`.
+#[tauri::command]
+fn save_journal_entry(state: State<AppState>, entry: JournalEntry) -> Result<Option<JournalEntry>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::save(&conn, &entry).map_err(err)
+}
+
+#[tauri::command]
+fn get_journal_day(state: State<AppState>, account_ids: Vec<i64>, day: String) -> Result<DayOverview, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::day_overview(&conn, &account_ids, &day).map_err(err)
+}
+
+#[tauri::command]
+fn list_journal_entries(state: State<AppState>, from: Option<String>, to: Option<String>) -> Result<Vec<JournalEntry>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::list(&conn, from.as_deref(), to.as_deref()).map_err(err)
+}
+
+#[tauri::command]
+fn delete_journal_entry(state: State<AppState>, day: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::delete(&conn, &day).map_err(err)
+}
+
+/// Execution-quality score of a stored trade (spec 3.2.9).
+#[tauri::command]
+fn get_execution_score(state: State<AppState>, trade_id: i64) -> Result<ExecutionScore, String> {
+    let conn = state.db.lock().map_err(err)?;
+    let trade = trades::get(&conn, trade_id).map_err(err)?;
+    Ok(execution_quality::score(&trade.data))
+}
+
+#[tauri::command]
+fn get_quality_report(state: State<AppState>, query: PeriodQuery) -> Result<QualityReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    execution_quality::report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_confidence_report(state: State<AppState>, query: PeriodQuery) -> Result<ConfidenceReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    confidence::report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_reminder_settings(state: State<AppState>) -> Result<ReminderSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::get_settings(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_reminder_settings(state: State<AppState>, settings: ReminderSettings) -> Result<ReminderSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::set_settings(&conn, &settings).map_err(err)
+}
+
+/// For the in-app banner: the reminder was sent today and there is still work (click on the toast is not relied upon).
+#[tauri::command]
+fn get_reminder_pending(state: State<AppState>, tz_offset_min: i32) -> Result<Option<reminder::Due>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::pending(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+/// Every minute, asks pulse-core whether the daily reminder is due and shows the native notification.
+fn spawn_reminder_loop(app: tauri::AppHandle) {
+    use chrono::{Local, Offset};
+    use tauri_plugin_notification::NotificationExt;
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        let tz = Local::now().offset().fix().local_minus_utc() / 60;
+        let state = app.state::<AppState>();
+        let due = match state.db.lock() {
+            Ok(conn) => reminder::check(&conn, now_ms(), tz),
+            Err(_) => continue,
+        };
+        let Ok(Some(due)) = due else { continue };
+        let (title, body) = reminder::message(&due);
+        // Marked as sent even when the system refuses the notification: the in-app banner takes over.
+        let shown = app.notification().builder().title(title).body(body).show();
+        if let Err(e) = &shown {
+            eprintln!("Pulse: could not show the reminder notification: {e}");
+        }
+        if let Ok(conn) = state.db.lock() {
+            let _ = reminder::mark_sent(&conn, &due.day);
+        };
+    });
+}
+
+// --- Lot 11: monthly goals and trade replay ---
+
+#[tauri::command]
+fn list_goals(state: State<AppState>, month: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::list(&conn, &month).map_err(err)
+}
+
+/// Creates the goal of a month and metric, or changes its target.
+#[tauri::command]
+fn set_goal(state: State<AppState>, goal: NewGoal) -> Result<Goal, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::set(&conn, &goal).map_err(err)
+}
+
+#[tauri::command]
+fn delete_goal(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::delete(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn copy_goals(state: State<AppState>, from: String, to: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::copy_month(&conn, &from, &to).map_err(err)
+}
+
+#[tauri::command]
+fn get_goal_progress(state: State<AppState>, query: ProgressQuery) -> Result<Vec<GoalProgress>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::progress(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn list_replay(state: State<AppState>, filter: Option<ReplayFilter>) -> Result<Vec<ReplayItem>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::list(&conn, &filter.unwrap_or_default()).map_err(err)
+}
+
+#[tauri::command]
+fn get_replay_card(state: State<AppState>, id: i64) -> Result<ReplayCard, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::card(&conn, id).map_err(err)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let conn = db::open(&data_dir).map_err(err)?;
             app.manage(AppState { db: Mutex::new(conn), data_dir });
+            spawn_reminder_loop(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -412,7 +582,28 @@ pub fn run() {
             save_screenshot,
             read_screenshot,
             update_account,
-            set_account_archived
+            set_account_archived,
+            list_missed_trades,
+            create_missed_trade,
+            update_missed_trade,
+            delete_missed_trade,
+            save_journal_entry,
+            get_journal_day,
+            list_journal_entries,
+            delete_journal_entry,
+            get_execution_score,
+            get_quality_report,
+            get_confidence_report,
+            get_reminder_settings,
+            set_reminder_settings,
+            get_reminder_pending,
+            list_goals,
+            set_goal,
+            delete_goal,
+            copy_goals,
+            get_goal_progress,
+            list_replay,
+            get_replay_card
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");

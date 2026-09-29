@@ -78,6 +78,34 @@ pub fn list(conn: &Connection, account_ids: &[i64]) -> Result<Vec<MissedTrade>> 
     load(conn, &ids_condition("account_id", account_ids))
 }
 
+/// Replaces every field of a missed trade, including its tags.
+pub fn update(conn: &Connection, id: i64, data: &MissedTradeData) -> Result<MissedTrade> {
+    get(conn, id)?;
+    let tag_ids = validate(conn, data)?;
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "UPDATE missed_trades SET account_id = ?1, instrument_id = ?2, direction = ?3, occurred_at = ?4,
+             tz_offset_min = ?5, reason = ?6, notes = ?7, conviction = ?8 WHERE id = ?9",
+        params![
+            data.account_id,
+            data.instrument_id,
+            data.direction,
+            data.occurred_at,
+            data.tz_offset_min,
+            data.reason.trim(),
+            data.notes.trim(),
+            data.conviction,
+            id
+        ],
+    )?;
+    tx.execute("DELETE FROM missed_trade_tags WHERE missed_trade_id = ?1", [id])?;
+    for tag in tag_ids {
+        tx.execute("INSERT INTO missed_trade_tags (missed_trade_id, tag_id) VALUES (?1,?2)", params![id, tag])?;
+    }
+    tx.commit()?;
+    get(conn, id)
+}
+
 pub fn delete(conn: &Connection, id: i64) -> Result<()> {
     get(conn, id)?;
     conn.execute("DELETE FROM missed_trades WHERE id = ?1", [id])?;
@@ -195,5 +223,38 @@ mod tests {
         assert!(create(&conn, &MissedTradeData { tag_ids: vec![calm.id], ..base.clone() }).is_err());
         assert!(create(&conn, &MissedTradeData { instrument_id: 999, ..base.clone() }).is_err());
         assert!(create(&conn, &base).is_ok());
+    }
+
+    #[test]
+    fn updates_a_missed_trade_and_its_tags() {
+        let conn = db::open_in_memory().unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let breakout = tags::create(&conn, TagKind::Setup, "Breakout").unwrap();
+        let range = tags::create(&conn, TagKind::MarketCondition, "Range serré").unwrap();
+        let data = MissedTradeData {
+            account_id: a,
+            instrument_id: eu,
+            direction: Some(Direction::Short),
+            occurred_at: 5,
+            tz_offset_min: 0,
+            reason: "Doute".into(),
+            notes: String::new(),
+            conviction: Some(7),
+            tag_ids: vec![breakout.id],
+        };
+        let m = create(&conn, &data).unwrap();
+        let edited = update(
+            &conn,
+            m.id,
+            &MissedTradeData { reason: " Peur ".into(), conviction: None, tag_ids: vec![range.id], ..data.clone() },
+        )
+        .unwrap();
+        assert_eq!((edited.id, edited.data.reason.as_str(), edited.data.conviction), (m.id, "Peur", None));
+        assert_eq!(edited.data.tag_ids, vec![range.id]);
+        assert_eq!(list(&conn, &[]).unwrap().len(), 1);
+        assert!(update(&conn, m.id, &MissedTradeData { conviction: Some(0), ..data.clone() }).is_err());
+        assert_eq!(get(&conn, m.id).unwrap(), edited, "a refused update changes nothing");
+        assert!(matches!(update(&conn, 999, &data), Err(CoreError::NotFound(_))));
     }
 }

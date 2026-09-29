@@ -36,7 +36,21 @@ import type {
   StreakReport,
   TradeDiscipline,
 } from '../types/behavior'
-import { mock } from './mockBackend'
+import type {
+  ConfidenceReport,
+  DayOverview,
+  ExecutionScore,
+  JournalEntry,
+  MissedTrade,
+  MissedTradeData,
+  PeriodQuery,
+  QualityReport,
+  ReminderDue,
+  ReminderSettings,
+} from '../types/journal'
+import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
+import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
+import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
@@ -180,5 +194,56 @@ export const api = {
     inTauri ? invoke('update_account', { id, account }) : mock.updateAccount(id, account),
   setAccountArchived: (id: number, archived: boolean): Promise<Account> =>
     inTauri ? invoke('set_account_archived', { id, archived }) : mock.setAccountArchived(id, archived),
+
+  // --- Lot 10 : trades manqués, journal quotidien, qualité d'exécution, confiance, rappel ---
+  listMissedTrades: (accountIds: number[] = []): Promise<MissedTrade[]> =>
+    inTauri ? invoke('list_missed_trades', { accountIds }) : mockJournal.listMissedTrades(accountIds),
+  createMissedTrade: (missed: MissedTradeData): Promise<MissedTrade> =>
+    inTauri ? invoke('create_missed_trade', { missed }) : mockJournal.createMissedTrade(missed),
+  updateMissedTrade: (id: number, missed: MissedTradeData): Promise<MissedTrade> =>
+    inTauri ? invoke('update_missed_trade', { id, missed }) : mockJournal.updateMissedTrade(id, missed),
+  deleteMissedTrade: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_missed_trade', { id }) : mockJournal.deleteMissedTrade(id),
+
+  /** Un journal entièrement vide est supprimé au lieu d'être enregistré : renvoie alors `null`. */
+  saveJournalEntry: (entry: JournalEntry): Promise<JournalEntry | null> =>
+    inTauri ? invoke('save_journal_entry', { entry }) : mockJournal.saveJournalEntry(entry),
+  /** Le journal d'un jour local (« AAAA-MM-JJ ») et les trades entrés ce jour-là. */
+  getJournalDay: (accountIds: number[], day: string): Promise<DayOverview> =>
+    inTauri ? invoke('get_journal_day', { accountIds, day }) : mockJournal.getJournalDay(accountIds, day),
+  listJournalEntries: (from?: string | null, to?: string | null): Promise<JournalEntry[]> =>
+    inTauri ? invoke('list_journal_entries', { from: from ?? null, to: to ?? null }) : mockJournal.listJournalEntries(from, to),
+  deleteJournalEntry: (day: string): Promise<void> =>
+    inTauri ? invoke('delete_journal_entry', { day }) : mockJournal.deleteJournalEntry(day),
+
+  /** Score de qualité d'exécution d'un trade enregistré (calculé par pulse-core). */
+  getExecutionScore: (tradeId: number): Promise<ExecutionScore> =>
+    inTauri ? invoke('get_execution_score', { tradeId }) : mockJournal.getExecutionScore(tradeId),
+  getQualityReport: (query: PeriodQuery): Promise<QualityReport> =>
+    inTauri ? invoke('get_quality_report', { query }) : mockJournal.getQualityReport(query),
+  getConfidenceReport: (query: PeriodQuery): Promise<ConfidenceReport> =>
+    inTauri ? invoke('get_confidence_report', { query }) : mockJournal.getConfidenceReport(query),
+
+  getReminderSettings: (): Promise<ReminderSettings> =>
+    inTauri ? invoke('get_reminder_settings') : mockJournal.getReminderSettings(),
+  setReminderSettings: (settings: ReminderSettings): Promise<ReminderSettings> =>
+    inTauri ? invoke('set_reminder_settings', { settings }) : mockJournal.setReminderSettings(settings),
+  /** Le rappel a déjà été envoyé aujourd'hui et il reste du travail : sert à la bannière dans l'application. */
+  getReminderPending: (tzOffsetMin: number): Promise<ReminderDue | null> =>
+    inTauri ? invoke('get_reminder_pending', { tzOffsetMin }) : mockJournal.getReminderPending(tzOffsetMin),
+
+  // --- Lot 11 : objectifs mensuels et replay ---
+  listGoals: (month: string): Promise<Goal[]> => (inTauri ? invoke('list_goals', { month }) : mockGoalsReplay.listGoals(month)),
+  /** Crée l'objectif d'un mois et d'une métrique, ou change sa cible. */
+  setGoal: (goal: NewGoal): Promise<Goal> => (inTauri ? invoke('set_goal', { goal }) : mockGoalsReplay.setGoal(goal)),
+  deleteGoal: (id: number): Promise<void> => (inTauri ? invoke('delete_goal', { id }) : mockGoalsReplay.deleteGoal(id)),
+  /** Reporte les objectifs d'un mois sur un autre (sans écraser ceux qui existent déjà). */
+  copyGoals: (from: string, to: string): Promise<Goal[]> => (inTauri ? invoke('copy_goals', { from, to }) : mockGoalsReplay.copyGoals(from, to)),
+  getGoalProgress: (query: ProgressQuery): Promise<GoalProgress[]> =>
+    inTauri ? invoke('get_goal_progress', { query }) : mockGoalsReplay.getGoalProgress(query),
+
+  listReplay: (filter?: ReplayFilter): Promise<ReplayItem[]> =>
+    inTauri ? invoke('list_replay', { filter: filter ?? null }) : mockGoalsReplay.listReplay(filter),
+  getReplayCard: (id: number): Promise<ReplayCard> => (inTauri ? invoke('get_replay_card', { id }) : mockGoalsReplay.getReplayCard(id)),
 }
 

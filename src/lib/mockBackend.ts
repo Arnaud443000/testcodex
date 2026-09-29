@@ -20,6 +20,11 @@ import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
 import { ASSET_CATALOG } from './assetCatalog'
+import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
+import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
+import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
+import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
+import type { DayOverview, JournalEntry, MissedTrade, MissedTradeData, PeriodQuery, ReminderDue, ReminderSettings } from '../types/journal'
 
 /**
  * MOCK EN MÉMOIRE — uniquement pour `npm run dev` dans un navigateur, sans Rust.
@@ -243,7 +248,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 5, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 6, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
 })
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
@@ -475,5 +480,189 @@ export const mock = {
     const s = screenshots.get(path)
     if (!s) throw new Error(`not found: screenshot ${path}`)
     return s
+  },
+}
+
+// --- Lot 10 : journal quotidien, trades manqués, qualité d'exécution, confiance, rappel ---
+const missedTrades: MissedTrade[] = []
+const journalEntries = new Map<string, JournalEntry>()
+let reminderSettings: ReminderSettings = { enabled: true, time: '20:00' }
+let reminderLastSent: string | null = null
+let nextMissedId = 1
+
+const scoped = (accountIds?: number[]) => (accountIds?.length ? accountIds : accounts.map((a) => a.id))
+const viewsOf = (accountIds?: number[]) => [...trades.values()].filter((t) => scoped(accountIds).includes(t.accountId)).map(view)
+const checkDay = (day: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`)) || new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day)
+    throw invalid(`invalid day "${day}"`)
+}
+const checkScale = (what: string, v: number | null | undefined, max: number) => {
+  if (v != null && (!Number.isInteger(v) || v < 1 || v > max)) throw invalid(`${what} must be between 1 and ${max}`)
+}
+function validateMissed(d: MissedTradeData) {
+  if (!accounts.some((a) => a.id === d.accountId)) throw invalid('unknown account')
+  if (!instruments.some((i) => i.id === d.instrumentId)) throw invalid('unknown instrument')
+  checkScale('conviction', d.conviction, 10)
+  for (const tid of new Set(d.tagIds)) {
+    const tag = tags.find((g) => g.id === tid)
+    if (!tag) throw invalid('unknown tag')
+    if (tag.kind === 'emotion' || tag.kind === 'mistake') throw invalid(`${tag.name} cannot qualify a missed trade`)
+  }
+}
+const cleanMissed = (d: MissedTradeData): MissedTradeData => ({
+  ...d,
+  direction: d.direction ?? null,
+  conviction: d.conviction ?? null,
+  reason: d.reason.trim(),
+  notes: d.notes.trim(),
+  tagIds: [...new Set(d.tagIds)].sort((a, b) => a - b),
+})
+/** Heure locale « maintenant » du faux backend, comme le fait le rappel de pulse-core. */
+function pendingWork(tz: number): ReminderDue | null {
+  const now = Date.now()
+  const day = dayOf(now, tz)
+  const todays = viewsOf().filter((v) => dayOf(v.entryTime, v.tzOffsetMin) === day)
+  if (todays.length === 0) return null
+  const journalMissing = !journalEntries.has(day)
+  const incompleteCount = todays.filter(isIncompleteData).length
+  return journalMissing || incompleteCount > 0 ? { day, tradeCount: todays.length, incompleteCount, journalMissing } : null
+}
+
+export const mockJournal = {
+  listMissedTrades: async (accountIds: number[]): Promise<MissedTrade[]> =>
+    missedTrades
+      .filter((m) => !accountIds.length || accountIds.includes(m.accountId))
+      .sort((a, b) => b.occurredAt - a.occurredAt || b.id - a.id),
+  createMissedTrade: async (d: MissedTradeData): Promise<MissedTrade> => {
+    validateMissed(d)
+    const m = { ...cleanMissed(d), id: nextMissedId++ }
+    missedTrades.push(m)
+    return m
+  },
+  updateMissedTrade: async (mid: number, d: MissedTradeData): Promise<MissedTrade> => {
+    const i = missedTrades.findIndex((m) => m.id === mid)
+    if (i < 0) throw new Error(`not found: missed trade ${mid}`)
+    validateMissed(d)
+    missedTrades[i] = { ...cleanMissed(d), id: mid }
+    return missedTrades[i]
+  },
+  deleteMissedTrade: async (mid: number): Promise<void> => {
+    const i = missedTrades.findIndex((m) => m.id === mid)
+    if (i < 0) throw new Error(`not found: missed trade ${mid}`)
+    missedTrades.splice(i, 1)
+  },
+  saveJournalEntry: async (e: JournalEntry): Promise<JournalEntry | null> => {
+    checkDay(e.day)
+    checkScale('mood', e.mood, 5)
+    checkScale('sleep quality', e.sleepQuality, 5)
+    checkScale('fatigue', e.fatigue, 5)
+    if (isBlankEntry(e)) {
+      journalEntries.delete(e.day)
+      return null
+    }
+    const saved = { ...e, mood: e.mood ?? null, sleepQuality: e.sleepQuality ?? null, fatigue: e.fatigue ?? null, wentWell: e.wentWell.trim(), toImprove: e.toImprove.trim(), notes: e.notes.trim() }
+    journalEntries.set(e.day, saved)
+    return saved
+  },
+  getJournalDay: async (accountIds: number[], day: string): Promise<DayOverview> => {
+    checkDay(day)
+    const lines = viewsOf(accountIds)
+      .filter((v) => dayOf(v.entryTime, v.tzOffsetMin) === day)
+      .sort((a, b) => a.entryTime - b.entryTime || a.id - b.id)
+      .map((v) => ({
+        tradeId: v.id,
+        symbol: v.symbol,
+        direction: v.direction,
+        currency: v.currency,
+        entryTime: v.entryTime,
+        netPnl: v.figures?.netPnl ?? null,
+        outcome: v.figures?.outcome ?? null,
+        incomplete: isIncompleteData(v),
+      }))
+    return { day, entry: journalEntries.get(day) ?? null, trades: lines, incompleteCount: lines.filter((l) => l.incomplete).length }
+  },
+  listJournalEntries: async (from?: string | null, to?: string | null): Promise<JournalEntry[]> =>
+    [...journalEntries.values()].filter((e) => (!from || e.day >= from) && (!to || e.day <= to)).sort((a, b) => b.day.localeCompare(a.day)),
+  deleteJournalEntry: async (day: string): Promise<void> => {
+    journalEntries.delete(day)
+  },
+  getExecutionScore: async (tid: number) => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    return mockExecutionScore(t)
+  },
+  getQualityReport: async (q: PeriodQuery) => mockQualityReport(viewsOf(q.accountIds), q),
+  getConfidenceReport: async (q: PeriodQuery) =>
+    mockConfidenceReport(viewsOf(q.accountIds), missedTrades.filter((m) => scoped(q.accountIds).includes(m.accountId)), q),
+  getReminderSettings: async (): Promise<ReminderSettings> => ({ ...reminderSettings }),
+  setReminderSettings: async (s: ReminderSettings): Promise<ReminderSettings> => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.time)) throw invalid(`reminder time must look like 20:00, got "${s.time}"`)
+    reminderSettings = { ...s }
+    return { ...reminderSettings }
+  },
+  /** Dans le navigateur, aucune notification native : la bannière suit l'heure du rappel. */
+  getReminderPending: async (tz: number): Promise<ReminderDue | null> => {
+    const now = new Date(Date.now() + tz * 60_000)
+    const minutes = now.getUTCHours() * 60 + now.getUTCMinutes()
+    const [h, m] = reminderSettings.time.split(':').map(Number)
+    if (!reminderSettings.enabled || minutes < h * 60 + m) return null
+    reminderLastSent = dayOf(Date.now(), tz)
+    return reminderLastSent ? pendingWork(tz) : null
+  },
+}
+
+// --- Lot 11 : objectifs mensuels et replay ---
+const goals: Goal[] = []
+let nextGoalId = 1
+
+export const mockGoalsReplay = {
+  listGoals: async (month: string): Promise<Goal[]> => {
+    if (!isMonth(month)) throw invalid(`invalid month "${month}" (expected YYYY-MM)`)
+    return goals.filter((g) => g.month === month)
+  },
+  setGoal: async (n: NewGoal): Promise<Goal> => {
+    checkGoal(n.month, n.metric, n.target)
+    const existing = goals.find((g) => g.month === n.month && g.metric === n.metric)
+    if (existing) {
+      existing.target = n.target
+      return { ...existing }
+    }
+    const g = { id: nextGoalId++, month: n.month, metric: n.metric, target: n.target }
+    goals.push(g)
+    return { ...g }
+  },
+  deleteGoal: async (gid: number): Promise<void> => {
+    const i = goals.findIndex((g) => g.id === gid)
+    if (i < 0) throw new Error(`not found: goal ${gid}`)
+    goals.splice(i, 1)
+  },
+  copyGoals: async (from: string, to: string): Promise<Goal[]> => {
+    if (!isMonth(from) || !isMonth(to)) throw invalid('invalid month (expected YYYY-MM)')
+    for (const g of goals.filter((x) => x.month === from)) {
+      if (!goals.some((x) => x.month === to && x.metric === g.metric)) goals.push({ id: nextGoalId++, month: to, metric: g.metric, target: g.target })
+    }
+    return goals.filter((g) => g.month === to)
+  },
+  getGoalProgress: async (q: ProgressQuery): Promise<GoalProgress[]> => {
+    if (!isMonth(q.month)) throw invalid(`invalid month "${q.month}" (expected YYYY-MM)`)
+    const list = goals.filter((g) => g.month === q.month).sort((a, b) => a.id - b.id)
+    if (list.length === 0) return []
+    const [year, month] = q.month.split('-').map(Number)
+    const cal = mockCalendar(ledgerOf(q.accountIds), { accountIds: q.accountIds, year, month, tzOffsetMin: q.tzOffsetMin })
+    const from = Date.UTC(year, month - 1, 1) - q.tzOffsetMin * 60_000
+    const to = Date.UTC(year, month, 1) - q.tzOffsetMin * 60_000
+    const quality = mockQualityReport(viewsOf(q.accountIds), { accountIds: q.accountIds, from, to })
+    return mockProgress(list, cal.summary, cal.currency, quality.averageStars, q.month, q.today)
+  },
+  listReplay: async (filter?: ReplayFilter | null): Promise<ReplayItem[]> =>
+    viewsOf(filter?.accountIds)
+      .filter((v) => replayPasses(v, filter ?? {}))
+      .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
+      .map(replayItem),
+  getReplayCard: async (tid: number): Promise<ReplayCard> => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    const v = view(t)
+    return { trade: v, levels: mockLadder(v) }
   },
 }

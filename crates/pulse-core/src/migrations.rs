@@ -261,6 +261,33 @@ pub const MIGRATIONS: &[&str] = &[
     include_str!("../catalog/v4_asset_catalog.sql"),
     // v5 — archiving an account: it keeps its history but leaves selectors and default totals.
     "ALTER TABLE accounts ADD COLUMN archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1));",
+    // v6 — daily journal (spec 3.2.6) and monthly goals (spec 3.7.2). Reminder
+    // settings (3.2.8) live in the existing key/value `settings` table.
+    // The journal is keyed by local day ("YYYY-MM-DD"): one entry per day, whatever the account.
+    // A goal target is an exact decimal in plain notation (percent for a win rate).
+    "CREATE TABLE journal_entries (
+        day           TEXT PRIMARY KEY
+                      CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+        mood          INTEGER CHECK (mood BETWEEN 1 AND 5),
+        sleep_quality INTEGER CHECK (sleep_quality BETWEEN 1 AND 5),
+        fatigue       INTEGER CHECK (fatigue BETWEEN 1 AND 5),
+        late_hours    INTEGER NOT NULL DEFAULT 0 CHECK (late_hours IN (0,1)),
+        went_well     TEXT NOT NULL DEFAULT '',
+        to_improve    TEXT NOT NULL DEFAULT '',
+        notes         TEXT NOT NULL DEFAULT '',
+        created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE TABLE goals (
+        id         INTEGER PRIMARY KEY,
+        month      TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'),
+        metric     TEXT NOT NULL
+                   CHECK (metric IN ('net_pnl','win_rate','profit_factor','expectancy_r','execution_quality','max_drawdown')),
+        target     TEXT NOT NULL
+                   CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*' AND target GLOB '*[1-9]*'),
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (month, metric)
+    );",
 ];
 
 pub fn latest_version() -> u32 {
@@ -532,5 +559,36 @@ mod tests {
         assert_eq!(a.initial_capital.to_string(), "1234.50");
         assert_eq!(crate::cash_flows::list(&conn, &[id]).unwrap().len(), 1);
         assert!(conn.execute("UPDATE accounts SET archived = 2", []).is_err(), "CHECK refuses other values");
+    }
+
+    #[test]
+    fn v6_adds_journal_and_goals_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 5).unwrap();
+        let account = account_v2(&conn);
+        conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 6);
+        let account_still_there: i64 =
+            conn.query_row("SELECT COUNT(*) FROM accounts WHERE id = ?1", [account], |r| r.get(0)).unwrap();
+        assert_eq!(account_still_there, 1);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'keep'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "me");
+        for table in ["journal_entries", "goals"] {
+            let n: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(n, 0, "{table} starts empty");
+        }
+        // Guards written straight to the schema.
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('2026-09-29')", []).is_ok());
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('2026-09-29')", []).is_err(), "one entry per day");
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('29/09/2026')", []).is_err());
+        assert!(conn.execute("INSERT INTO journal_entries (day, mood) VALUES ('2026-09-30', 6)", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500')", []).is_ok());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '600')", []).is_err(), "one goal per month and metric");
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '0')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'sharpe', '1')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '1e2')", []).is_err());
     }
 }
