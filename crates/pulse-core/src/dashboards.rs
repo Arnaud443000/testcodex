@@ -11,6 +11,10 @@
 //! - The default dashboard (3.8.6) is the `dashboard.default` setting; missing, unknown or deleted → the
 //!   "Essentiel" preset, which is the dashboard the application always had, so an existing user loses nothing.
 //! - A widget's own period / account / display mode (3.8.8): `None` = follow the global choice / the default mode.
+//! - Scope of a dashboard (3.8.9): `follow` (the account chosen in the top bar, what every dashboard did
+//!   before the scope existed), `account` (linked to ONE account) or `all` (consolidated over every active
+//!   account). **Priority for the account a widget reads: the widget's own account, then the dashboard's
+//!   scope, then the top bar.** The period is not part of the scope: it stays the widget's own, else the top bar's.
 
 use crate::error::{CoreError, Result};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -28,6 +32,50 @@ const DEFAULT_SETTING: &str = "dashboard.default";
 const CUSTOM_PREFIX: &str = "custom:";
 /// Values of a widget's own period (same keys as the top bar).
 pub const PERIODS: [&str; 6] = ["1D", "1W", "1M", "3M", "1Y", "ALL"];
+
+/// What a dashboard reads by default (3.8.9).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScopeKind {
+    /// The account chosen in the top bar (all active accounts when none is chosen).
+    Follow,
+    /// One account, whatever the top bar says.
+    Account,
+    /// Every active account, consolidated (never summed across currencies: see [`ResolvedScope::mixed_currency`]).
+    All,
+}
+
+impl ScopeKind {
+    fn as_db(self) -> &'static str {
+        match self {
+            ScopeKind::Follow => "follow",
+            ScopeKind::Account => "account",
+            ScopeKind::All => "all",
+        }
+    }
+
+    fn from_db(s: &str) -> ScopeKind {
+        match s {
+            "account" => ScopeKind::Account,
+            "all" => ScopeKind::All,
+            _ => ScopeKind::Follow,
+        }
+    }
+}
+
+/// The scope as stored. `account_id` is set for `Account` only; an `Account` scope whose id is `None` is a
+/// dashboard whose account was deleted (the column is emptied by the database): it reads as `Follow`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DashboardScope {
+    pub kind: ScopeKind,
+    #[serde(default)]
+    pub account_id: Option<i64>,
+}
+
+impl DashboardScope {
+    pub const FOLLOW: DashboardScope = DashboardScope { kind: ScopeKind::Follow, account_id: None };
+}
 
 /// A kind of widget in the library (3.8.3). `modes` lists the display modes a widget of this kind offers
 /// (the first one is the default); `period` / `account` say whether it honours its own period / account.
@@ -153,6 +201,7 @@ pub struct DashboardLayout {
     /// A built-in preset: read-only.
     pub builtin: bool,
     pub is_default: bool,
+    pub scope: DashboardScope,
     pub widgets: Vec<WidgetInstance>,
 }
 
@@ -163,6 +212,7 @@ pub struct DashboardSummary {
     pub name: String,
     pub builtin: bool,
     pub is_default: bool,
+    pub scope: DashboardScope,
     pub widget_count: usize,
 }
 
@@ -373,19 +423,25 @@ fn widgets_of(conn: &Connection, dashboard_id: i64) -> Result<Vec<WidgetInstance
     Ok(rows.collect::<std::result::Result<_, _>>()?)
 }
 
+fn scope_of(kind: &str, account_id: Option<i64>) -> DashboardScope {
+    DashboardScope { kind: ScopeKind::from_db(kind), account_id }
+}
+
 pub fn get(conn: &Connection, key: &str) -> Result<DashboardLayout> {
     let is_default = default_key(conn)? == key;
     match parse_key(key)? {
         KeyRef::Preset(k) => {
             let (name, widgets) = preset(k).expect("known preset");
-            Ok(DashboardLayout { key: k.into(), name: name.into(), builtin: true, is_default, widgets })
+            Ok(DashboardLayout { key: k.into(), name: name.into(), builtin: true, is_default, scope: DashboardScope::FOLLOW, widgets })
         }
         KeyRef::Custom(id) => {
-            let name: String = conn
-                .query_row("SELECT name FROM dashboards WHERE id = ?1", [id], |r| r.get(0))
+            let (name, scope) = conn
+                .query_row("SELECT name, scope, scope_account_id FROM dashboards WHERE id = ?1", [id], |r| {
+                    Ok((r.get::<_, String>(0)?, scope_of(&r.get::<_, String>(1)?, r.get(2)?)))
+                })
                 .optional()?
                 .ok_or_else(|| CoreError::NotFound(format!("dashboard {key:?}")))?;
-            Ok(DashboardLayout { key: custom_key(id), name, builtin: false, is_default, widgets: widgets_of(conn, id)? })
+            Ok(DashboardLayout { key: custom_key(id), name, builtin: false, is_default, scope, widgets: widgets_of(conn, id)? })
         }
     }
 }
@@ -402,21 +458,182 @@ pub fn list(conn: &Connection) -> Result<Vec<DashboardSummary>> {
         .iter()
         .map(|k| {
             let (name, widgets) = preset(k).expect("known preset");
-            DashboardSummary { key: (*k).into(), name: name.into(), builtin: true, is_default: default == *k, widget_count: widgets.len() }
+            DashboardSummary {
+                key: (*k).into(),
+                name: name.into(),
+                builtin: true,
+                is_default: default == *k,
+                scope: DashboardScope::FOLLOW,
+                widget_count: widgets.len(),
+            }
         })
         .collect();
     let mut stmt = conn.prepare(
-        "SELECT d.id, d.name, (SELECT COUNT(*) FROM dashboard_widgets w WHERE w.dashboard_id = d.id)
+        "SELECT d.id, d.name, (SELECT COUNT(*) FROM dashboard_widgets w WHERE w.dashboard_id = d.id), d.scope, d.scope_account_id
          FROM dashboards d ORDER BY d.position, d.id",
     )?;
-    let rows = stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?)))?;
+    let rows = stmt.query_map([], |r| {
+        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, Option<i64>>(4)?))
+    })?;
     for row in rows {
-        let (id, name, count) = row?;
+        let (id, name, count, kind, account) = row?;
         let widget_count = count as usize;
         let key = custom_key(id);
-        out.push(DashboardSummary { is_default: default == key, key, name, builtin: false, widget_count });
+        out.push(DashboardSummary { is_default: default == key, key, name, builtin: false, scope: scope_of(&kind, account), widget_count });
     }
     Ok(out)
+}
+
+// --- Scope resolution (3.8.9) -------------------------------------------------------------------
+
+/// An account a dashboard or widget reads, as the interface shows it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScopeAccount {
+    pub id: i64,
+    pub name: String,
+    pub currency: String,
+    pub archived: bool,
+}
+
+/// Something the trader should be told about the scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScopeNotice {
+    /// The linked account no longer exists: the dashboard reads the top bar again.
+    AccountDeleted,
+    /// The linked account is archived: still read, since it is named explicitly.
+    AccountArchived,
+}
+
+/// Where the account a widget reads comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScopeSource {
+    Widget,
+    Dashboard,
+    TopBar,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedScope {
+    /// The scope as stored.
+    pub declared: ScopeKind,
+    /// What is really read: `Follow` when the linked account is gone.
+    pub effective: ScopeKind,
+    /// Accounts to send to the statistics commands; empty = every active account (engine convention).
+    pub account_ids: Vec<i64>,
+    /// The accounts read (all active accounts when `account_ids` is empty).
+    pub accounts: Vec<ScopeAccount>,
+    /// Common currency of the accounts read; `None` without account.
+    pub currency: Option<String>,
+    /// The accounts read do not share a currency: nothing may be added up.
+    pub mixed_currency: bool,
+    pub notices: Vec<ScopeNotice>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetScope {
+    pub uid: String,
+    pub source: ScopeSource,
+    pub account_ids: Vec<i64>,
+    pub accounts: Vec<ScopeAccount>,
+    pub currency: Option<String>,
+    pub mixed_currency: bool,
+    /// The account set on the widget does not exist (an unsaved draft; a saved widget is emptied on deletion).
+    pub account_missing: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedDashboard {
+    pub scope: ResolvedScope,
+    pub widgets: Vec<WidgetScope>,
+}
+
+/// Accounts by id, or every active account when `ids` is empty. Unknown ids are simply absent.
+fn load_accounts(conn: &Connection, ids: &[i64]) -> Result<Vec<ScopeAccount>> {
+    let mut out = Vec::new();
+    let map = |r: &rusqlite::Row| -> rusqlite::Result<ScopeAccount> {
+        Ok(ScopeAccount { id: r.get(0)?, name: r.get(1)?, currency: r.get(2)?, archived: r.get(3)? })
+    };
+    if ids.is_empty() {
+        let mut stmt = conn.prepare("SELECT id, name, currency, archived FROM accounts WHERE archived = 0 ORDER BY id")?;
+        for row in stmt.query_map([], map)? {
+            out.push(row?);
+        }
+    } else {
+        let mut stmt = conn.prepare("SELECT id, name, currency, archived FROM accounts WHERE id = ?1")?;
+        for id in ids {
+            if let Some(a) = stmt.query_row([id], map).optional()? {
+                out.push(a);
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn currency_of(accounts: &[ScopeAccount]) -> (Option<String>, bool) {
+    let first = accounts.first().map(|a| a.currency.clone());
+    let mixed = accounts.iter().any(|a| Some(&a.currency) != first.as_ref());
+    (first, mixed)
+}
+
+/// What the dashboard reads. `selected` = the account chosen in the top bar (`None` = all active accounts).
+pub fn resolve_scope(conn: &Connection, scope: &DashboardScope, selected: Option<i64>) -> Result<ResolvedScope> {
+    let mut notices = Vec::new();
+    let (effective, account_ids) = match (scope.kind, scope.account_id) {
+        (ScopeKind::Account, Some(id)) if !load_accounts(conn, &[id])?.is_empty() => (ScopeKind::Account, vec![id]),
+        (ScopeKind::Account, _) => {
+            notices.push(ScopeNotice::AccountDeleted);
+            (ScopeKind::Follow, selected.into_iter().collect())
+        }
+        (ScopeKind::All, _) => (ScopeKind::All, Vec::new()),
+        (ScopeKind::Follow, _) => (ScopeKind::Follow, selected.into_iter().collect()),
+    };
+    let accounts = load_accounts(conn, &account_ids)?;
+    if effective == ScopeKind::Account && accounts.iter().any(|a| a.archived) {
+        notices.push(ScopeNotice::AccountArchived);
+    }
+    let (currency, mixed_currency) = currency_of(&accounts);
+    Ok(ResolvedScope { declared: scope.kind, effective, account_ids, accounts, currency, mixed_currency, notices })
+}
+
+/// The dashboard's scope and, for each widget, the accounts it reads: its own account first, then the
+/// dashboard's scope, then the top bar (`ResolvedScope` already falls back to the top bar for `Follow`).
+pub fn resolve(conn: &Connection, scope: &DashboardScope, widgets: &[WidgetInstance], selected: Option<i64>) -> Result<ResolvedDashboard> {
+    let dashboard = resolve_scope(conn, scope, selected)?;
+    let mut out = Vec::with_capacity(widgets.len());
+    for widget in widgets {
+        let scoped = match widget.account_id {
+            Some(id) => {
+                let accounts = load_accounts(conn, &[id])?;
+                let (currency, mixed_currency) = currency_of(&accounts);
+                WidgetScope {
+                    uid: widget.uid.clone(),
+                    source: ScopeSource::Widget,
+                    account_ids: vec![id],
+                    account_missing: accounts.is_empty(),
+                    accounts,
+                    currency,
+                    mixed_currency,
+                }
+            }
+            None => WidgetScope {
+                uid: widget.uid.clone(),
+                source: if dashboard.effective == ScopeKind::Follow { ScopeSource::TopBar } else { ScopeSource::Dashboard },
+                account_ids: dashboard.account_ids.clone(),
+                accounts: dashboard.accounts.clone(),
+                currency: dashboard.currency.clone(),
+                mixed_currency: dashboard.mixed_currency,
+                account_missing: false,
+            },
+        };
+        out.push(scoped);
+    }
+    Ok(ResolvedDashboard { scope: dashboard, widgets: out })
 }
 
 // --- Writing ------------------------------------------------------------------------------------
@@ -455,8 +672,37 @@ fn write_widgets(conn: &Connection, dashboard_id: i64, widgets: &[WidgetInstance
 /// Saves a dashboard. `key` = `None` or a preset key creates the user's own dashboard (a preset itself is
 /// never altered); a `custom:` key replaces that dashboard's name and widgets. Returns what is now stored.
 pub fn save(conn: &Connection, key: Option<&str>, name: &str, widgets: &[WidgetInstance]) -> Result<DashboardLayout> {
+    save_scoped(conn, key, name, None, widgets)
+}
+
+/// Checks a scope: `Account` needs an existing account (an archived one is fine: it is named explicitly),
+/// the other kinds carry no account.
+pub fn validate_scope(conn: &Connection, scope: &DashboardScope) -> Result<()> {
+    match (scope.kind, scope.account_id) {
+        (ScopeKind::Account, Some(id)) => {
+            let exists: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM accounts WHERE id = ?1)", [id], |r| r.get(0))?;
+            if exists { Ok(()) } else { Err(CoreError::NotFound(format!("account {id}"))) }
+        }
+        (ScopeKind::Account, None) => invalid("a dashboard linked to an account needs that account"),
+        (_, Some(_)) => invalid("only a dashboard linked to an account carries an account"),
+        (_, None) => Ok(()),
+    }
+}
+
+/// [`save`] with a scope (3.8.9). `scope` = `None` keeps the scope of an existing dashboard (a new one, or
+/// a copy of a preset, starts on `Follow`).
+pub fn save_scoped(
+    conn: &Connection,
+    key: Option<&str>,
+    name: &str,
+    scope: Option<&DashboardScope>,
+    widgets: &[WidgetInstance],
+) -> Result<DashboardLayout> {
     let name = clean_name(name)?;
     validate(conn, widgets)?;
+    if let Some(scope) = scope {
+        validate_scope(conn, scope)?;
+    }
     let existing = match key {
         Some(k) => match parse_key(k)? {
             KeyRef::Custom(id) => {
@@ -483,13 +729,43 @@ pub fn save(conn: &Connection, key: Option<&str>, name: &str, widgets: &[WidgetI
         }
         None => {
             let position: i64 = tx.query_row("SELECT COALESCE(MAX(position), 0) + 1 FROM dashboards", [], |r| r.get(0))?;
-            tx.execute("INSERT INTO dashboards (name, position) VALUES (?1, ?2)", params![name, position])?;
+            let new = scope.unwrap_or(&DashboardScope::FOLLOW);
+            tx.execute(
+                "INSERT INTO dashboards (name, position, scope, scope_account_id) VALUES (?1, ?2, ?3, ?4)",
+                params![name, position, new.kind.as_db(), new.account_id],
+            )?;
             tx.last_insert_rowid()
         }
     };
+    if existing.is_some()
+        && let Some(scope) = scope
+    {
+        write_scope(&tx, id, scope)?;
+    }
     write_widgets(&tx, id, widgets)?;
     tx.commit()?;
     get(conn, &custom_key(id))
+}
+
+fn write_scope(conn: &Connection, id: i64, scope: &DashboardScope) -> Result<()> {
+    conn.execute(
+        "UPDATE dashboards SET scope = ?1, scope_account_id = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?3",
+        params![scope.kind.as_db(), scope.account_id, id],
+    )?;
+    Ok(())
+}
+
+/// Changes what one of the user's dashboards reads (3.8.9). A built-in preset always follows the top bar.
+pub fn set_scope(conn: &Connection, key: &str, scope: &DashboardScope) -> Result<DashboardLayout> {
+    let KeyRef::Custom(id) = parse_key(key)? else {
+        return invalid("a built-in dashboard cannot be linked to an account: save a copy first");
+    };
+    if !exists(conn, key)? {
+        return Err(CoreError::NotFound(format!("dashboard {key:?}")));
+    }
+    validate_scope(conn, scope)?;
+    write_scope(conn, id, scope)?;
+    get(conn, key)
 }
 
 pub fn rename(conn: &Connection, key: &str, name: &str) -> Result<DashboardLayout> {

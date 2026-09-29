@@ -5,7 +5,7 @@ use pulse_core::behavior::{
     StreakReport, TradeDiscipline,
 };
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
-use pulse_core::dashboards::{self, DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance};
+use pulse_core::dashboards::{self, DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance};
 use pulse_core::confidence::{self, ConfidenceReport};
 use pulse_core::execution_quality::{self, ExecutionScore, QualityReport};
 use pulse_core::journal::{self, DayOverview, JournalEntry};
@@ -628,7 +628,9 @@ pub fn run() {
             save_dashboard_layout,
             rename_dashboard_layout,
             delete_dashboard_layout,
-            set_default_dashboard_layout
+            set_default_dashboard_layout,
+            set_dashboard_scope,
+            resolve_dashboard_scope
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -784,9 +786,10 @@ fn save_dashboard_layout(
     key: Option<String>,
     name: String,
     widgets: Vec<WidgetInstance>,
+    scope: Option<DashboardScope>,
 ) -> Result<DashboardLayout, String> {
     let conn = state.db.lock().map_err(err)?;
-    dashboards::save(&conn, key.as_deref(), &name, &widgets).map_err(err)
+    dashboards::save_scoped(&conn, key.as_deref(), &name, scope.as_ref(), &widgets).map_err(err)
 }
 
 #[tauri::command]
@@ -805,4 +808,26 @@ fn delete_dashboard_layout(state: State<AppState>, key: String) -> Result<(), St
 fn set_default_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
     let conn = state.db.lock().map_err(err)?;
     dashboards::set_default(&conn, &key).map_err(err)
+}
+
+// --- Lot 18 : portée d'un dashboard (3.8.9) ---
+
+/// Change ce que lit un dashboard de l'utilisateur : barre du haut, un compte, ou tous les comptes.
+#[tauri::command]
+fn set_dashboard_scope(state: State<AppState>, key: String, scope: DashboardScope) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::set_scope(&conn, &key, &scope).map_err(err)
+}
+
+/// Comptes réellement lus par le dashboard et par chaque widget (le compte du widget, puis la portée du
+/// dashboard, puis la barre du haut). `widgets` peut être un brouillon non enregistré.
+#[tauri::command]
+fn resolve_dashboard_scope(
+    state: State<AppState>,
+    scope: DashboardScope,
+    widgets: Vec<WidgetInstance>,
+    selected_account_id: Option<i64>,
+) -> Result<ResolvedDashboard, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::resolve(&conn, &scope, &widgets, selected_account_id).map_err(err)
 }

@@ -12,8 +12,16 @@ export function WidgetHost({ instance, env }: { instance: WidgetInstance; env: S
     () => resolveScope(instance, env),
     // Les seuls réglages qui changent la portée ; `instance` change aussi à chaque déplacement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [instance.period, instance.accountId, env],
+    [instance.uid, instance.period, instance.accountId, env],
   )
+  // La portée du dashboard est calculée par pulse-core : tant que ce widget n'y est pas, on n'interroge rien.
+  if (env.resolved && !env.resolved[instance.uid]) {
+    return (
+      <section className="glass-card flex h-full items-center justify-center p-6 text-center text-sm text-tx3" role="status">
+        {t.loading}
+      </section>
+    )
+  }
   const Component = WIDGET_COMPONENTS[instance.kind]
   if (!Component) {
     return (

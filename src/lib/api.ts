@@ -55,14 +55,14 @@ import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
 import { mockAnalyses, mockBehaviorExtra } from './mockBackend'
 import { createDashboardsMock } from './mockDashboards'
-import type { DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
+import type { DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
  * Outside Tauri (plain `npm run dev` in a browser) it falls back to an
  * in-memory mock (mockBackend.ts) so the UI can be developed and screenshotted without Rust.
  */
-const mockDashboards = createDashboardsMock(async () => (await mock.listAccounts()).map((a) => a.id))
+const mockDashboards = createDashboardsMock(() => mock.listAccounts())
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -301,14 +301,24 @@ export const api = {
   /** Le dashboard affiché au démarrage : « Essentiel » tant qu'aucun autre n'est choisi par défaut. */
   getStartupDashboard: (): Promise<DashboardLayout> => (inTauri ? invoke('get_startup_dashboard') : mockDashboards.getStartupDashboard()),
   /** `key` `null` ou d'un preset : crée un dashboard de l'utilisateur ; sinon remplace le sien. */
-  saveDashboardLayout: (key: string | null, name: string, widgets: WidgetInstance[]): Promise<DashboardLayout> =>
-    inTauri ? invoke('save_dashboard_layout', { key, name, widgets }) : mockDashboards.saveDashboardLayout(key, name, widgets),
+  saveDashboardLayout: (key: string | null, name: string, widgets: WidgetInstance[], scope: DashboardScope | null = null): Promise<DashboardLayout> =>
+    inTauri ? invoke('save_dashboard_layout', { key, name, widgets, scope }) : mockDashboards.saveDashboardLayout(key, name, widgets, scope),
   renameDashboardLayout: (key: string, name: string): Promise<DashboardLayout> =>
     inTauri ? invoke('rename_dashboard_layout', { key, name }) : mockDashboards.renameDashboardLayout(key, name),
   deleteDashboardLayout: (key: string): Promise<void> =>
     inTauri ? invoke('delete_dashboard_layout', { key }) : mockDashboards.deleteDashboardLayout(key),
   setDefaultDashboardLayout: (key: string): Promise<DashboardLayout> =>
     inTauri ? invoke('set_default_dashboard_layout', { key }) : mockDashboards.setDefaultDashboardLayout(key),
+
+  // --- Lot 18 : portée d'un dashboard (3.8.9) ---
+  /** Change ce que lit un dashboard de l'utilisateur : barre du haut, un compte, ou tous les comptes. */
+  setDashboardScope: (key: string, scope: DashboardScope): Promise<DashboardLayout> =>
+    inTauri ? invoke('set_dashboard_scope', { key, scope }) : mockDashboards.setDashboardScope(key, scope),
+  /** Comptes réellement lus par le dashboard et par chaque widget (`widgets` peut être un brouillon). */
+  resolveDashboardScope: (scope: DashboardScope, widgets: WidgetInstance[], selectedAccountId: number | null): Promise<ResolvedDashboard> =>
+    inTauri
+      ? invoke('resolve_dashboard_scope', { scope, widgets, selectedAccountId })
+      : mockDashboards.resolveDashboardScope(scope, widgets, selectedAccountId),
 }
 
 

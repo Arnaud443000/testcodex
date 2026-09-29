@@ -244,3 +244,176 @@ fn a_widget_from_a_future_version_is_still_read_back() {
     let loaded = get(&conn, &saved.key).unwrap();
     assert!(loaded.widgets.iter().any(|x| x.kind == "brand_new"));
 }
+
+// --- Scope of a dashboard (3.8.9) ---------------------------------------------------------------
+
+fn acct(conn: &Connection, name: &str, currency: &str) -> i64 {
+    accounts::create(
+        conn,
+        &accounts::NewAccount { name: name.into(), kind: "prop".into(), broker: String::new(), currency: currency.into(), initial_capital: Default::default() },
+    )
+    .unwrap()
+    .id
+}
+
+fn linked(id: i64) -> DashboardScope {
+    DashboardScope { kind: ScopeKind::Account, account_id: Some(id) }
+}
+
+const ALL: DashboardScope = DashboardScope { kind: ScopeKind::All, account_id: None };
+
+#[test]
+fn a_new_dashboard_and_the_presets_follow_the_top_bar() {
+    let conn = db::open_in_memory().unwrap();
+    assert!(list(&conn).unwrap().iter().all(|d| d.scope == DashboardScope::FOLLOW));
+    assert_eq!(get(&conn, ESSENTIAL).unwrap().scope, DashboardScope::FOLLOW);
+    assert_eq!(save(&conn, None, "Mien", &simple()).unwrap().scope, DashboardScope::FOLLOW);
+}
+
+#[test]
+fn the_scope_is_saved_read_back_and_kept_when_the_layout_is_saved_again() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let mine = save_scoped(&conn, None, "Prop suivi", Some(&linked(prop)), &simple()).unwrap();
+    assert_eq!(mine.scope, linked(prop));
+    assert_eq!(list(&conn).unwrap().last().unwrap().scope, linked(prop));
+    // Saving the layout without a scope (the ordinary "Enregistrer") never changes the scope.
+    let again = save(&conn, Some(&mine.key), "Prop suivi", &[]).unwrap();
+    assert_eq!(again.scope, linked(prop));
+    // Changing it is explicit.
+    assert_eq!(set_scope(&conn, &mine.key, &ALL).unwrap().scope, ALL);
+    assert_eq!(get(&conn, &mine.key).unwrap().scope, ALL);
+    assert_eq!(set_scope(&conn, &mine.key, &DashboardScope::FOLLOW).unwrap().scope, DashboardScope::FOLLOW);
+    // A copy of a preset saved with a scope carries it; the preset itself stays untouched.
+    let copy = save_scoped(&conn, Some("preset:behavior"), "Comportement prop", Some(&linked(prop)), &simple()).unwrap();
+    assert_eq!(copy.scope, linked(prop));
+    assert_eq!(get(&conn, "preset:behavior").unwrap().scope, DashboardScope::FOLLOW);
+}
+
+#[test]
+fn invalid_scopes_are_refused_and_write_nothing() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let mine = save(&conn, None, "Mien", &simple()).unwrap();
+    for bad in [
+        DashboardScope { kind: ScopeKind::Account, account_id: None },
+        DashboardScope { kind: ScopeKind::All, account_id: Some(prop) },
+        DashboardScope { kind: ScopeKind::Follow, account_id: Some(prop) },
+    ] {
+        assert!(is_invalid(set_scope(&conn, &mine.key, &bad)), "{bad:?}");
+        assert!(is_invalid(save_scoped(&conn, None, "Autre", Some(&bad), &simple())), "{bad:?}");
+    }
+    assert!(matches!(set_scope(&conn, &mine.key, &linked(999)), Err(CoreError::NotFound(_))));
+    assert!(is_invalid(set_scope(&conn, "preset:analysis", &ALL)), "a preset has no scope of its own");
+    assert!(matches!(set_scope(&conn, "custom:404", &ALL), Err(CoreError::NotFound(_))));
+    assert_eq!(list(&conn).unwrap().len(), 4, "nothing was created");
+    assert_eq!(get(&conn, &mine.key).unwrap().scope, DashboardScope::FOLLOW);
+}
+
+#[test]
+fn follow_reads_the_top_bar_all_reads_every_active_account_account_reads_its_own() {
+    let conn = db::open_in_memory().unwrap();
+    let a = acct(&conn, "Perso", "USD");
+    let b = acct(&conn, "Prop", "USD");
+    let follow = resolve_scope(&conn, &DashboardScope::FOLLOW, None).unwrap();
+    assert_eq!((follow.effective, follow.account_ids.clone(), follow.accounts.len()), (ScopeKind::Follow, vec![], 2));
+    let follow_b = resolve_scope(&conn, &DashboardScope::FOLLOW, Some(b)).unwrap();
+    assert_eq!((follow_b.account_ids, follow_b.accounts.iter().map(|x| x.id).collect::<Vec<_>>()), (vec![b], vec![b]));
+    // "All" ignores the top bar; a linked dashboard too.
+    let all = resolve_scope(&conn, &ALL, Some(a)).unwrap();
+    assert_eq!((all.effective, all.account_ids, all.accounts.len()), (ScopeKind::All, vec![], 2));
+    let own = resolve_scope(&conn, &linked(b), Some(a)).unwrap();
+    assert_eq!((own.effective, own.account_ids, own.currency.as_deref()), (ScopeKind::Account, vec![b], Some("USD")));
+    assert!(own.notices.is_empty());
+    // All ignores archived accounts.
+    accounts::set_archived(&conn, a, true).unwrap();
+    let all = resolve_scope(&conn, &ALL, None).unwrap();
+    assert_eq!(all.accounts.iter().map(|x| x.id).collect::<Vec<_>>(), [b]);
+}
+
+#[test]
+fn accounts_of_different_currencies_are_flagged_and_never_merged() {
+    let conn = db::open_in_memory().unwrap();
+    let usd = acct(&conn, "Dollars", "USD");
+    let eur = acct(&conn, "Euros", "EUR");
+    let all = resolve_scope(&conn, &ALL, None).unwrap();
+    assert!(all.mixed_currency, "USD + EUR: no sum");
+    let follow = resolve_scope(&conn, &DashboardScope::FOLLOW, None).unwrap();
+    assert!(follow.mixed_currency);
+    // One account, or two of the same currency, is fine.
+    let one = resolve_scope(&conn, &linked(eur), None).unwrap();
+    assert_eq!((one.mixed_currency, one.currency.as_deref()), (false, Some("EUR")));
+    acct(&conn, "Euros 2", "EUR");
+    accounts::set_archived(&conn, usd, true).unwrap();
+    let all = resolve_scope(&conn, &ALL, None).unwrap();
+    assert_eq!((all.mixed_currency, all.currency.as_deref(), all.accounts.len()), (false, Some("EUR"), 2));
+    // No account at all: no currency, nothing mixed.
+    let empty = db::open_in_memory().unwrap();
+    let none = resolve_scope(&empty, &ALL, None).unwrap();
+    assert_eq!((none.currency, none.mixed_currency, none.accounts.len()), (None, false, 0));
+}
+
+#[test]
+fn a_widget_reads_its_own_account_then_the_dashboard_then_the_top_bar() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let perso = acct(&conn, "Perso", "USD");
+    let eur = acct(&conn, "Euros", "EUR");
+    let widgets = vec![
+        widget("free", "capital", 0, 0, 10, 16),
+        WidgetInstance { account_id: Some(perso), ..widget("pinned", "calendar", 10, 0, 13, 13) },
+    ];
+    // Follow: the free widget reads the top bar, the pinned one its account.
+    let r = resolve(&conn, &DashboardScope::FOLLOW, &widgets, Some(prop)).unwrap();
+    assert_eq!((r.widgets[0].source, r.widgets[0].account_ids.clone()), (ScopeSource::TopBar, vec![prop]));
+    assert_eq!((r.widgets[1].source, r.widgets[1].account_ids.clone()), (ScopeSource::Widget, vec![perso]));
+    // Linked dashboard: the top bar no longer matters; the widget's own account still wins.
+    let r = resolve(&conn, &linked(prop), &widgets, Some(perso)).unwrap();
+    assert_eq!((r.widgets[0].source, r.widgets[0].account_ids.clone()), (ScopeSource::Dashboard, vec![prop]));
+    assert_eq!((r.widgets[1].source, r.widgets[1].account_ids.clone()), (ScopeSource::Widget, vec![perso]));
+    // Consolidated dashboard with mixed currencies: the free widget is flagged, the pinned one is not.
+    let r = resolve(&conn, &ALL, &widgets, None).unwrap();
+    assert!(r.scope.mixed_currency && r.widgets[0].mixed_currency && !r.widgets[1].mixed_currency);
+    assert_eq!(r.widgets[0].accounts.len(), 3);
+    assert_eq!(r.widgets[1].currency.as_deref(), Some("USD"));
+    let _ = eur;
+}
+
+#[test]
+fn a_widget_pointing_at_a_missing_account_is_flagged_in_a_draft() {
+    let conn = db::open_in_memory().unwrap();
+    let draft = [WidgetInstance { account_id: Some(4242), ..widget("x", "calendar", 0, 0, 13, 13) }];
+    let r = resolve(&conn, &DashboardScope::FOLLOW, &draft, None).unwrap();
+    assert!(r.widgets[0].account_missing && r.widgets[0].accounts.is_empty());
+}
+
+#[test]
+fn deleting_the_linked_account_keeps_the_dashboard_and_reads_the_top_bar_again() {
+    let conn = db::open_in_memory().unwrap();
+    let prop = acct(&conn, "Prop", "USD");
+    let other = acct(&conn, "Autre", "USD");
+    let mine = save_scoped(&conn, None, "Prop", Some(&linked(prop)), &simple()).unwrap();
+    accounts::delete(&conn, prop).unwrap();
+    let loaded = get(&conn, &mine.key).unwrap();
+    assert_eq!(loaded.widgets.len(), 2, "the layout survives");
+    assert_eq!(loaded.scope, DashboardScope { kind: ScopeKind::Account, account_id: None });
+    let r = resolve_scope(&conn, &loaded.scope, Some(other)).unwrap();
+    assert_eq!((r.declared, r.effective, r.account_ids), (ScopeKind::Account, ScopeKind::Follow, vec![other]));
+    assert_eq!(r.notices, [ScopeNotice::AccountDeleted]);
+    // Saving the layout again does not need to (and must not) touch the orphan scope; choosing a new one works.
+    assert!(save(&conn, Some(&mine.key), "Prop", &simple()).is_ok());
+    assert_eq!(set_scope(&conn, &mine.key, &linked(other)).unwrap().scope, linked(other));
+}
+
+#[test]
+fn an_archived_linked_account_is_still_read_with_a_notice() {
+    let conn = db::open_in_memory().unwrap();
+    let old = acct(&conn, "Ancien", "USD");
+    let mine = save_scoped(&conn, None, "Ancien", Some(&linked(old)), &simple()).unwrap();
+    accounts::set_archived(&conn, old, true).unwrap();
+    let r = resolve_scope(&conn, &mine.scope, None).unwrap();
+    assert_eq!((r.effective, r.account_ids, r.accounts[0].archived), (ScopeKind::Account, vec![old], true));
+    assert_eq!(r.notices, [ScopeNotice::AccountArchived]);
+    // A new dashboard may be linked to an archived account, named explicitly.
+    assert!(save_scoped(&conn, None, "Encore", Some(&linked(old)), &simple()).is_ok());
+}

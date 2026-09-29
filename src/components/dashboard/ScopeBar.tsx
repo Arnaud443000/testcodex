@@ -1,0 +1,54 @@
+import { useT } from '../../i18n'
+import type { Account } from '../../types/account'
+import type { ResolvedDashboard } from '../../types/dashboardLayout'
+import { Icon } from '../Icon'
+
+/**
+ * Indique clairement ce que lit le dashboard affiché (3.8.9). Tout vient de `resolve_dashboard_scope` : ce
+ * composant ne fait que formuler. `onChange` absent = dashboard livré (portée fixe) ou mode modification.
+ */
+export function ScopeBar({
+  resolved,
+  selectedAccount,
+  onChange,
+  isPreset,
+}: {
+  resolved: ResolvedDashboard
+  /** Compte choisi dans la barre du haut (pour l'indiquer quand le dashboard le suit). */
+  selectedAccount: Account | null
+  onChange?: () => void
+  isPreset: boolean
+}) {
+  const t = useT().dashboardBuilder.scope
+  const { scope } = resolved
+  const own = resolved.widgets.filter((w) => w.source === 'widget').length
+  const label =
+    scope.effective === 'account'
+      ? t.badge.account(scope.accounts[0]?.name ?? '')
+      : scope.effective === 'all'
+        ? t.badge.all(scope.accounts.length)
+        : t.badge.follow(selectedAccount ? selectedAccount.name : t.badge.allAccounts)
+  const archived = scope.effective === 'account' && scope.accounts[0]?.archived
+  return (
+    <div className="flex flex-col gap-2" data-testid="dashboard-scope">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+        <span className="badge" title={t.title}>
+          <Icon name="wallet" size={14} />
+          <span className="text-tx3">{t.label} :</span> {label}
+          {archived && <span className="ml-1 text-tx3">({t.archivedTag})</span>}
+        </span>
+        {scope.effective !== 'follow' && <span className="text-xs text-tx3">{t.ignoresTopBar}</span>}
+        {own > 0 && <span className="text-xs text-tx3">{t.widgetOwnAccount(own)}</span>}
+        {onChange && !isPreset && (
+          <button type="button" className="text-xs text-violet underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet" onClick={onChange}>
+            {t.change}
+          </button>
+        )}
+      </div>
+      {scope.notices.map((n) => (
+        <div key={n} className="nt nt-warn" role="status">{t.notice[n]}</div>
+      ))}
+      {scope.mixedCurrency && scope.effective !== 'follow' && <div className="nt nt-warn" role="status">{t.mixedCurrencies}</div>}
+    </div>
+  )
+}

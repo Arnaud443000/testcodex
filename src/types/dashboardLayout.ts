@@ -46,6 +46,8 @@ export interface DashboardLayout {
   /** Un preset livré avec l'application : en lecture seule. */
   builtin: boolean
   isDefault: boolean
+  /** Ce que lit le dashboard par défaut (3.8.9). */
+  scope: DashboardScope
   widgets: WidgetInstance[]
 }
 
@@ -54,5 +56,55 @@ export interface DashboardSummary {
   name: string
   builtin: boolean
   isDefault: boolean
+  scope: DashboardScope
   widgetCount: number
+}
+
+/** Portée d'un dashboard (3.8.9) : la barre du haut, un seul compte, ou tous les comptes actifs. */
+export type ScopeKind = 'follow' | 'account' | 'all'
+
+export interface DashboardScope {
+  kind: ScopeKind
+  /** Renseigné pour `account` ; `null` avec `account` = le compte lié a été supprimé. */
+  accountId: number | null
+}
+
+export const FOLLOW_SCOPE: DashboardScope = { kind: 'follow', accountId: null }
+
+/** Miroir de `dashboards::ResolvedDashboard` : les comptes réellement lus, calculés par pulse-core. */
+export interface ScopeAccount {
+  id: number
+  name: string
+  currency: string
+  archived: boolean
+}
+
+export type ScopeNotice = 'accountDeleted' | 'accountArchived'
+/** D'où vient le compte lu par un widget : le sien, celui du dashboard, ou la barre du haut. */
+export type ScopeSource = 'widget' | 'dashboard' | 'topBar'
+
+export interface ResolvedScope {
+  declared: ScopeKind
+  effective: ScopeKind
+  /** Vide = tous les comptes actifs. */
+  accountIds: number[]
+  accounts: ScopeAccount[]
+  currency: string | null
+  mixedCurrency: boolean
+  notices: ScopeNotice[]
+}
+
+export interface WidgetScope {
+  uid: string
+  source: ScopeSource
+  accountIds: number[]
+  accounts: ScopeAccount[]
+  currency: string | null
+  mixedCurrency: boolean
+  accountMissing: boolean
+}
+
+export interface ResolvedDashboard {
+  scope: ResolvedScope
+  widgets: WidgetScope[]
 }

@@ -5,6 +5,8 @@ import { DashboardSwitcher } from '../components/dashboard/DashboardSwitcher'
 import { EditBar } from '../components/dashboard/EditBar'
 import { EditableGrid } from '../components/dashboard/EditableGrid'
 import { NameDialog } from '../components/dashboard/NameDialog'
+import { ScopeBar } from '../components/dashboard/ScopeBar'
+import { ScopeDialog } from '../components/dashboard/ScopeDialog'
 import { WidgetLibrary } from '../components/dashboard/WidgetLibrary'
 import { WidgetSettings } from '../components/dashboard/WidgetSettings'
 import { EmptyState } from '../components/EmptyState'
@@ -17,14 +19,14 @@ import { addWidget, countByKind, patchWidget, removeWidget, sameLayout } from '.
 import { ENGINE_PERIOD, localTzOffsetMin, usePeriod } from '../lib/period'
 import { clearWidgetCache } from '../lib/widgetData'
 import type { ScopeEnv } from '../lib/widgetScope'
-import type { DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
+import type { DashboardLayout, DashboardScope, DashboardSummary, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /** Dashboard consulté pendant cette session : on y revient en quittant puis en rouvrant la page. */
 let sessionKey: string | null = null
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-type Dialog = { kind: 'save' } | { kind: 'rename' } | { kind: 'new' } | null
+type Dialog = { kind: 'save' } | { kind: 'rename' } | { kind: 'new' } | { kind: 'scope' } | null
 
 export function DashboardPage() {
   const { accounts, allAccounts, loading, selectedId } = useAccounts()
@@ -43,6 +45,8 @@ export function DashboardPage() {
   const [editError, setEditError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [live, setLive] = useState('')
+  // Comptes réellement lus (calculés par pulse-core), avec ce pour quoi ils ont été calculés.
+  const [resolvedState, setResolvedState] = useState<{ for: string; value: ResolvedDashboard } | null>(null)
   const [gridRef, gridWidth] = useWidth<HTMLDivElement>()
   // Instant de référence figé à l'ouverture : tous les widgets envoient exactement les mêmes requêtes.
   const [nowMs] = useState(() => {
@@ -51,14 +55,37 @@ export function DashboardPage() {
   })
   const tzOffsetMin = useMemo(() => localTzOffsetMin(), [])
 
-  const chosen = useMemo(() => (selectedId === null ? accounts : allAccounts.filter((a) => a.id === selectedId)), [accounts, allAccounts, selectedId])
-  const accountIds = useMemo(() => (selectedId === null ? [] : [selectedId]), [selectedId])
-  const mixedCurrencies = chosen.some((a) => a.currency !== chosen[0].currency)
+  const scopeKey = layout ? JSON.stringify([layout.key, layout.scope, selectedId]) : null
+  const resolved = resolvedState && resolvedState.for === scopeKey ? resolvedState.value : null
+  // Sans portée encore calculée : la barre du haut, comme avant le lot 18.
+  const chosen = useMemo(
+    () => resolved?.scope.accounts ?? (selectedId === null ? accounts : allAccounts.filter((a) => a.id === selectedId)),
+    [resolved, accounts, allAccounts, selectedId],
+  )
+  const accountIds = useMemo(() => resolved?.scope.accountIds ?? (selectedId === null ? [] : [selectedId]), [resolved, selectedId])
   const ready = !loading && chosen.length > 0
   const editing = draft !== null
+  const shownWidgets = draft ?? layout?.widgets ?? []
+  // Devises mélangées : chaque widget libre le dit ; la page entière ne se bloque que si aucun widget n'a son propre compte.
+  const mixedCurrencies = (resolved ? resolved.scope.mixedCurrency : chosen.some((a) => a.currency !== chosen[0].currency)) && !shownWidgets.some((w) => w.accountId !== null)
   const defs = useMemo(() => Object.fromEntries(catalog.map((d) => [d.kind, d])), [catalog])
   const dirty = layout !== null && draft !== null && !sameLayout(draft, layout.widgets)
   const narrow = gridWidth > 0 && gridWidth < STACK_BELOW
+
+  const widgetAccountsSig = JSON.stringify(shownWidgets.map((w) => [w.uid, w.accountId]))
+  useEffect(() => {
+    if (!layout || scopeKey === null) return
+    let alive = true
+    api
+      .resolveDashboardScope(layout.scope, shownWidgets, selectedId)
+      .then((value) => alive && setResolvedState({ for: scopeKey, value }))
+      .catch((e) => alive && setError(message(e)))
+    return () => {
+      alive = false
+    }
+    // `shownWidgets` change à chaque déplacement : seuls les identifiants et comptes des widgets modifient la portée.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeKey, widgetAccountsSig])
 
   const refreshSummaries = useCallback(() => api.listDashboardLayouts().then(setSummaries), [])
 
@@ -84,7 +111,11 @@ export function DashboardPage() {
 
   // Aucun trade du tout (toutes périodes) : bienvenue plutôt qu'une grille de widgets vides.
   useEffect(() => {
-    if (!ready || mixedCurrencies) return
+    if (!ready) return
+    if (mixedCurrencies) {
+      setHasTrades(true)
+      return
+    }
     let alive = true
     api
       .getDashboard({ accountIds, period: ENGINE_PERIOD.ALL, nowMs, tzOffsetMin })
@@ -95,9 +126,15 @@ export function DashboardPage() {
     }
   }, [ready, mixedCurrencies, accountIds, nowMs, tzOffsetMin])
 
+  const resolvedByUid = useMemo(() => Object.fromEntries((resolved?.widgets ?? []).map((w) => [w.uid, w])), [resolved])
   const env: ScopeEnv = useMemo(
-    () => ({ accounts, allAccounts, selectedId, period, nowMs, tzOffsetMin }),
-    [accounts, allAccounts, selectedId, period, nowMs, tzOffsetMin],
+    () => ({ accounts, allAccounts, selectedId, period, nowMs, tzOffsetMin, resolved: resolvedByUid }),
+    [accounts, allAccounts, selectedId, period, nowMs, tzOffsetMin, resolvedByUid],
+  )
+  const selectedAccount = useMemo(() => allAccounts.find((a) => a.id === selectedId) ?? null, [allAccounts, selectedId])
+  const scopeChoices = useMemo(
+    () => allAccounts.filter((a) => !a.archived || a.id === layout?.scope.accountId),
+    [allAccounts, layout?.scope.accountId],
   )
 
   const show = (next: DashboardLayout) => {
@@ -130,9 +167,9 @@ export function DashboardPage() {
   }
 
   /** Enregistre le brouillon : sur un dashboard de l'utilisateur, il est remplacé ; sur un dashboard livré, une copie est créée. */
-  async function saveDraft(name: string | null) {
+  async function saveDraft(name: string | null, scope: DashboardScope | null = null) {
     if (!layout || !draft) return
-    const saved = await api.saveDashboardLayout(layout.key, name ?? layout.name, draft)
+    const saved = await api.saveDashboardLayout(layout.key, name ?? layout.name, draft, scope)
     show(saved)
     await refreshSummaries()
     setNotice(layout.builtin ? b.toolbar.savedAsCopy(saved.name) : b.toolbar.saved(saved.name))
@@ -182,7 +219,7 @@ export function DashboardPage() {
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
       actions={
-        layout && ready && !mixedCurrencies && hasTrades !== false && !editing ? (
+        layout && ready && hasTrades !== false && !editing ? (
           <div className="flex flex-wrap items-center justify-end gap-3">
             <DashboardSwitcher
               summaries={summaries}
@@ -222,11 +259,80 @@ export function DashboardPage() {
       </section>,
     )
   }
+  const dialogs = () =>
+    layout ? (
+      <>
+      {dialog?.kind === 'save' && (
+        <NameDialog
+          title={b.toolbar.saveAs}
+          initial={b.toolbar.nameSuggestion(layout.name)}
+          submitLabel={t.common.save}
+          scopeAccounts={scopeChoices}
+          onSubmit={async (name, scope) => {
+            await saveDraft(name, scope)
+            setDialog(null)
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'rename' && (
+        <NameDialog
+          title={b.toolbar.rename}
+          initial={layout.name}
+          submitLabel={t.common.save}
+          onSubmit={async (name) => {
+            show(await api.renameDashboardLayout(layout.key, name))
+            await refreshSummaries()
+            setDialog(null)
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'scope' && !layout.builtin && (
+        <ScopeDialog
+          initial={layout.scope}
+          accounts={scopeChoices}
+          onSubmit={async (scope) => {
+            const updated = await api.setDashboardScope(layout.key, scope)
+            show(updated)
+            await refreshSummaries()
+            setNotice(b.scope.changed(updated.name))
+            setDialog(null)
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'new' && (
+        <NameDialog
+          title={b.toolbar.newDashboard}
+          initial=""
+          submitLabel={t.common.save}
+          scopeAccounts={scopeChoices}
+          onSubmit={async (name, scope) => {
+            const created = await api.saveDashboardLayout(null, name, [], scope)
+            show(created)
+            await refreshSummaries()
+            setDialog(null)
+            setDraft([])
+            setLibraryOpen(true)
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      </>
+    ) : null
+  const scopeBar = resolved && layout ? (
+    <ScopeBar resolved={resolved} selectedAccount={selectedAccount} isPreset={layout.builtin} onChange={editing ? undefined : () => setDialog({ kind: 'scope' })} />
+  ) : null
   if (mixedCurrencies) {
     return wrap(
-      <section className="glass-card">
-        <EmptyState title={t.dashboard.mixedCurrenciesTitle}>{t.dashboard.mixedCurrenciesText}</EmptyState>
-      </section>,
+      <>
+        {scopeBar}
+        <section className="glass-card">
+          <EmptyState title={t.dashboard.mixedCurrenciesTitle}>{t.dashboard.mixedCurrenciesText}</EmptyState>
+        </section>
+        {dialogs()}
+      </>,
     )
   }
   if (error) return wrap(<div className="nt nt-bad" role="alert">{b.toolbar.loadError(error)}</div>)
@@ -244,6 +350,7 @@ export function DashboardPage() {
   const shownItems = draft ?? layout.widgets
   return wrap(
     <>
+      {scopeBar}
       {notice && !editing && <div className="nt nt-ok" role="status">{notice}</div>}
       {editing && (
         <EditBar
@@ -308,51 +415,12 @@ export function DashboardPage() {
           instance={settingsTarget}
           def={defs[settingsTarget.kind]}
           accounts={allAccounts}
+          dashboardScope={resolved?.scope ?? null}
           onChange={(patch) => setDraft(patchWidget(draft!, settingsTarget.uid, patch))}
           onClose={() => setSettingsUid(null)}
         />
       )}
-      {dialog?.kind === 'save' && (
-        <NameDialog
-          title={b.toolbar.saveAs}
-          initial={b.toolbar.nameSuggestion(layout.name)}
-          submitLabel={t.common.save}
-          onSubmit={async (name) => {
-            await saveDraft(name)
-            setDialog(null)
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'rename' && (
-        <NameDialog
-          title={b.toolbar.rename}
-          initial={layout.name}
-          submitLabel={t.common.save}
-          onSubmit={async (name) => {
-            show(await api.renameDashboardLayout(layout.key, name))
-            await refreshSummaries()
-            setDialog(null)
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'new' && (
-        <NameDialog
-          title={b.toolbar.newDashboard}
-          initial=""
-          submitLabel={t.common.save}
-          onSubmit={async (name) => {
-            const created = await api.saveDashboardLayout(null, name, [])
-            show(created)
-            await refreshSummaries()
-            setDialog(null)
-            setDraft([])
-            setLibraryOpen(true)
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
+      {dialogs()}
     </>,
   )
 }
