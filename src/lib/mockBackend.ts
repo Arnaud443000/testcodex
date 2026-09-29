@@ -20,7 +20,7 @@ import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
 import * as analyses from './mockAnalyses'
-import type { FeeGranularity } from '../types/stats'
+import type { FeeGranularity, YearComparisonQuery } from '../types/stats'
 import { ASSET_CATALOG } from './assetCatalog'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
 import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
@@ -762,4 +762,5 @@ export const mockAnalyses = {
 import * as analysesMore from './mockAnalysesMore'
 export const mockAnalysesMore = {
   getOpportunityReport: async (q: StatsQuery) => analysesMore.mockOpportunity(behaviorInput(q.accountIds), q),
+  getYearComparison: async (q: YearComparisonQuery) => analysesMore.mockYearComparison(behaviorInput(q.accountIds), q),
 }

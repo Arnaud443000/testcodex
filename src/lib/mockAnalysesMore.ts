@@ -1,7 +1,8 @@
 import type { Decimal } from '../types/money'
 import type { TradeView } from '../types/trade'
-import type { OpportunityReport, OpportunityTrade, StatsQuery } from '../types/stats'
-import { toDec, toScaled } from './mockStats'
+import type { Comparison, OpportunityReport, OpportunityTrade, StatsQuery, YearComparison, YearComparisonQuery } from '../types/stats'
+import { summary as summaryOf } from './mockAnalyses'
+import { localDay, ratio, toDec, toScaled } from './mockStats'
 import type { BehaviorInput } from './mockBehavior'
 
 /**
@@ -91,5 +92,61 @@ export function mockOpportunity(input: BehaviorInput, q: StatsQuery): Opportunit
     totalAvoided: dec(avoidedTotal),
     netPnlOfEligible: dec(netTotal),
     trades,
+  }
+}
+
+// --- même période un an plus tôt (3.3.19) ------------------------------------------------
+
+const DAY = 86_400_000
+const PERIOD_DAYS = { day: 1, week: 7, month: 30, quarter: 90, year: 365, all: null } as const
+
+/** Jour local (jours depuis 1970) un an plus tôt : le 29 février devient le 28 février. */
+function dayMinusOneYear(day: number): number {
+  const d = new Date(day * DAY)
+  const y = d.getUTCFullYear() - 1
+  const m = d.getUTCMonth()
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  return Date.UTC(y, m, Math.min(d.getUTCDate(), last)) / DAY
+}
+
+export function mockYearComparison(input: BehaviorInput, q: YearComparisonQuery): YearComparison {
+  const closed = input.trades.filter(isClosed).sort(byExit)
+  const inWindow = (from: number | null, to: number | null) => closed.filter((t) => (from === null || t.exitTime >= from) && (to === null || t.exitTime < to))
+  const n = PERIOD_DAYS[q.period]
+  const base = { minSample: MIN_SAMPLE }
+  if (n === null) {
+    const current = summaryOf(closed)
+    return {
+      ...base, available: false, from: null, to: null, previousFrom: null, previousTo: null, current, currentEmpty: current.tradeCount === 0,
+      currentLowSample: current.tradeCount < MIN_SAMPLE, previous: null, previousEmpty: false, previousLowSample: false, previousReason: null, comparison: null,
+    }
+  }
+  const midnight = (day: number) => day * DAY - q.tzOffsetMin * 60_000
+  const today = localDay(q.nowMs, q.tzOffsetMin)
+  const [first, last] = [today + 1 - n, today]
+  const [from, to] = [midnight(first), midnight(last + 1)]
+  const [previousFrom, previousTo] = [midnight(dayMinusOneYear(first)), midnight(dayMinusOneYear(last) + 1)]
+  const current = summaryOf(inWindow(from, to))
+  const previous = summaryOf(inWindow(previousFrom, previousTo))
+  const previousEmpty = previous.tradeCount === 0
+  const firstEntry = input.trades.length ? Math.min(...input.trades.map((t) => t.entryTime)) : null
+  const diff = (a: number | null, b: number | null) => (a !== null && b !== null ? a - b : null)
+  const delta = toScaled(current.netPnl) - toScaled(previous.netPnl)
+  const comparison: Comparison | null = previousEmpty
+    ? null
+    : {
+        tradeCount: current.tradeCount - previous.tradeCount,
+        netPnl: toDec(delta),
+        netPnlPct: ratio(delta, toScaled(previous.netPnl) < 0n ? -toScaled(previous.netPnl) : toScaled(previous.netPnl)),
+        winRate: diff(current.winRate, previous.winRate),
+        profitFactor: diff(current.profitFactor, previous.profitFactor),
+        avgWinLossRatio: diff(current.avgWinLossRatio, previous.avgWinLossRatio),
+        expectancyR: diff(current.expectancyR, previous.expectancyR),
+        maxDrawdown: toDec(toScaled(current.maxDrawdown) - toScaled(previous.maxDrawdown)),
+      }
+  return {
+    ...base, available: true, from, to, previousFrom, previousTo, current, currentEmpty: current.tradeCount === 0,
+    currentLowSample: current.tradeCount < MIN_SAMPLE, previous, previousEmpty, previousLowSample: previous.tradeCount < MIN_SAMPLE,
+    previousReason: previousEmpty ? (firstEntry !== null && firstEntry >= previousTo ? 'historyTooShort' : 'noTrades') : null, comparison,
   }
 }

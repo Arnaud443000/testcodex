@@ -7,7 +7,8 @@
 use super::pnl::{checked, ratio};
 use super::segments::{SegmentBy, groups};
 use super::summary::{Summary, analyze};
-use super::{Ledger, StatsQuery, load, replay, time};
+use super::dashboard::{Comparison, Period, compare};
+use super::{Ledger, StatsQuery, compute, load, replay, time};
 use crate::error::Result;
 use crate::instruments::AssetClass;
 use crate::money::Decimal;
@@ -419,4 +420,115 @@ pub fn opportunity_report(conn: &Connection, query: &StatsQuery) -> Result<Oppor
         after.insert(id, price);
     }
     opportunity(&ledger, &after, query)
+}
+
+// --- same period one year earlier (3.3.19) ---------------------------------------------
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearComparisonQuery {
+    #[serde(default)]
+    pub account_ids: Vec<i64>,
+    pub period: Period,
+    /// The current instant and the user's UTC offset, supplied by the shell (as for the dashboard).
+    pub now_ms: i64,
+    #[serde(default)]
+    pub tz_offset_min: i32,
+}
+
+/// Why nothing can be compared with last year.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PreviousEmptyReason {
+    /// The first trade of the accounts is later than the end of last year's window.
+    HistoryTooShort,
+    /// The history reaches back far enough but holds no closed trade in that window.
+    NoTrades,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearComparison {
+    /// `false` for "all time": nothing precedes it.
+    pub available: bool,
+    /// Current window `[from, to)` and the same calendar dates one year earlier.
+    pub from: Option<i64>,
+    pub to: Option<i64>,
+    pub previous_from: Option<i64>,
+    pub previous_to: Option<i64>,
+    pub min_sample: usize,
+    pub current: Summary,
+    pub current_empty: bool,
+    pub current_low_sample: bool,
+    /// `None` when `available` is false.
+    pub previous: Option<Summary>,
+    pub previous_empty: bool,
+    pub previous_low_sample: bool,
+    pub previous_reason: Option<PreviousEmptyReason>,
+    /// Same gaps as the dashboard; `None` when last year is empty or unavailable (never a gap against nothing).
+    pub comparison: Option<Comparison>,
+}
+
+/// The local calendar day one year earlier (29 February becomes 28 February).
+fn day_minus_one_year(day: i64) -> i64 {
+    let (y, m, d) = time::civil_from_days(day);
+    let d = d.min(u32::from(time::days_in_month(y - 1, m)));
+    time::days_from_civil(y - 1, m, d).unwrap_or(day - 365)
+}
+
+pub fn year_comparison(ledger: &Ledger, q: &YearComparisonQuery) -> Result<YearComparison> {
+    const DAY_MS: i64 = 86_400_000;
+    let stats = |from: Option<i64>, to: Option<i64>| StatsQuery { account_ids: q.account_ids.clone(), from, to, ..StatsQuery::default() };
+    let midnight = |day: i64| day * DAY_MS - i64::from(q.tz_offset_min) * 60_000;
+    let Some(n) = q.period.days() else {
+        let current = compute(ledger, &stats(None, None))?.summary;
+        return Ok(YearComparison {
+            available: false,
+            from: None,
+            to: None,
+            previous_from: None,
+            previous_to: None,
+            min_sample: MIN_SAMPLE,
+            current_empty: current.trade_count == 0,
+            current_low_sample: low_sample(&current),
+            current,
+            previous: None,
+            previous_empty: false,
+            previous_low_sample: false,
+            previous_reason: None,
+            comparison: None,
+        });
+    };
+    let today = time::local_day_number(q.now_ms, q.tz_offset_min);
+    let (first, last) = (today + 1 - n, today);
+    let (from, to) = (midnight(first), midnight(last + 1));
+    let (previous_from, previous_to) = (midnight(day_minus_one_year(first)), midnight(day_minus_one_year(last) + 1));
+    let current = compute(ledger, &stats(Some(from), Some(to)))?.summary;
+    let previous = compute(ledger, &stats(Some(previous_from), Some(previous_to)))?.summary;
+    let previous_empty = previous.trade_count == 0;
+    let previous_reason = previous_empty.then(|| match ledger.trades.iter().map(|t| t.entry_time).min() {
+        Some(first_entry) if first_entry >= previous_to => PreviousEmptyReason::HistoryTooShort,
+        _ => PreviousEmptyReason::NoTrades,
+    });
+    let comparison = if previous_empty { None } else { Some(compare(&current, &previous)?) };
+    Ok(YearComparison {
+        available: true,
+        from: Some(from),
+        to: Some(to),
+        previous_from: Some(previous_from),
+        previous_to: Some(previous_to),
+        min_sample: MIN_SAMPLE,
+        current_empty: current.trade_count == 0,
+        current_low_sample: low_sample(&current),
+        previous_low_sample: low_sample(&previous),
+        current,
+        previous: Some(previous),
+        previous_empty,
+        previous_reason,
+        comparison,
+    })
+}
+
+pub fn year_comparison_report(conn: &Connection, q: &YearComparisonQuery) -> Result<YearComparison> {
+    year_comparison(&load(conn, &q.account_ids)?, q)
 }

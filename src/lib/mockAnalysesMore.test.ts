@@ -34,6 +34,7 @@ async function add(direction: 'long' | 'short', entry: string, exit: string | nu
 }
 
 const q = () => ({ accountIds: [accountId] })
+const close = (a: number | null | undefined, b: number) => expect(a).toBeCloseTo(b, 12)
 
 describe('faux backend : coût d’opportunité (journal K)', () => {
   beforeAll(async () => {
@@ -68,5 +69,88 @@ describe('faux backend : coût d’opportunité (journal K)', () => {
     expect([one.eligibleCount, one.totalLeftOnTable, one.leftCount, one.leftPerEarlyExit]).toEqual([1, '50', 1, '50'])
     const none = await mockAnalysesMore.getOpportunityReport({ ...q(), from: SEP_1 + 100 * DAY })
     expect([none.tradeCount, none.eligibleCount, none.totalLeftOnTable, none.leftPerEarlyExit, none.trades]).toEqual([0, 0, '0', null, []])
+  })
+})
+
+/**
+ * Journal L (comparaison avec l'an dernier) — capital 10 000, multiplicateur 1, taille 1, sans frais, longs entrés à 10:00 et sortis à 11:00 UTC.
+ * « Aujourd'hui » = mar. 29 sept. 2026 12:00 UTC, période 1M : fenêtre [31 août 2026, 30 sept. 2026) et, un an plus tôt, [31 août 2025, 30 sept. 2025).
+ * | 1 | 2 sept. 2026  | 100 → 110 | +10 | cette année |
+ * | 2 | 10 sept. 2026 | 100 → 95  | −5  | cette année |
+ * | 3 | 20 sept. 2026 | 50 → 60   | +10 | cette année |
+ * | 4 | 30 août 2025  | 10 → 30   | +20 | avant la fenêtre de l'an dernier |
+ * | 5 | 5 sept. 2025  | 100 → 104 | +4  | an dernier |
+ * | 6 | 15 sept. 2025 | 100 → 90  | −10 | an dernier |
+ * | 7 | 25 sept. 2025 | 20 → 22   | +2  | an dernier |
+ * | 8 | 30 sept. 2025 | 10 → 11   | +1  | après la fenêtre de l'an dernier (fin exclue) |
+ * Cette année : +15, 3 trades, réussite 2/3, facteur de profit 4, drawdown max 5.
+ * An dernier : −4, 3 trades, réussite 2/3, facteur de profit 0,6, drawdown max 10.
+ * Écarts : trades 0, net +19, net % 4,75, réussite 0, facteur de profit +3,4, drawdown −5.
+ */
+const utc = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d)
+
+describe('faux backend : comparaison avec l’an dernier (journal L)', () => {
+  let acc = 0
+  let ins = 0
+  const add = async (y: number, m: number, d: number, entry: string, exit: string) => {
+    await mock.createTrade({
+      accountId: acc, instrumentId: ins, direction: 'long', size: '1', multiplier: '1', entryPrice: entry, exitPrice: exit,
+      entryTime: utc(y, m, d) + 10 * HOUR, exitTime: utc(y, m, d) + 11 * HOUR, tzOffsetMin: 0, plannedSl: null, fees: '0', thesis: '',
+      postMortem: '', tagIds: [], emotions: [], ruleChecks: [], checklist: [], executionType: null,
+    } as TradeData)
+  }
+  const now = utc(2026, 9, 29) + 12 * HOUR
+  const yq = (period: 'day' | 'month' | 'all', accountIds = [acc], at = now) => ({ accountIds, period, nowMs: at, tzOffsetMin: 0 })
+
+  beforeAll(async () => {
+    acc = (await mock.createAccount({ name: 'L', kind: 'personal', broker: '', currency: 'USD', initialCapital: '10000' })).id
+    ins = (await mock.listInstruments())[0].id
+    await add(2026, 9, 2, '100', '110')
+    await add(2026, 9, 10, '100', '95')
+    await add(2026, 9, 20, '50', '60')
+    await add(2025, 8, 30, '10', '30')
+    await add(2025, 9, 5, '100', '104')
+    await add(2025, 9, 15, '100', '90')
+    await add(2025, 9, 25, '20', '22')
+    await add(2025, 9, 30, '10', '11')
+    await mock.createCashFlow({ accountId: acc, kind: 'deposit', amount: '5000', occurredAt: utc(2025, 9, 10), tzOffsetMin: 0, note: '' })
+  })
+
+  it('journal L : fenêtres, chiffres et écarts', async () => {
+    const r = await mockAnalysesMore.getYearComparison(yq('month'))
+    expect([r.available, r.from, r.to, r.previousFrom, r.previousTo]).toEqual([true, utc(2026, 8, 31), utc(2026, 9, 30), utc(2025, 8, 31), utc(2025, 9, 30)])
+    expect([r.current.tradeCount, r.current.netPnl, r.previous!.tradeCount, r.previous!.netPnl]).toEqual([3, '15', 3, '-4'])
+    close(r.current.winRate, 2 / 3)
+    close(r.previous!.profitFactor, 0.6)
+    expect([r.current.maxDrawdown, r.previous!.maxDrawdown]).toEqual(['5', '10'])
+    expect([r.currentLowSample, r.previousLowSample, r.previousEmpty, r.previousReason]).toEqual([true, true, false, null])
+    const c = r.comparison!
+    expect([c.tradeCount, c.netPnl, c.maxDrawdown]).toEqual([0, '19', '-5'])
+    close(c.netPnlPct, 4.75)
+    close(c.winRate, 0)
+    close(c.profitFactor, 3.4)
+    expect(c.expectancyR).toBeNull()
+  })
+
+  it('« Tout » n’a pas d’an dernier ; une journée sans trade ; l’an dernier vide', async () => {
+    const all = await mockAnalysesMore.getYearComparison(yq('all'))
+    expect([all.available, all.previous, all.comparison, all.current.tradeCount]).toEqual([false, null, null, 8])
+    const day = await mockAnalysesMore.getYearComparison(yq('day'))
+    expect([day.currentEmpty, day.previousEmpty, day.previousReason, day.comparison]).toEqual([true, true, 'noTrades', null])
+    // Compte sans aucun trade avant cette année : l'historique est trop court.
+    const other = (await mock.createAccount({ name: 'L2', kind: 'personal', broker: '', currency: 'USD', initialCapital: '100' })).id
+    await mock.createTrade({
+      accountId: other, instrumentId: ins, direction: 'long', size: '1', multiplier: '1', entryPrice: '1', exitPrice: '2', entryTime: utc(2026, 9, 2), exitTime: utc(2026, 9, 2) + HOUR,
+      tzOffsetMin: 0, plannedSl: null, fees: '0', thesis: '', postMortem: '', tagIds: [], emotions: [], ruleChecks: [], checklist: [], executionType: null,
+    } as TradeData)
+    const short = await mockAnalysesMore.getYearComparison(yq('month', [other]))
+    expect([short.previousEmpty, short.previousReason, short.comparison, short.current.tradeCount]).toEqual([true, 'historyTooShort', null, 1])
+  })
+
+  it('29 février : l’an dernier commence le 28 février ; un dépôt n’est pas de la performance', async () => {
+    const at = utc(2028, 2, 29) + 12 * HOUR
+    const r = await mockAnalysesMore.getYearComparison(yq('day', [acc], at))
+    expect([r.previousFrom, r.previousTo, r.from, r.to]).toEqual([utc(2027, 2, 28), utc(2027, 3, 1), utc(2028, 2, 29), utc(2028, 3, 1)])
+    expect([r.current.tradeCount, r.current.netPnl]).toEqual([0, '0'])
   })
 })

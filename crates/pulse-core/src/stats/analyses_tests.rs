@@ -18,6 +18,7 @@
 //! Totals over the 7 closed trades: gross +294, fees 12, net +282.
 
 use super::analyses::*;
+use super::dashboard::Period;
 use super::tests::{DAY, SEP_1, all, approx, ledger, trade};
 use super::*;
 use crate::instruments::AssetClass;
@@ -523,4 +524,134 @@ fn opportunity_report_reads_the_price_after_exit_from_sqlite() {
     // 1 lot × 100 000: (min(1.0950, 1.0900) − 1.0871) × 100 000 = 290 left on the table.
     let r = opportunity_report(&conn, &StatsQuery::default()).unwrap();
     assert_eq!((r.eligible_count, r.total_left_on_table), (1, d("290")));
+}
+
+// --- same period one year earlier (3.3.19) ---------------------------------------
+//
+// Journal L — capital 10 000, multiplier 1, size 1, no fees, long trades entered 10:00 and closed 11:00 UTC.
+// "Today" is Tue 29 Sept 2026 12:00 UTC and the period is 1M (30 local days): the window is
+// [31 Aug 2026 00:00, 30 Sept 2026 00:00) and, one year earlier, [31 Aug 2025 00:00, 30 Sept 2025 00:00).
+//
+// | # | date        | entry → exit | net | in window            |
+// |---|-------------|--------------|-----|----------------------|
+// | 1 | 2 Sep 2026  | 100 → 110    | +10 | this year            |
+// | 2 | 10 Sep 2026 | 100 → 95     | −5  | this year            |
+// | 3 | 20 Sep 2026 | 50 → 60      | +10 | this year            |
+// | 4 | 30 Aug 2025 | 10 → 30      | +20 | before last year's window |
+// | 5 | 5 Sep 2025  | 100 → 104    | +4  | last year            |
+// | 6 | 15 Sep 2025 | 100 → 90     | −10 | last year            |
+// | 7 | 25 Sep 2025 | 20 → 22      | +2  | last year            |
+// | 8 | 30 Sep 2025 | 10 → 11      | +1  | after last year's window (same date as today's end, exclusive) |
+//
+// This year: net +15, 3 trades, win rate 2/3, profit factor 20 / 5 = 4, max drawdown 5.
+// Last year: net −4, 3 trades, win rate 2/3, profit factor 6 / 10 = 0.6, max drawdown 10 (4 → −6).
+// Gaps: trades 0, net +19 (= 15 − (−4)), net % = 19 / |−4| = 4.75, win rate 0, profit factor 3.4, max drawdown 5 − 10 = −5.
+
+fn on(id: i64, (y, m, d): (i64, u32, u32), entry: &str, exit: &str) -> TradeFacts {
+    let day = time::days_from_civil(y, m, d).unwrap() - 20_697;
+    trade(id, Long, entry, Some(exit), "1", None, "0", day)
+}
+
+fn journal_l() -> Vec<TradeFacts> {
+    vec![
+        on(1, (2026, 9, 2), "100", "110"),
+        on(2, (2026, 9, 10), "100", "95"),
+        on(3, (2026, 9, 20), "50", "60"),
+        on(4, (2025, 8, 30), "10", "30"),
+        on(5, (2025, 9, 5), "100", "104"),
+        on(6, (2025, 9, 15), "100", "90"),
+        on(7, (2025, 9, 25), "20", "22"),
+        on(8, (2025, 9, 30), "10", "11"),
+    ]
+}
+
+fn today() -> i64 {
+    time::days_from_civil(2026, 9, 29).unwrap() * DAY + 12 * 3_600_000
+}
+
+fn yq(period: Period, now: i64) -> YearComparisonQuery {
+    YearComparisonQuery { account_ids: vec![], period, now_ms: now, tz_offset_min: 0 }
+}
+
+fn midnight(y: i64, m: u32, d: u32) -> i64 {
+    time::days_from_civil(y, m, d).unwrap() * DAY
+}
+
+#[test]
+fn year_comparison_journal_l() {
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::Month, today())).unwrap();
+    assert!(r.available);
+    assert_eq!((r.from, r.to), (Some(midnight(2026, 8, 31)), Some(midnight(2026, 9, 30))));
+    assert_eq!((r.previous_from, r.previous_to), (Some(midnight(2025, 8, 31)), Some(midnight(2025, 9, 30))));
+    assert_eq!((r.current.trade_count, r.current.net_pnl), (3, d("15")));
+    let p = r.previous.as_ref().unwrap();
+    assert_eq!((p.trade_count, p.net_pnl), (3, d("-4")));
+    approx(r.current.win_rate, 2.0 / 3.0);
+    approx(p.profit_factor, 0.6);
+    assert_eq!((r.current.max_drawdown, p.max_drawdown), (d("5"), d("10")));
+    assert!(!r.current_empty && !r.previous_empty && r.previous_reason.is_none());
+    assert!(r.current_low_sample && r.previous_low_sample); // 3 < 5: shown, flagged
+    let c = r.comparison.unwrap();
+    assert_eq!((c.trade_count, c.net_pnl, c.max_drawdown), (0, d("19"), d("-5")));
+    approx(c.net_pnl_pct, 4.75);
+    approx(c.win_rate, 0.0);
+    approx(c.profit_factor, 3.4);
+    assert_eq!(c.expectancy_r, None); // no stop on any trade
+}
+
+#[test]
+fn year_comparison_of_all_time_is_not_available() {
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::All, today())).unwrap();
+    assert!(!r.available);
+    assert_eq!((r.previous.is_none(), r.comparison.is_none(), r.previous_reason), (true, true, None));
+    assert_eq!(r.current.trade_count, 8);
+}
+
+#[test]
+fn an_empty_previous_year_says_why_and_never_compares_against_nothing() {
+    // Only this year's trades: the history starts after last year's window.
+    let recent: Vec<_> = journal_l().into_iter().take(3).collect();
+    let r = year_comparison(&ledger("10000", recent, vec![]), &yq(Period::Month, today())).unwrap();
+    assert!(r.previous_empty && r.comparison.is_none());
+    assert_eq!(r.previous_reason, Some(PreviousEmptyReason::HistoryTooShort));
+    assert_eq!(r.previous.as_ref().unwrap().trade_count, 0);
+    assert_eq!(r.current.net_pnl, d("15"));
+
+    // Older history exists (Jan 2024) but nothing in the window: not "too short".
+    let mut older = journal_l().into_iter().take(3).collect::<Vec<_>>();
+    older.push(on(9, (2024, 1, 10), "10", "12"));
+    let r = year_comparison(&ledger("10000", older, vec![]), &yq(Period::Month, today())).unwrap();
+    assert_eq!((r.previous_empty, r.previous_reason, r.comparison.is_none()), (true, Some(PreviousEmptyReason::NoTrades), true));
+}
+
+#[test]
+fn an_empty_current_period_and_a_journal_without_trades() {
+    // 1D = today only: no trade closes on 29 Sept 2026 → current empty; the same day last year has none either.
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::Day, today())).unwrap();
+    assert!(r.current_empty && r.previous_empty);
+    assert_eq!(r.previous_reason, Some(PreviousEmptyReason::NoTrades)); // history starts in 2025, before 29 Sept 2025
+    let none = year_comparison(&ledger("10000", vec![], vec![]), &yq(Period::Year, today())).unwrap();
+    assert!(none.current_empty && none.previous_empty && none.comparison.is_none());
+    assert_eq!(none.previous_reason, Some(PreviousEmptyReason::NoTrades));
+}
+
+#[test]
+fn one_trade_each_year_is_compared_and_flagged() {
+    let trades = vec![on(1, (2026, 9, 2), "100", "110"), on(2, (2025, 9, 2), "100", "105")];
+    let r = year_comparison(&ledger("10000", trades, vec![]), &yq(Period::Month, today())).unwrap();
+    let c = r.comparison.unwrap();
+    assert_eq!((c.trade_count, c.net_pnl), (0, d("5")));
+    approx(c.net_pnl_pct, 1.0); // 5 / |+5|
+    assert!(r.current_low_sample && r.previous_low_sample);
+}
+
+#[test]
+fn the_leap_day_maps_to_the_28th_and_deposits_never_count() {
+    // Today is 29 Feb 2028 (period 1D): last year's window is the single day 28 Feb 2027.
+    let now = midnight(2028, 2, 29) + 12 * 3_600_000;
+    let r = year_comparison(&ledger("10000", vec![], vec![(midnight(2028, 2, 29), "500")]), &yq(Period::Day, now)).unwrap();
+    assert_eq!((r.previous_from, r.previous_to), (Some(midnight(2027, 2, 28)), Some(midnight(2027, 3, 1))));
+    assert_eq!((r.from, r.to), (Some(midnight(2028, 2, 29)), Some(midnight(2028, 3, 1))));
+    // A deposit is not performance: no trade, no figure.
+    assert_eq!((r.current.trade_count, r.current.net_pnl), (0, d("0")));
 }

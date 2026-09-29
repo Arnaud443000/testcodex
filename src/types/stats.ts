@@ -342,3 +342,32 @@ export interface OpportunityReport {
   netPnlOfEligible: Decimal
   trades: OpportunityTrade[]
 }
+
+export type PreviousEmptyReason = 'historyTooShort' | 'noTrades'
+
+/** Requête de la comparaison à l'an dernier : celle du tableau de bord (comptes, période, instant et fuseau). */
+export interface YearComparisonQuery {
+  accountIds: number[]
+  period: EnginePeriod
+  nowMs: number
+  tzOffsetMin: number
+}
+
+/** Même période un an plus tôt (3.3.19). `comparison` est absent quand l'an dernier est vide : jamais d'écart contre du vide. */
+export interface YearComparison {
+  /** Faux pour « Tout » : rien ne le précède. */
+  available: boolean
+  from: number | null
+  to: number | null
+  previousFrom: number | null
+  previousTo: number | null
+  minSample: number
+  current: Summary
+  currentEmpty: boolean
+  currentLowSample: boolean
+  previous: Summary | null
+  previousEmpty: boolean
+  previousLowSample: boolean
+  previousReason: PreviousEmptyReason | null
+  comparison: Comparison | null
+}
