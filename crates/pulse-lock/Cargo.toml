@@ -1,0 +1,13 @@
+[package]
+name = "pulse-lock"
+version = "0.1.0"
+edition = "2024"
+description = "Pulse lock (lot 22): password-derived keys and encrypted file envelopes, pure Rust"
+
+# Pure Rust on purpose (no C, no OpenSSL): it must build for x86_64-pc-windows-msvc from any OS.
+[dependencies]
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
+chacha20poly1305 = { version = "0.11", default-features = false, features = ["alloc", "zeroize"] }
+getrandom = "0.3"
+thiserror = "2.0.21"
+zeroize = "1"
