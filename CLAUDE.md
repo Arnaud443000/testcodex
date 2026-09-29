@@ -96,6 +96,70 @@ Code : `crates/pulse-core/src/stats/` (`pnl.rs` par trade, `summary.rs` agrégat
 - **Calendrier / PnL par jour** : jour local de sortie. **Segments jour de semaine / heure** : heure locale d'**entrée** (moment de la décision). Un trade avec plusieurs erreurs compte dans chacune ; sans tag du type demandé → segment « none », listé en dernier.
 - **Débordement** : les calculs en `Decimal` sont vérifiés ; un montant hors limites donne une erreur, jamais un plantage (le profil release est en `panic = "abort"`).
 
+## Analyse comportementale (lot 8) — interprétation
+
+Code : `crates/pulse-core/src/behavior/` (score de discipline, analyses 3.4.x), `stats/distribution.rs` et `stats/risk.rs` (3.3.8, 3.3.10 à 3.3.12), `settings.rs` (réglages). Mêmes principes que le moteur de statistiques : tout est recalculé depuis les données sources, une valeur indéfinie vaut `None`, l'argent reste en `Decimal`, les ratios sont des fractions `f64` (0,25 = 25 %), les dépôts/retraits ne sont jamais de la performance. Sauf mention contraire, un rapport porte sur les **trades clôturés** de la période (sortie dans `[from, to)`) qui passent les filtres de `StatsQuery` ; l'historique (trade précédent, rang dans la journée, solde) utilise toujours tous les trades des comptes choisis, ouverts compris.
+
+### Réglages (table `settings`, aucune migration)
+
+| Clé | Sens | Par défaut |
+|---|---|---|
+| `behavior.max_risk_percent` | risque max par trade, en **% du solde** (`1.5` = 1,5 %), décimal exact | absent → composante « risque » exclue |
+| `behavior.max_trades_per_day` | nombre max de trades entrés par jour local | absent → pas de détection de surtrading |
+| `behavior.revenge_window_min` | délai après une perte pendant lequel un trade peut être « de revanche » | 60 min |
+| `behavior.revenge_size_factor` | facteur d'exposition au-delà duquel c'est une revanche | `1.5` |
+
+Ces seuils seront reliés aux alertes et aux règles personnelles à l'étape 3 (3.6.7, 3.6.9) ; aucun n'est imposé.
+
+### Score de discipline (3.4.1, 3.2.9)
+
+Score d'un trade = `100 × Σ(poids × valeur) / Σ(poids)` sur les **seules composantes qui ont une donnée**. Une composante sans donnée est **exclue et les poids sont renormalisés** ; elle ne compte jamais comme 0. `coverage` = somme des poids présents / 100 (pour afficher « score établi sur 45 % des critères »). Ce score par trade **est** la note de qualité d'exécution calculée (3.2.9) ; la note manuelle 1–5 (`execution_quality`) n'y entre pas (voir plus bas).
+
+| Composante (`key`) | Poids | Valeur de 0 à 1 | Sans donnée (exclue) |
+|---|---|---|---|
+| Respect du plan (`plan`) | 30 | oui = 1, partiel = 0,5, non = 0 | plan non renseigné |
+| Règles personnelles (`rules`) | 25 | règles respectées / règles cochées sur ce trade | aucune règle cochée |
+| Checklist pré-trade (`checklist`) | 15 | cases cochées / cases de la copie du trade | pas de checklist remplie |
+| Stop loss prévu (`stopLoss`) | 10 | 1 si un SL prévu valide existe, 0 sinon | jamais exclue |
+| Risque dans la limite (`risk`) | 10 | 1 si risque initial ≤ limite × solde à l'entrée (comparaison exacte en `Decimal`), 0 sinon | pas de limite réglée ; pas de SL (déjà pénalisé par `stopLoss`, pas de double peine) ; solde à l'entrée ≤ 0 |
+| Comportement (`behavior`) | 10 | 0 si le trade est une revanche **ou** du surtrading, 1 sinon | jamais exclue |
+
+- **Revanche (3.4.5)** : `P` = dernier trade sorti au plus tard à l'entrée de `T` (ordre de sortie, égalité : id). `T` est une revanche si `P` est perdant (PnL net < 0), si `T` est entré au plus `revenge_window_min` après la sortie de `P`, et si l'exposition de `T` ≥ `revenge_size_factor` × celle de `P`. Exposition : **risque initial** en argent si les deux trades ont un SL ; sinon, **taille × multiplicateur** si c'est le même instrument ; sinon on ne peut pas comparer → pas de revanche.
+- **Surtrading** : rang du trade parmi les trades **entrés** le même jour local (ordre d'entrée, égalité : id, trades ouverts compris) > `max_trades_per_day`.
+- **Jour** : moyenne des scores des trades du jour local de **sortie** (comme le calendrier), sans minimum d'échantillon (chaque trade reste explicable).
+- **Période / groupe** : moyenne des scores des trades ; **`None` en dessous de 5 trades** (`sampleTooSmall`). Même règle pour le score moyen d'un groupe (premier trade du jour, etc.).
+- **Composantes sur la période** : moyenne de la valeur sur les trades où elle est présente, avec leur nombre.
+- **Bien / mal exécuté (3.2.9)** : bien exécuté = score ≥ 70. Quatre cases (gagnant bien exécuté, gagnant mal exécuté, perdant bien exécuté, perdant mal exécuté) + breakevens, avec nombre et PnL net.
+
+### Analyses (3.4.2 à 3.4.10)
+
+| Analyse | Choix d'implémentation |
+|---|---|
+| Émotion et résultat (3.4.2) | segments `SegmentBy::Emotion(moment)` : un groupe par émotion déclarée, par moment (avant / pendant / après) et tous moments confondus (un trade compte une fois par émotion même déclarée à deux moments) ; sans émotion → « none ». Indicateurs = `Summary` du moteur (win rate, PnL net, expectancy = R moyen…). |
+| Séries (3.4.3) | dans l'ordre de sortie ; un **breakeven interrompt** la série. Série courante = celle qui finit au dernier trade de la période (`None` si ce dernier est un breakeven ou s'il n'y a aucun trade). Records gagnant / perdant : la plus longue, la plus récente en cas d'égalité. Chaque série : longueur, PnL net, premier / dernier trade. |
+| Dans le plan / hors plan (3.4.4) | quatre groupes toujours présents : `yes` (dans le plan), `partial`, `no` (hors plan, au sens du cahier), `none` (non renseigné). |
+| Patterns dangereux (3.4.5) | liste des revanches (trade, trade perdant précédent, délai, base et rapport d'exposition) avec le `Summary` de ces trades ; jours de surtrading ; hésitation : trades manqués contre trades pris par setup et par session (part manquée = manqués / (pris + manqués)), trades manqués de la période (`occurred_at`) passant les filtres compte / instrument / sens / tags. |
+| Respect des règles (3.4.6) | par règle : cochée N fois, respectée M fois, taux = M / N ; série par mois local de sortie ; **tendance** = taux de la moitié récente − taux de la moitié ancienne des coches (ordre de sortie ; nombre impair : la coche du milieu est ignorée), `None` sous 4 coches. Règles actives jamais cochées listées avec un taux `None` ; règles archivées listées seulement si cochées. |
+| Erreurs récurrentes (3.4.7, 3.4.8) | sources : tags d'erreur **et** règles non respectées (« règle non respectée : … »). Par erreur : nombre de trades, part des trades, PnL net cumulé, **coût** = somme des pertes (valeur absolue des PnL nets négatifs), expectancy R, liste des trades (compteur cliquable). Deux classements : par nombre (égalité : coût, puis libellé) et par coût (égalité : nombre, puis libellé). |
+| Facteurs externes (3.4.9) | **non fait** : le journal quotidien (3.2.6) n'existe pas encore dans le schéma ; prévu au lot 10. |
+| Premier trade du jour (3.4.10) | rang dans le jour local d'**entrée** (même rang que le surtrading). Groupes `first` / `subsequent` et par rang `1`, `2`, `3`, `4+` : `Summary` + score de discipline moyen (minimum 5 trades). |
+
+### Statistiques complémentaires (3.3.8, 3.3.10 à 3.3.12)
+
+| Statistique | Choix d'implémentation |
+|---|---|
+| Distribution des R (3.3.8) | classes de 0,5 R, `[a, b)`, de −3 à +5, plus deux classes ouvertes (`< −3`, `≥ 5`) ; toutes les classes sont renvoyées, même vides. Un breakeven (R = 0) tombe dans `[0 ; 0,5)`. R moyen (= expectancy), R médian (moyenne des deux du milieu si nombre pair), trades sans R comptés à part. |
+| Heatmap jour × heure | jour de semaine et heure locaux d'**entrée** (comme les segments) ; seules les cases ayant des trades ; nombre, PnL net, win rate, intensité = PnL net / plus grand |PnL net| d'une case, dans [−1, 1]. La heatmap mensuelle (3.3.11) est le calendrier du lot 5. |
+| Long / short (3.3.10) | `SegmentBy::Direction`, les deux côtés toujours présents, part des longs en nombre. |
+| Risque en % du capital (3.3.12) | `risque initial / solde réel à l'entrée`, solde = capital initial + flux datés au plus tard de l'entrée + PnL net des trades sortis au plus tard à l'entrée. Par trade et en agrégat (moyenne, médiane, max, trades sans SL, dépassements de la limite, limite convertie en argent au capital courant). Solde ≤ 0 → `None`. |
+
+### Points du cahier tranchés dans ce lot
+
+- Pondération du score (point ouvert section 9) : choisie ci-dessus, modifiable plus tard (constantes de `behavior/discipline.rs`).
+- La note manuelle d'exécution (1–5) n'entre pas dans le score : le cahier la décrit comme « en complément » ; elle reste affichable à côté.
+- « Hors plan » = `planRespecté = non` ; « partiel » est un groupe à part (et vaut 0,5 dans le score).
+- Revanche et surtrading détectés sur les données (taille, horaires), pas sur les tags « Trade de revanche » / « Surtrading » que l'utilisateur peut renommer ; ces tags restent comptés dans les erreurs récurrentes.
+
 ## Modèle de données (schéma v2)
 
 `accounts`, `instruments` (symbole normalisé, classe d'actif, multiplicateur par défaut), `trades` (données saisies seulement : aucun PnL/R stocké), `tags` (types `setup`, `timeframe`, `session`, `market_condition`, `emotion`, `mistake` ; unicité insensible à la casse et aux espaces ; archivage au lieu de suppression), `trade_tags`, `trade_emotions` (avant/pendant/après), `rules` + `trade_rule_checks`, `checklist_items` + `trade_checklist` (copie remplie, libellés figés), `cash_flows` (dépôts/retraits, montant > 0), `missed_trades` + `missed_trade_tags`. Un trade a au plus un tag de chaque type `setup/timeframe/session/market_condition`. Des déclencheurs SQL empêchent de mélanger émotions et tags ordinaires. Suppression d'un trade : ses lignes filles partent avec lui ; un compte, un instrument, un tag ou une règle utilisés ne peuvent pas être supprimés.
