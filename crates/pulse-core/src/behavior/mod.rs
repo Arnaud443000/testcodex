@@ -11,6 +11,7 @@ mod analysis;
 mod discipline;
 mod mistakes;
 mod patterns;
+mod factors;
 
 pub use analysis::{
     EmotionReport, FirstTradeReport, PlanReport, RankGroup, Streak, StreakReport, emotion_report, emotions, first_trade,
@@ -24,6 +25,10 @@ pub use patterns::{Hesitation, MissedFacts, OvertradingDay, PatternReport, Reven
 pub use discipline::{
     Component, ComponentKey, ComponentSummary, DayDiscipline, DisciplineReport, MIN_SCORED_TRADES, Quadrant, Quadrants,
     TradeDiscipline, WELL_EXECUTED_SCORE, WEIGHTS, discipline, discipline_report, score, trade_discipline,
+};
+pub use factors::{
+    Comparison, DISCIPLINE_GAP, EXPECTANCY_GAP_R, ExternalFactorReport, FACTORS, FactorKey, FactorReport, FactorSide, MIN_FACTOR_DAYS,
+    MIN_R_TRADES, Verdict, external_factor_report, external_factors,
 };
 
 use crate::error::Result;
@@ -134,3 +139,6 @@ mod tests;
 
 #[cfg(test)]
 mod analysis_tests;
+
+#[cfg(test)]
+mod more_tests;
