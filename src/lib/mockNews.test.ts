@@ -59,6 +59,7 @@ describe('faux calendrier', () => {
     icsUrl: 'https://calendar.example.org/eco.ics',
     icsImportance: 'medium',
     icsCurrency: null,
+    ffConsent: false,
     windowBeforeMin: 15,
     windowAfterMin: 15,
     alert: true,
@@ -113,5 +114,58 @@ describe('faux calendrier', () => {
     expect(next[0].title).toBe("Offres d'emploi JOLTS")
     expect(next.every((e) => e.startsAt == null || e.startsAt >= NOW)).toBe(true)
     expect(await m.clearNewsEvents()).toBe(s.added)
+  })
+
+  const ff: NewsSettings = { ...feed, source: 'forexFactory', icsUrl: null, ffConsent: true }
+
+  it('Forex Factory : consentement exigé, hôte unique, simulation', async () => {
+    const m = createNewsMock(() => NOW)
+    await m.setNewsSettings({ ...feed, source: 'none', icsUrl: null })
+    expect(await code(m.setNewsSettings({ ...ff, ffConsent: false }))).toBe('news:consentRequired')
+    expect((await m.getNewsStatus()).settings.source).toBe('none')
+    const st = await m.setNewsSettings(ff)
+    expect([st.onlineReady, st.onlineHost, st.settings.ffConsent]).toEqual([true, 'nfs.faireconomy.media', true])
+    const r = await m.refreshNews(false)
+    expect(r.fetched).toBe(true)
+    const week = await m.getNewsCalendar('week', { importances: [], currencies: [] })
+    expect(week.events.length).toBeGreaterThan(0)
+    expect(week.events.every((e) => e.source === 'simulation')).toBe(true)
+    expect(week.events.every((e) => e.actual === null)).toBe(true) // aucune valeur réelle chez Forex Factory
+    // Quitter la source efface ses événements (pas ceux d'un fichier).
+    await m.importNewsFile('csv', 'x.csv', { importance: 'medium', currency: null })
+    await m.setNewsSettings({ ...ff, source: 'none' })
+    expect((await m.getNewsStatus()).eventCount).toBe(simulatedEvents(NOW).length)
+  })
+
+  it('« Tester la source » n’enregistre rien avant confirmation et respecte le délai de 5 min', async () => {
+    let t = NOW
+    const m = createNewsMock(() => t)
+    await m.setNewsSettings({ ...feed, source: 'none', icsUrl: null })
+    expect(await code(m.testNewsSource({ ...ff, ffConsent: false }))).toBe('news:consentRequired')
+    expect(await code(m.testNewsSource({ ...ff, source: 'none' }))).toBe('news:noSource')
+    const p = await m.testNewsSource(ff)
+    expect(p.count).toBe(simulatedEvents(NOW).length)
+    // Mardi 12:00 à Paris : l'inflation de 11:00 est passée ; puis mercredi.
+    expect(p.events.map((e) => [e.day, e.parisTime, e.title])).toEqual([
+      ['2026-09-29', '16:00', "Offres d'emploi JOLTS"],
+      ['2026-09-30', '14:15', 'Emplois privés ADP'],
+      ['2026-09-30', '16:30', 'Stocks de pétrole brut'],
+    ])
+    expect(p.events.every((e) => e.day >= '2026-09-29')).toBe(true)
+    expect((await m.getNewsStatus()).eventCount).toBe(0)
+    expect((await m.getNewsStatus()).settings.source).toBe('none')
+    t = NOW + 4 * 60_000
+    expect(await code(m.testNewsSource(ff))).toBe('news:tooSoon')
+    expect((await m.getNewsStatus()).nextRequestAt).toBe(NOW + 5 * 60_000)
+    // Confirmé avant d'enregistrer les réglages : refusé (et le test est consommé).
+    expect(await code(m.keepTestedNews())).toBe('news:previewOutdated')
+    t = NOW + 5 * 60_000
+    await m.testNewsSource(ff)
+    await m.setNewsSettings(ff)
+    const kept = await m.keepTestedNews()
+    expect(kept.summary?.added).toBe(simulatedEvents(t).length)
+    // Vaut récupération du jour : rien à l'ouverture suivante.
+    t = NOW + 3 * 3_600_000
+    expect((await m.refreshNews(false)).fetched).toBe(false)
   })
 })

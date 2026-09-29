@@ -6,8 +6,11 @@
 
 export type Importance = 'low' | 'medium' | 'high'
 
-/** `none` : aucune source en ligne (rien ne sort du PC) ; `icsUrl` : flux ICS à l'adresse saisie. */
-export type NewsSourceKind = 'none' | 'icsUrl'
+/**
+ * `none` : aucune source en ligne (rien ne sort du PC) ; `icsUrl` : flux ICS à l'adresse saisie ;
+ * `forexFactory` : export hebdomadaire de Forex Factory (lot 28, non officiel, consentement exigé).
+ */
+export type NewsSourceKind = 'none' | 'icsUrl' | 'forexFactory'
 
 export interface NewsSettings {
   enabled: boolean
@@ -17,6 +20,8 @@ export interface NewsSettings {
   icsImportance: Importance
   /** Devise d'un événement du flux sans devise ; `null` = non précisée. */
   icsCurrency: string | null
+  /** Forex Factory : l'utilisateur a lu et accepte ce qu'est cette source (obligatoire pour la choisir). */
+  ffConsent: boolean
   windowBeforeMin: number
   windowAfterMin: number
   /** Alerte 3.6.8 (seulement si `enabled`). */
@@ -37,14 +42,16 @@ export interface NewsStatus {
   state: FetchState
   eventCount: number
   onlineReady: boolean
-  /** Hôte du flux : la seule destination de la requête. */
+  /** Hôte de la source en ligne : la seule destination des requêtes. */
   onlineHost: string | null
+  /** Instant (ms) à partir duquel une nouvelle requête est permise (5 min après la dernière) ; `null` = maintenant. */
+  nextRequestAt: number | null
 }
 
 /** Un événement tel que l'interface l'affiche. */
 export interface EconomicEvent {
   id: number
-  /** `file`, `icsUrl`, ou `simulation` (faux backend du navigateur). */
+  /** `file`, `icsUrl`, `forexFactory`, ou `simulation` (faux backend du navigateur). */
   source: string
   /** Instant UTC (ms) ; `null` = sans heure. */
   startsAt: number | null
@@ -85,6 +92,10 @@ export type SkipReason =
   | 'missingColumns'
   | 'tooManyEvents'
   | 'incomplete'
+  | 'missingCurrency'
+  | 'missingImportance'
+  | 'invalidEntry'
+  | 'duplicate'
 
 export interface ImportSummary {
   added: number
@@ -93,6 +104,10 @@ export interface ImportSummary {
   skipped: { line: number; reason: SkipReason }[]
   skippedCount: number
   purged: number
+  /** Forex Factory : événements des jours couverts que la source ne liste plus (déplacés ou retirés). */
+  removed: number
+  /** Code d'une partie illisible alors que le reste l'a été (semaine suivante de Forex Factory), sinon `null`. */
+  partial: string | null
 }
 
 export type CalendarView = 'today' | 'week'
@@ -115,4 +130,26 @@ export interface NewsRefresh {
   fetched: boolean
   summary: ImportSummary | null
   status: NewsStatus
+}
+
+/** Un événement montré par « Tester la source », avant tout enregistrement. */
+export interface PreviewEvent {
+  day: string
+  parisTime: string | null
+  weekday: number
+  currency: string
+  title: string
+  importance: Importance
+  forecast: string | null
+  previous: string | null
+}
+
+/** Résultat de « Tester la source » : rien n'est enregistré avant confirmation. */
+export interface NewsPreview {
+  count: number
+  /** Les 3 prochains événements (ou les 3 premiers s'ils sont tous passés). */
+  events: PreviewEvent[]
+  skipped: { line: number; reason: SkipReason }[]
+  skippedCount: number
+  partial: string | null
 }

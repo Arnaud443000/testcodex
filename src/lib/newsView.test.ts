@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fr } from '../i18n/fr'
-import { countdown, groupByDay, importanceBars, newsErrorMessage, toggle, valueCells, widgetImportances } from './newsView'
+import { countdown, formatClock, groupByDay, importanceBars, newsErrorMessage, toggle, valueCells, widgetImportances } from './newsView'
 import type { EconomicEvent } from '../types/news'
 
 const t = fr.news
@@ -19,9 +19,27 @@ describe('affichage du calendrier économique', () => {
     // Chaque code de pulse-core (settings, store, ics, csv) et de pulse-news a son texte.
     for (const code of ['disabled', 'noSource', 'tooSoon', 'urlNotHttps', 'urlWithCredentials', 'invalidUrl', 'invalidWindow', 'invalidCurrency',
       'invalidRange', 'fileTooLarge', 'fileUnreadable', 'notIcs', 'csvHeader', 'offline', 'timeout', 'redirected', 'forbidden', 'notFound',
-      'rateLimited', 'rejected', 'serverError', 'tooLarge', 'empty', 'unexpectedResponse']) {
+      'rateLimited', 'rejected', 'serverError', 'tooLarge', 'empty', 'unexpectedResponse',
+      // Lot 28 (Forex Factory, test de la source).
+      'requestDenied', 'invalidJson', 'unexpectedJson', 'consentRequired', 'previewOutdated']) {
       expect(typeof (t.errors as unknown as Record<string, unknown>)[code], code).toBe('string')
     }
+  })
+
+  it('lot 28 : la page « Request Denied » et la semaine suivante manquante sont expliquées', () => {
+    expect(newsErrorMessage('Error: news:requestDenied', t)).toContain('trop de téléchargements')
+    expect(t.page.partial(newsErrorMessage('news:notFound', t))).toContain('Seule la semaine en cours')
+    // Chaque motif de rejet de pulse-core a son texte.
+    for (const reason of ['missingDate', 'invalidDate', 'invalidTime', 'unsupportedTimeZone', 'floatingTime', 'nonexistentTime', 'missingTitle',
+      'invalidImportance', 'invalidCurrency', 'missingColumns', 'tooManyEvents', 'incomplete', 'missingCurrency', 'missingImportance', 'invalidEntry',
+      'duplicate'] as const) {
+      expect(t.skipReasons[reason], reason).toBeTruthy()
+    }
+    expect(t.page.sourceNames.forexFactory).toContain('non officielle')
+  })
+
+  it('heure de la prochaine requête', () => {
+    expect(formatClock(new Date(2026, 8, 29, 21, 34).getTime())).toBe('21:34')
   })
 
   it('importance : texte et forme', () => {

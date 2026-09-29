@@ -2,12 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
-import { CURRENCIES, IMPORTANCES, newsErrorMessage, storedErrorMessage } from '../lib/newsView'
+import { CURRENCIES, FOREX_FACTORY_HOST, IMPORTANCES, formatClock, newsErrorMessage, storedErrorMessage } from '../lib/newsView'
+import { formatDayLong } from '../lib/calendarFormat'
 import { formatDateTime } from '../lib/format'
-import type { ImportSummary, Importance, NewsFileFormat, NewsSettings, NewsStatus } from '../types/news'
+import type { ImportSummary, Importance, NewsFileFormat, NewsPreview, NewsSettings, NewsStatus } from '../types/news'
+import { CurrencyTag, ImportanceMark, SimulationBadge } from './news/ImportanceMark'
 import { Notice, Switch } from './ui'
 
 const HEADER = 'date;heure;devise;titre;importance;prevu;precedent;reel'
+
+/** Hôte d'une adresse saisie, pour l'affichage seulement (pulse-core la valide à l'enregistrement). */
+function hostPreview(url: string): string {
+  const rest = url.trim().replace(/^https?:\/\//i, '')
+  return rest.split(/[/?#]/)[0].replace(/:\d*$/, '').toLowerCase()
+}
 
 function ImportanceSelect({ id, value, onChange }: { id: string; value: Importance; onChange: (v: Importance) => void }) {
   const t = useT().news
@@ -33,9 +41,10 @@ function CurrencySelect({ id, value, onChange }: { id: string; value: string | n
 }
 
 /**
- * Paramètres > Calendrier économique (lot 25, ancre `/settings#news`) : désactivé par défaut ; source (fichiers
- * seulement, ou flux ICS à l'adresse choisie), ce qui part exactement, fenêtre et alerte 3.6.8, import de fichier,
- * état et effacement. pulse-core revalide tout et fait foi.
+ * Paramètres > Calendrier économique (lots 25 et 28, ancre `/settings#news`) : désactivé par défaut ; source (fichiers
+ * seulement, Forex Factory avec consentement, ou flux ICS à l'adresse choisie), ce qui part exactement, « Tester la
+ * source » sans rien enregistrer avant confirmation, fenêtre et alerte 3.6.8, import de fichier, état et effacement.
+ * pulse-core revalide tout et fait foi.
  */
 export function NewsSettingsPanel() {
   const t = useT()
@@ -46,7 +55,8 @@ export function NewsSettingsPanel() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [busy, setBusy] = useState<'save' | 'import' | null>(null)
+  const [busy, setBusy] = useState<'save' | 'import' | 'test' | 'keep' | null>(null)
+  const [preview, setPreview] = useState<NewsPreview | null>(null)
   const [format, setFormat] = useState<NewsFileFormat>('ics')
   const [fileImportance, setFileImportance] = useState<Importance>('medium')
   const [fileCurrency, setFileCurrency] = useState<string | null>(null)
@@ -104,6 +114,38 @@ export function NewsSettingsPanel() {
       setBusy(null)
     }
   }
+  const runTest = async () => {
+    reset()
+    setPreview(null)
+    setBusy('test')
+    try {
+      setPreview(await api.testNewsSource(form))
+    } catch (e) {
+      setError(s.testFailed(newsErrorMessage(e, n)))
+    } finally {
+      setBusy(null)
+      setStatus(await api.getNewsStatus().catch(() => status))
+    }
+  }
+  const keepTested = async () => {
+    reset()
+    setBusy('keep')
+    try {
+      const st = await api.setNewsSettings(form)
+      setStatus(st)
+      setForm(st.settings)
+      const r = await api.keepTestedNews()
+      setStatus(r.status)
+      const sum = r.summary
+      if (sum) setMessage([s.testKept(sum.added, sum.updated), sum.removed > 0 ? n.page.removed(sum.removed) : ''].filter(Boolean).join(' '))
+      if (sum?.partial) setError(n.page.partial(newsErrorMessage(sum.partial, n)))
+    } catch (e) {
+      setError(newsErrorMessage(e, n))
+    } finally {
+      setPreview(null)
+      setBusy(null)
+    }
+  }
   const clear = async () => {
     reset()
     setConfirmClear(false)
@@ -120,7 +162,12 @@ export function NewsSettingsPanel() {
   const set = (patch: Partial<NewsSettings>) => {
     setForm({ ...form, ...patch })
     setMessage(null)
+    // Un test ne vaut que pour la source testée.
+    if ('source' in patch || 'icsUrl' in patch || 'ffConsent' in patch) setPreview(null)
   }
+  const online = form.source !== 'none'
+  const canTest = form.source === 'icsUrl' ? Boolean(form.icsUrl?.trim()) : form.source === 'forexFactory' && form.ffConsent
+  const savedOnline = status.settings.source === form.source && status.onlineHost
   const lastError = storedErrorMessage(status.state.lastError, n)
 
   return (
@@ -146,15 +193,30 @@ export function NewsSettingsPanel() {
           <form onSubmit={submit} className="flex flex-col gap-5">
             <fieldset className="flex flex-col gap-3">
               <legend className="caption mb-2">{s.sourceTitle}</legend>
-              <label className="flex items-center gap-2.5 text-sm">
-                <input type="radio" name="news-source" checked={form.source === 'none'} onChange={() => set({ source: 'none' })} />
-                {s.sourceNone}
-              </label>
-              <label className="flex items-center gap-2.5 text-sm">
-                <input type="radio" name="news-source" checked={form.source === 'icsUrl'} onChange={() => set({ source: 'icsUrl' })} />
-                {s.sourceIcs}
-              </label>
-              <p className="max-w-[90ch] text-[12.5px] leading-relaxed text-tx3">{s.sourcePending}</p>
+              {(['none', 'forexFactory', 'icsUrl'] as const).map((k) => (
+                <label key={k} className="flex min-h-6 items-center gap-2.5 text-sm">
+                  <input type="radio" name="news-source" checked={form.source === k} onChange={() => set({ source: k })} />
+                  {k === 'none' ? s.sourceNone : k === 'forexFactory' ? s.sourceFf : s.sourceIcs}
+                </label>
+              ))}
+              <p className="max-w-[90ch] text-[12.5px] leading-relaxed text-tx3">{s.sourceHint}</p>
+              {form.source === 'forexFactory' && (
+                <div className="flex flex-col gap-3" data-testid="news-ff">
+                  <Notice level="warn">
+                    <b className="block text-tx">{s.ffTitle}</b>
+                    <ul className="ml-4 mt-1.5 flex max-w-[95ch] list-disc flex-col gap-1 leading-relaxed">
+                      {s.ffPoints.map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  </Notice>
+                  <label className="flex max-w-[95ch] items-start gap-2.5 text-sm leading-relaxed">
+                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={form.ffConsent} onChange={(e) => set({ ffConsent: e.target.checked })} />
+                    <span>{s.ffConsent}</span>
+                  </label>
+                  {!form.ffConsent && <p className="text-[12.5px] text-tx3">{s.ffConsentNeeded}</p>}
+                </div>
+              )}
               {form.source === 'icsUrl' && (
                 <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4">
                   <label className="flex min-w-0 flex-col gap-1.5">
@@ -183,10 +245,81 @@ export function NewsSettingsPanel() {
               <div className="rounded-[14px] border px-4 py-3 text-[13px] leading-relaxed" style={{ borderColor: 'var(--hairline)', background: 'rgba(255,255,255,.03)' }}>
                 <b className="block text-tx">{s.whatLeavesTitle}</b>
                 <span className="text-tx2">
-                  {status.settings.source === 'icsUrl' && status.onlineHost ? s.whatLeaves(status.onlineHost) : s.whatLeavesNone}
+                  {form.source === 'forexFactory'
+                    ? s.whatLeavesFf(FOREX_FACTORY_HOST)
+                    : form.source === 'icsUrl' && savedOnline
+                      ? s.whatLeaves(status.onlineHost ?? '')
+                      : form.source === 'icsUrl' && form.icsUrl?.trim()
+                        ? s.whatLeaves(hostPreview(form.icsUrl))
+                        : s.whatLeavesNone}
                 </span>
                 <span className="mt-1 block text-tx3">{s.frequency}</span>
               </div>
+              {online && (
+                <div className="flex flex-col gap-3" data-testid="news-test">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button type="button" className="btn btn-secondary" onClick={runTest} disabled={busy !== null || !canTest}>
+                      {busy === 'test' ? s.testing : s.testButton}
+                    </button>
+                    {api.isBrowserPreview && <SimulationBadge />}
+                    <span className="max-w-[70ch] text-[12.5px] leading-relaxed text-tx3">
+                      {s.testHint}
+                      {status.nextRequestAt ? ` ${s.nextAllowed(formatClock(status.nextRequestAt))}` : ''}
+                    </span>
+                  </div>
+                  {preview && (
+                    <Notice
+                      level={preview.skippedCount > 0 || preview.partial ? 'warn' : 'ok'}
+                      actions={
+                        <>
+                          <button type="button" className="btn btn-primary btn-sm" onClick={keepTested} disabled={busy !== null}>
+                            {busy === 'keep' ? s.testKeeping : s.testKeep}
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreview(null)} disabled={busy !== null}>
+                            {s.testDiscard}
+                          </button>
+                        </>
+                      }
+                    >
+                      <p className="font-semibold text-tx">{s.testResult(preview.count)}</p>
+                      {preview.partial && <p>{n.page.partial(newsErrorMessage(preview.partial, n))}</p>}
+                      {preview.skippedCount > 0 && (
+                        <>
+                          <p>{s.skipped(preview.skippedCount)}</p>
+                          <ul className="ml-4 list-disc">
+                            {preview.skipped.slice(0, 5).map((k) => (
+                              <li key={`${k.line}-${k.reason}`}>{s.skippedItem(k.line, n.skipReasons[k.reason])}</li>
+                            ))}
+                          </ul>
+                          {preview.skippedCount > 5 && <p>{s.skippedMore(preview.skippedCount - 5)}</p>}
+                        </>
+                      )}
+                      {preview.events.length === 0 ? (
+                        <p className="mt-1">{s.testNone}</p>
+                      ) : (
+                        <>
+                          <p className="mt-1">{s.testFirst}</p>
+                          <ul className="mt-1 flex flex-col gap-1.5" data-testid="news-preview">
+                            {preview.events.map((e) => (
+                              <li key={`${e.day}-${e.parisTime}-${e.currency}-${e.title}`} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span className="tabular-nums text-tx">
+                                  <span className="first-letter:uppercase">{formatDayLong(e.day)}</span>
+                                  {' · '}
+                                  {e.parisTime ?? <span title={n.allDayHint}>{n.allDay}</span>}
+                                </span>
+                                <CurrencyTag currency={e.currency} />
+                                <span className="font-medium text-tx">{e.title}</span>
+                                <ImportanceMark importance={e.importance} />
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-1 text-tx3">{n.parisNote}</p>
+                        </>
+                      )}
+                    </Notice>
+                  )}
+                </div>
+              )}
             </fieldset>
 
             <fieldset className="flex flex-col gap-3">

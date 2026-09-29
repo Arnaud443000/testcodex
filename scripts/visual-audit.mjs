@@ -8,7 +8,7 @@
  * sans info-bulle, cibles trop petites, boutons-icônes sans nom accessible, focus clavier invisible, tailles des
  * titres de page. Code de sortie 1 s'il y a un défilement horizontal de PAGE (ce qui ne doit jamais arriver).
  *
- * Usage : node scripts/visual-audit.mjs [--out DIR] [--shots DIR] [--url http://localhost:5199] [--wide] [--only regex]
+ * Usage : node scripts/visual-audit.mjs [--out DIR] [--shots DIR] [--url http://localhost:5199] [--wide] [--sizes 1440x900,1920x1080] [--only regex]
  * Prérequis : playwright (npm i -g playwright ; Chromium dans /opt/pw-browsers ou PLAYWRIGHT_BROWSERS_PATH).
  */
 import { spawn, execSync } from 'node:child_process'
@@ -81,6 +81,50 @@ export const SCENARIOS = [
   ['carte-de-trade', async (page, id) => { await go(page, `/trades/${id}`); await clickText(page, 'Créer une carte') }],
   ['settings-securite', async (page) => { await go(page, '/settings'); await clickText(page, 'Activer le verrouillage…') }],
   ['settings-donnees-pdf', async (page) => { await go(page, '/settings'); await page.evaluate(() => [...document.querySelectorAll('h2')].find((h) => /PDF|Données/.test(h.textContent))?.scrollIntoView()) }],
+  // Lot 28 : source Forex Factory (simulation du navigateur, aucune requête), dans l'ordre d'un premier usage.
+  ['news-ff-consentement', async (page) => {
+    await go(page, '/settings')
+    const on = page.getByRole('switch', { name: 'Calendrier économique' })
+    if ((await on.getAttribute('aria-checked')) !== 'true') await on.click()
+    await page.waitForTimeout(300)
+    await page.getByLabel(/Forex Factory\s:\sexport hebdomadaire/).check()
+    await page.getByTestId('news-ff').scrollIntoViewIfNeeded()
+    await page.evaluate(() => document.getElementById('news')?.scrollIntoView())
+    await page.waitForTimeout(300)
+  }],
+  ['news-ff-test', async (page) => {
+    await page.getByLabel(/J’ai lu ces points/).check()
+    await page.getByRole('button', { name: 'Tester la source' }).click()
+    await page.getByTestId('news-preview').waitFor({ timeout: 3000 }).catch(() => {})
+    await page.evaluate(() => document.querySelector('[data-testid="news-test"]')?.scrollIntoView({ block: 'center' }))
+    await page.waitForTimeout(300)
+  }],
+  ['news-ff-calendrier', async (page) => {
+    await page.getByRole('button', { name: 'Enregistrer la source et ces événements' }).click().catch(() => {})
+    await page.waitForTimeout(500)
+    await go(page, '/calendar/news')
+    await page.waitForTimeout(400)
+  }],
+  ['news-ff-trop-tot', async (page) => {
+    await page.getByRole('button', { name: 'Actualiser' }).click().catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['news-ff-widget', async (page) => {
+    // Widget « Prochaines news » ajouté en mode édition (il n'est dans aucun modèle), rempli par la source Forex Factory.
+    await go(page, '/')
+    await clickText(page, 'Modifier le dashboard')
+    await clickText(page, 'Ajouter un widget')
+    await page.getByRole('button', { name: 'Temporel', exact: true }).click().catch(() => {})
+    await page.getByRole('button', { name: /Ajouter Prochaines news/ }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: /Fermer/ }).first().click().catch(() => {})
+    await page.waitForTimeout(300)
+    await clickText(page, 'Enregistrer comme copie')
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click().catch(() => {})
+    await page.waitForTimeout(600)
+    await page.getByText('Prochaines news', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(600)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')
@@ -210,7 +254,8 @@ async function main() {
   }
   const exe = existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined
   const browser = await chromium.launch({ executablePath: exe && existsSync(`${exe}/chrome-linux/chrome`) ? `${exe}/chrome-linux/chrome` : undefined })
-  const sizes = flag('wide') ? [...SIZES, [2560, 1440]] : SIZES
+  const chosen = opt('sizes', null)?.split(',').map((x) => x.split('x').map(Number))
+  const sizes = chosen ?? (flag('wide') ? [...SIZES, [2560, 1440]] : SIZES)
   const report = []
   let overflowFail = 0
 

@@ -8,6 +8,9 @@ import { formatDuration } from './format'
 
 export const IMPORTANCES: Importance[] = ['high', 'medium', 'low']
 
+/** Seul hôte contacté par la source Forex Factory (`pulse_core::news::ff::HOST`). */
+export const FOREX_FACTORY_HOST = 'nfs.faireconomy.media'
+
 /** Mêmes devises que `pulse_core::news::CURRENCIES`. */
 export const CURRENCIES = [
   'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'CNH', 'HKD', 'SGD', 'SEK', 'NOK', 'DKK', 'PLN',
@@ -31,6 +34,11 @@ export function newsErrorMessage(e: unknown, t: Messages['news']): string {
 /** Code `news:…` stocké (dernière tentative échouée) → message. */
 export function storedErrorMessage(code: string | null, t: Messages['news']): string | null {
   return code === null ? null : newsErrorMessage(code, t)
+}
+
+/** Heure de l'horloge du PC « 21:34 » (prochaine requête permise : c'est l'heure que l'utilisateur voit). */
+export function formatClock(ms: number): string {
+  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(ms)
 }
 
 /** Les événements regroupés par jour, dans l'ordre reçu (pulse-core trie déjà). */
