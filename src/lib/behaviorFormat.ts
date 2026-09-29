@@ -41,3 +41,9 @@ export function heatTier(intensity: number): { tone: 'gain' | 'loss' | 'none'; t
   if (a === 0) return { tone: 'none', tier: 1 }
   return { tone: intensity > 0 ? 'gain' : 'loss', tier: a <= 1 / 3 ? 1 : a <= 2 / 3 ? 2 : 3 }
 }
+
+/** Jour « AAAA-MM-JJ » en axe de graphique : « 29/09 ». Valeur inattendue renvoyée telle quelle. */
+export function formatDayShort(day: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(day)
+  return m ? `${m[2]}/${m[1]}` : day
+}

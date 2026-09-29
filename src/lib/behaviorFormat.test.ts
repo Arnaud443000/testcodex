@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatLoss, formatPercentValue, formatScore, heatTier, isLossBin, rBinLabel } from './behaviorFormat'
+import { formatDayShort, formatLoss, formatPercentValue, formatScore, heatTier, isLossBin, rBinLabel } from './behaviorFormat'
 
 const NBSP = '\u00a0'
 
@@ -49,5 +49,12 @@ describe('heatTier', () => {
     expect(heatTier(0.2)).toEqual({ tone: 'gain', tier: 1 })
     expect(heatTier(-0.5)).toEqual({ tone: 'loss', tier: 2 })
     expect(heatTier(1)).toEqual({ tone: 'gain', tier: 3 })
+  })
+})
+
+describe('formatDayShort', () => {
+  it('met un jour en jj/mm pour les axes', () => {
+    expect(formatDayShort('2026-09-29')).toBe('29/09')
+    expect(formatDayShort('n’importe quoi')).toBe('n’importe quoi')
   })
 })

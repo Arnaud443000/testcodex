@@ -1,14 +1,17 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { DisciplineReport, MistakeReport, StreakReport } from '../../types/behavior'
 import type { Heatmap, RDistribution, RiskReport } from '../../types/stats'
+import { DayBars } from './DayBars'
 import { DisciplineCard } from './DisciplineCard'
+import { QuadrantsGrid } from './ScoreRing'
 import { MistakesCard } from './MistakesCard'
 import { StreaksCard } from './StreaksCard'
 import { HeatmapCard, RDistributionCard, RiskCard } from './StatsCards'
 
-const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el)
+const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(createElement(MemoryRouter, null, el))
 const zero = { count: 0, netPnl: '0' }
 
 const tooSmall: DisciplineReport = {
@@ -25,7 +28,7 @@ const tooSmall: DisciplineReport = {
 
 describe('états vides de la page Comportement', () => {
   it('score non établi : « — » et message clair, jamais 0', () => {
-    const out = html(createElement(DisciplineCard, { report: tooSmall, currency: 'USD' }))
+    const out = html(createElement(DisciplineCard, { report: tooSmall }))
     expect(out).toContain('Pas assez de trades')
     expect(out).toContain('au moins 5 trades clôturés ; vous en avez 3')
     expect(out).toContain('Score de discipline non établi')
@@ -35,7 +38,7 @@ describe('états vides de la page Comportement', () => {
   })
 
   it('score établi : la valeur arrondie et son libellé accessible', () => {
-    const out = html(createElement(DisciplineCard, { report: { ...tooSmall, score: 77.6, sampleTooSmall: false, scoredTradeCount: 12 }, currency: 'USD' }))
+    const out = html(createElement(DisciplineCard, { report: { ...tooSmall, score: 77.6, sampleTooSmall: false, scoredTradeCount: 12 } }))
     expect(out).toContain('>78<')
     expect(out).toContain('Score de discipline : 78 sur 100')
   })
@@ -95,5 +98,38 @@ describe('états vides de la page Comportement', () => {
     expect(out).toContain('+40')
     expect(out).toContain('cal-l3')
     expect(out).toContain('cal-g2')
+  })
+})
+
+describe('page Discipline', () => {
+  it('le résumé du score renvoie vers la page Discipline', () => {
+    expect(html(createElement(DisciplineCard, { report: tooSmall }))).toContain('href="/discipline"')
+  })
+
+  it('score par jour : une barre par jour, jour sans score en « sans score », seuil affiché', () => {
+    const days = [
+      { day: '2026-09-28', tradeCount: 2, score: 82.4 },
+      { day: '2026-09-29', tradeCount: 1, score: null },
+    ]
+    const out = html(createElement(DayBars, { days, threshold: 70, selected: '2026-09-28', onSelect: () => undefined }))
+    expect(out).toContain('2026-09-28 : score 82 sur 100, 2 trades')
+    expect(out).toContain('2026-09-29 : sans score, 1 trade')
+    expect(out).toContain('aria-pressed="true"')
+    expect(out).toContain('Seuil « bien exécuté » : 70')
+    expect(out).toContain('height:82.4%')
+    expect(out).toContain('height:3px')
+  })
+
+  it('les quatre cases affichent nombre et P&L signé, « 0,00 » sans signe quand elles sont vides', () => {
+    const out = html(
+      createElement(QuadrantsGrid, {
+        currency: 'USD',
+        quadrants: { ...tooSmall.quadrants, wellExecutedWins: { count: 3, netPnl: '120.5' }, poorlyExecutedLosses: { count: 2, netPnl: '-80' } },
+      }),
+    )
+    expect(out).toContain('Gagnants bien exécutés')
+    expect(out).toContain('+120,50')
+    expect(out).toContain('−80,00')
+    expect(out).toContain('Bien exécuté = score de 70 ou plus.')
   })
 })

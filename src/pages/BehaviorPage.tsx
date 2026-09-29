@@ -120,7 +120,7 @@ export function BehaviorPage() {
     <>
       <Alerts data={data} currency={currency} />
       <div className="grid grid-cols-12 gap-6">
-        <DisciplineCard report={data.discipline} currency={currency} />
+        <DisciplineCard report={data.discipline} />
         <EmotionsCard report={data.emotions} currency={currency} />
         <StreaksCard report={data.streaks} currency={currency} />
         <PlanCard report={data.plan} currency={currency} />
