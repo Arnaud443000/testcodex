@@ -318,6 +318,33 @@ pub const MIGRATIONS: &[&str] = &[
         dismissed_at  INTEGER
     );
     CREATE INDEX alert_log_by_account ON alert_log (account_id, first_seen_at);",
+    // v9 — customisable dashboard (spec 3.8, 2.9, 2.10). Only the user's own dashboards live here; the
+    // built-in presets are code (`dashboards::presets`) so they cannot be altered or lost. `kind` has no
+    // CHECK on purpose: the widget library grows without a migration, `dashboards::save` validates it.
+    // Deleting an account puts its widgets back on "the global account" instead of blocking the deletion.
+    "CREATE TABLE dashboards (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 60),
+        position   INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE UNIQUE INDEX dashboards_name_key ON dashboards (lower(trim(name)));
+    CREATE TABLE dashboard_widgets (
+        id           INTEGER PRIMARY KEY,
+        dashboard_id INTEGER NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+        uid          TEXT NOT NULL CHECK (length(uid) BETWEEN 1 AND 40),
+        kind         TEXT NOT NULL CHECK (length(kind) BETWEEN 1 AND 40),
+        x            INTEGER NOT NULL CHECK (x >= 0),
+        y            INTEGER NOT NULL CHECK (y >= 0),
+        w            INTEGER NOT NULL CHECK (w >= 1),
+        h            INTEGER NOT NULL CHECK (h >= 1),
+        period       TEXT CHECK (period IS NULL OR period IN ('1D','1W','1M','3M','1Y','ALL')),
+        account_id   INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+        mode         TEXT CHECK (mode IS NULL OR length(mode) BETWEEN 1 AND 40),
+        UNIQUE (dashboard_id, uid)
+    );
+    CREATE INDEX dashboard_widgets_dashboard ON dashboard_widgets (dashboard_id);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -669,7 +696,7 @@ mod tests {
         conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).unwrap();
 
         migrate(&mut conn).unwrap();
-        assert_eq!(current_version(&conn).unwrap(), 8);
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
         // Existing data untouched.
         assert_eq!(accounts::list(&conn).unwrap().len(), 1);
         assert_eq!(trades::get(&conn, trade.id).unwrap().data.account_id, a);
@@ -691,5 +718,49 @@ mod tests {
         assert!(insert("x:1:2", a, "info").is_err());
         assert!(insert("", a, "warning").is_err());
         assert!(insert("x:9:1", 999, "warning").is_err(), "unknown account");
+    }
+
+    #[test]
+    fn v9_adds_dashboards_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 8).unwrap();
+        let account = account_v2(&conn);
+        conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500')", []).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+
+        migrate_to(&mut conn, 9).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 9);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'keep'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "me");
+        let goals: i64 = conn.query_row("SELECT COUNT(*) FROM goals", [], |r| r.get(0)).unwrap();
+        assert_eq!(goals, 1);
+        for table in ["dashboards", "dashboard_widgets"] {
+            let n: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(n, 0, "{table} starts empty: the default dashboard is a built-in preset");
+        }
+        // The existing user lands on the dashboard they always had.
+        assert_eq!(crate::dashboards::startup(&conn).unwrap().key, "preset:essential");
+
+        // Guards written straight to the schema.
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES ('Mon dashboard')", []).is_ok());
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES (' mon DASHBOARD ')", []).is_err(), "names are unique, case and spaces aside");
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES ('   ')", []).is_err());
+        let widget = |extra: &str| format!("INSERT INTO dashboard_widgets (dashboard_id, uid, kind, x, y, w, h{extra}) ");
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'a', 'kpi', 0, 0, 6, 6)"), []).is_ok());
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'a', 'kpi', 6, 0, 6, 6)"), []).is_err(), "uid unique in a dashboard");
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'b', 'kpi', -1, 0, 6, 6)"), []).is_err());
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'b', 'kpi', 0, 0, 0, 6)"), []).is_err());
+        assert!(conn.execute(&(widget("") + "VALUES (2, 'b', 'kpi', 0, 0, 6, 6)"), []).is_err(), "dashboard must exist");
+        assert!(conn.execute(&(widget(", period") + "VALUES (1, 'b', 'kpi', 6, 0, 6, 6, '2W')"), []).is_err());
+        assert!(conn.execute(&(widget(", period, account_id") + &format!("VALUES (1, 'b', 'kpi', 6, 0, 6, 6, '1M', {account})")), []).is_ok());
+        // Deleting an account keeps the widget; deleting the dashboard removes its widgets.
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [account]).unwrap();
+        let acc: Option<i64> = conn.query_row("SELECT account_id FROM dashboard_widgets WHERE uid = 'b'", [], |r| r.get(0)).unwrap();
+        assert_eq!(acc, None);
+        conn.execute("DELETE FROM dashboards WHERE id = 1", []).unwrap();
+        let n: i64 = conn.query_row("SELECT COUNT(*) FROM dashboard_widgets", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 0);
     }
 }

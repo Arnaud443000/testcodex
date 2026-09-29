@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { signOf } from '../../lib/decimal'
 import type { Decimal } from '../../types/money'
 
@@ -16,9 +16,13 @@ export function toneOfNumber(value: number | null): string {
   return value > 0 ? 'text-gain' : value < 0 ? 'text-loss' : 'text-neutral'
 }
 
+/** Vrai quand la carte est posée dans un widget du dashboard : elle remplit sa cellule au lieu de prendre des colonnes. */
+export const EmbeddedCardContext = createContext(false)
+
 export function Card({ title, span, children, aside }: { title: string; span: string; children: ReactNode; aside?: ReactNode }) {
+  const embedded = useContext(EmbeddedCardContext)
   return (
-    <section className={`glass-card col-span-12 flex flex-col p-6 ${span}`}>
+    <section className={embedded ? 'glass-card flex h-full flex-col overflow-auto p-6' : `glass-card col-span-12 flex flex-col p-6 ${span}`}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
         {aside}

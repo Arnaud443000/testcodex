@@ -75,6 +75,29 @@ const PATHS = {
       <path d="M10 8.5l5 3.5-5 3.5z" />
     </>
   ),
+  // Lot 13 : dashboard personnalisable
+  grip: (
+    <>
+      <circle cx="9" cy="6" r="1" />
+      <circle cx="15" cy="6" r="1" />
+      <circle cx="9" cy="12" r="1" />
+      <circle cx="15" cy="12" r="1" />
+      <circle cx="9" cy="18" r="1" />
+      <circle cx="15" cy="18" r="1" />
+    </>
+  ),
+  resize: <path d="M20 10L10 20M20 16l-4 4" />,
+  edit: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
+  library: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <path d="M16.5 13v7M13 16.5h7" />
+    </>
+  ),
+  reset: <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5" />,
+  star: <path d="M12 4l2.5 5.2 5.6.8-4.1 4 1 5.6L12 17l-5 2.6 1-5.6-4.1-4 5.6-.8z" />,
 } as const
 
 export type IconName = keyof typeof PATHS

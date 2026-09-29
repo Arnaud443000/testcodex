@@ -5,13 +5,13 @@ import type { EmotionReport } from '../../types/behavior'
 import type { Segment } from '../../types/stats'
 import { Card, EmptyLine, Segmented, toneOfDecimal } from './parts'
 
-type Moment = 'before' | 'during' | 'after' | 'any'
+export type Moment = 'before' | 'during' | 'after' | 'any'
 const MOMENTS: Moment[] = ['before', 'during', 'after', 'any']
 
 /** Barres divergentes autour d'un axe central (charte 6) : gain à droite, perte à gauche, valeur et réussite à droite. */
-export function EmotionsCard({ report, currency }: { report: EmotionReport; currency: string }) {
+export function EmotionsCard({ report, currency, initialMoment = 'before' }: { report: EmotionReport; currency: string; initialMoment?: Moment }) {
   const t = useT().behavior.emotions
-  const [moment, setMoment] = useState<Moment>('before')
+  const [moment, setMoment] = useState<Moment>(initialMoment)
   const rows: Segment[] = report[moment]
   // Échelle du dessin : le plus gros écart en valeur absolue occupe la demi-piste.
   const max = Math.max(...rows.map((s) => Math.abs(Number(s.summary.netPnl))), 0) || 1
