@@ -233,3 +233,35 @@ pub fn paris_week(now: i64) -> (String, String) {
     let monday = today - (today + 3).rem_euclid(7);
     (zones::day_key_of(monday), zones::day_key_of(monday + 6))
 }
+
+/// Which days the calendar page shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CalendarView {
+    /// Today (Paris).
+    Today,
+    /// Monday to Sunday of the Paris week containing today.
+    Week,
+}
+
+/// The calendar page: its days (Paris), the events, the currencies to filter on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Calendar {
+    pub today: String,
+    pub from_day: String,
+    pub to_day: String,
+    pub events: Vec<EventView>,
+    /// Every currency stored (not only this range's), sorted.
+    pub currencies: Vec<String>,
+}
+
+pub fn calendar(conn: &Connection, now: i64, view: CalendarView, importances: &[Importance], currencies_filter: &[String]) -> Result<Calendar> {
+    let today = zones::paris_day(now);
+    let (from_day, to_day) = match view {
+        CalendarView::Today => (today.clone(), today.clone()),
+        CalendarView::Week => paris_week(now),
+    };
+    let q = EventQuery { from_day: from_day.clone(), to_day: to_day.clone(), importances: importances.to_vec(), currencies: currencies_filter.to_vec() };
+    Ok(Calendar { events: list(conn, &q)?, currencies: currencies(conn)?, today, from_day, to_day })
+}

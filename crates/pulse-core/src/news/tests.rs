@@ -393,3 +393,29 @@ fn v14_adds_the_calendar_and_keeps_existing_data() {
     assert!(insert("c", "", "urgent").is_err());
     assert!(insert("d", "", "low").is_ok());
 }
+
+#[test]
+fn the_calendar_page_covers_today_or_the_paris_week_and_files_are_size_checked() {
+    let conn = db::open_in_memory().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("eco.csv");
+    std::fs::write(&path, "date;heure;devise;titre;importance;prevu;precedent;reel\n2026-09-29;14:30;USD;A;forte\n2026-10-04;10:00;EUR;B;faible\n2026-10-05;10:00;EUR;C;faible\n").unwrap();
+    assert_eq!(code(settings::import_path(&conn, FileFormat::Csv, &path, &defaults(), now()).unwrap_err()), "news:disabled");
+    enabled(&conn);
+    assert_eq!(code(settings::import_path(&conn, FileFormat::Csv, &dir.path().join("missing.csv"), &defaults(), now()).unwrap_err()), "news:fileUnreadable");
+    assert_eq!(settings::import_path(&conn, FileFormat::Csv, &path, &defaults(), now()).unwrap().added, 3);
+    let big = dir.path().join("big.ics");
+    std::fs::write(&big, vec![b'x'; MAX_BYTES + 1]).unwrap();
+    assert_eq!(code(settings::import_path(&conn, FileFormat::Ics, &big, &defaults(), now()).unwrap_err()), "news:fileTooLarge");
+
+    let today = store::calendar(&conn, now(), CalendarView::Today, &[], &[]).unwrap();
+    assert_eq!((today.today.as_str(), today.from_day.as_str(), today.to_day.as_str()), ("2026-09-29", "2026-09-29", "2026-09-29"));
+    assert_eq!(today.events.iter().map(|e| e.title.as_str()).collect::<Vec<_>>(), ["A"]);
+    assert_eq!(today.currencies, ["EUR", "USD"]);
+    let week = store::calendar(&conn, now(), CalendarView::Week, &[Importance::Low], &[]).unwrap();
+    assert_eq!((week.from_day.as_str(), week.to_day.as_str()), ("2026-09-28", "2026-10-04"));
+    assert_eq!(week.events.iter().map(|e| e.title.as_str()).collect::<Vec<_>>(), ["B"], "Sunday in, next Monday out");
+    // Sunday 23:30 UTC in summer is already Monday in Paris: the next week.
+    let late = at(2026, 10, 4, 22, 30);
+    assert_eq!(store::calendar(&conn, late, CalendarView::Week, &[], &[]).unwrap().from_day, "2026-10-05");
+}

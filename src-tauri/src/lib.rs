@@ -766,7 +766,14 @@ pub fn run() {
             lock_cmds::set_lock_idle,
             lock_cmds::lock_touch,
             lock_cmds::retry_persist,
-            lock_cmds::quit_discarding_changes
+            lock_cmds::quit_discarding_changes,
+            get_news_status,
+            set_news_settings,
+            import_news_file,
+            refresh_news,
+            get_news_calendar,
+            get_upcoming_news,
+            clear_news_events
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1364,4 +1371,108 @@ fn delete_coach_conversation(state: State<AppState>, id: i64) -> Result<(), Stri
 fn delete_all_coach_conversations(state: State<AppState>) -> Result<usize, String> {
     let conn = state.conn()?;
     pulse_core::coach::delete_all_conversations(&conn).map_err(err)
+}
+
+// --- Lot 25 : calendrier économique (3.6.8) ; réseau isolé dans pulse-news, désactivé par défaut ---
+
+#[tauri::command]
+fn get_news_status(state: State<AppState>) -> Result<pulse_core::news::NewsStatus, String> {
+    let conn = state.conn()?;
+    pulse_core::news::settings::status(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_news_settings(state: State<AppState>, settings: pulse_core::news::NewsSettings) -> Result<pulse_core::news::NewsStatus, String> {
+    let conn = state.conn()?;
+    pulse_core::news::settings::set(&conn, &settings).map_err(err)?;
+    pulse_core::news::settings::status(&conn).map_err(err)
+}
+
+/// Imports a local ICS or CSV file chosen in the file dialog (no network).
+#[tauri::command]
+fn import_news_file(
+    state: State<AppState>,
+    format: pulse_core::news::settings::FileFormat,
+    path: String,
+    defaults: pulse_core::news::Defaults,
+) -> Result<pulse_core::news::ImportSummary, String> {
+    let conn = state.conn()?;
+    pulse_core::news::settings::import_path(&conn, format, std::path::Path::new(&path), &defaults, now_ms()).map_err(err)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NewsRefresh {
+    /// `false` when nothing was fetched (automatic call: off, no source, already tried today).
+    fetched: bool,
+    summary: Option<pulse_core::news::ImportSummary>,
+    status: pulse_core::news::NewsStatus,
+}
+
+/// Fetches the online feed. `manual`: the "Actualiser" button (at most once every 5 minutes);
+/// otherwise the call made at opening (at most once per Paris day). `pulse-core` decides and
+/// records the attempt before anything leaves; the network call runs without holding the database.
+#[tauri::command]
+async fn refresh_news(state: State<'_, AppState>, manual: bool) -> Result<NewsRefresh, String> {
+    let plan = {
+        let conn = state.conn()?;
+        pulse_core::news::settings::prepare_fetch(&conn, now_ms(), manual).map_err(err)?
+    };
+    let Some(plan) = plan else {
+        let conn = state.conn()?;
+        return Ok(NewsRefresh { fetched: false, summary: None, status: pulse_core::news::settings::status(&conn).map_err(err)? });
+    };
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        use pulse_news::CalendarProvider;
+        pulse_news::IcsUrl::new().fetch(&plan)
+    })
+    .await
+    .map_err(err)?;
+    let conn = state.conn()?;
+    match result {
+        Ok(parsed) => {
+            let summary = pulse_core::news::settings::finish_fetch(&conn, now_ms(), parsed).map_err(err)?;
+            Ok(NewsRefresh { fetched: true, summary: Some(summary), status: pulse_core::news::settings::status(&conn).map_err(err)? })
+        }
+        Err(e) => {
+            pulse_core::news::settings::fail_fetch(&conn, &e.to_string()).map_err(err)?;
+            Err(e.to_string())
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NewsFilter {
+    #[serde(default)]
+    importances: Vec<pulse_core::news::Importance>,
+    #[serde(default)]
+    currencies: Vec<String>,
+}
+
+#[tauri::command]
+fn get_news_calendar(
+    state: State<AppState>,
+    view: pulse_core::news::CalendarView,
+    filter: NewsFilter,
+) -> Result<pulse_core::news::Calendar, String> {
+    let conn = state.conn()?;
+    pulse_core::news::store::calendar(&conn, now_ms(), view, &filter.importances, &filter.currencies).map_err(err)
+}
+
+#[tauri::command]
+fn get_upcoming_news(
+    state: State<AppState>,
+    limit: u32,
+    importances: Vec<pulse_core::news::Importance>,
+) -> Result<Vec<pulse_core::news::EventView>, String> {
+    let conn = state.conn()?;
+    pulse_core::news::store::upcoming(&conn, now_ms(), limit, &importances).map_err(err)
+}
+
+/// Deletes every stored event (the settings stay).
+#[tauri::command]
+fn clear_news_events(state: State<AppState>) -> Result<usize, String> {
+    let conn = state.conn()?;
+    pulse_core::news::store::clear(&conn).map_err(err)
 }

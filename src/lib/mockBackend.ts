@@ -912,3 +912,7 @@ export const mockCoach = createCoachMock({
   tools: () => COACH_TOOLS,
   now: () => Date.now(),
 })
+
+// --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
+import { createNewsMock } from './mockNews'
+export const mockNews = createNewsMock()

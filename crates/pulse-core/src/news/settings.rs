@@ -280,3 +280,16 @@ pub fn import_file(conn: &Connection, format: FileFormat, bytes: &[u8], defaults
     write(conn, LAST_IMPORT_AT, Some(now.to_string()))?;
     Ok(summary)
 }
+
+/// Imports a file chosen in the file dialog: its size is checked before it is read.
+pub fn import_path(conn: &Connection, format: FileFormat, path: &std::path::Path, defaults: &Defaults, now: i64) -> Result<ImportSummary> {
+    if !get(conn)?.enabled {
+        return Err(error("disabled"));
+    }
+    let size = std::fs::metadata(path).map_err(|_| error("fileUnreadable"))?.len();
+    if size > super::MAX_BYTES as u64 {
+        return Err(error("fileTooLarge"));
+    }
+    let bytes = std::fs::read(path).map_err(|_| error("fileUnreadable"))?;
+    import_file(conn, format, &bytes, defaults, now)
+}

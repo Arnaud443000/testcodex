@@ -9,7 +9,7 @@ pub mod store;
 pub mod zones;
 
 pub use settings::{FetchPlan, FetchState, NewsSettings, NewsStatus, SourceKind};
-pub use store::{EventQuery, EventView, ImportSummary};
+pub use store::{Calendar, CalendarView, EventQuery, EventView, ImportSummary};
 
 use crate::error::CoreError;
 use serde::{Deserialize, Serialize};
