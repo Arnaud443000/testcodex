@@ -24,6 +24,7 @@ import type {
   RiskReport,
   StatsQuery,
 } from '../types/stats'
+import type { AssetRow, ExecutionReport, FeeGranularity, FeeReport, StrategyRow } from '../types/stats'
 import type {
   BehaviorSettings,
   DisciplineReport,
@@ -52,7 +53,7 @@ import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
 import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
 import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
-import { mockBehaviorExtra } from './mockBackend'
+import { mockAnalyses, mockBehaviorExtra } from './mockBackend'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
@@ -261,5 +262,19 @@ export const api = {
   /** Simulation sans les trades hors plan : à étiqueter comme une simulation, jamais un conseil. */
   getPlanSimulation: (query: StatsQuery): Promise<PlanSimulation> =>
     inTauri ? invoke('get_plan_simulation', { query }) : mockBehaviorExtra.getPlanSimulation(query),
+
+  // --- Lot 14 : analyses d'étape 3 ---
+  /** Performance par instrument (3.3.13). */
+  getAssetReport: (query: StatsQuery): Promise<AssetRow[]> =>
+    inTauri ? invoke('get_asset_report', { query }) : mockAnalyses.getAssetReport(query),
+  /** Frais et commissions : courbe cumulée et tableau par jour / semaine / mois (3.3.15). */
+  getFeeReport: (query: StatsQuery, granularity: FeeGranularity = 'month'): Promise<FeeReport> =>
+    inTauri ? invoke('get_fee_report', { query, granularity }) : mockAnalyses.getFeeReport(query, granularity),
+  /** Stratégies côte à côte : une stratégie = un tag « setup » (3.3.16). */
+  getStrategyReport: (query: StatsQuery): Promise<StrategyRow[]> =>
+    inTauri ? invoke('get_strategy_report', { query }) : mockAnalyses.getStrategyReport(query),
+  /** Système contre discrétionnaire, d'après le type du trade (3.3.17). */
+  getExecutionReport: (query: StatsQuery): Promise<ExecutionReport> =>
+    inTauri ? invoke('get_execution_report', { query }) : mockAnalyses.getExecutionReport(query),
 }
 
