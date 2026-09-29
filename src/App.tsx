@@ -5,6 +5,7 @@ import { useT } from './i18n'
 import { AccountsProvider } from './lib/accounts'
 import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
+import { AlertBanner } from './components/AlertBanner'
 import { DisciplinePage } from './pages/DisciplinePage'
 import { BehaviorPage } from './pages/BehaviorPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -31,6 +32,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-7 py-6">
               {/* Largeur max du contenu : au-delà, les grilles s’étireraient et les cartes se déséquilibreraient. */}
               <div className="mx-auto w-full max-w-[1480px]">
+              <AlertBanner />
               <ReminderBanner />
               <Routes>
                 <Route path="/" element={<DashboardPage />} />

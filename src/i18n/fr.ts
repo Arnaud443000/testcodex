@@ -1219,6 +1219,42 @@ export const fr = {
       empty: 'Aucun trade avec un stop loss prévu : le risque ne peut pas être calculé.',
     },
   },
+  // --- Lot 12 : alertes à seuils (garde-fous, cahier 3.6) ---
+  alerts: {
+    bannerTitle: (n: number) => (n > 1 ? `${n} garde-fous déclenchés` : 'Garde-fou déclenché'),
+    severity: { critical: 'Critique', warning: 'Attention' } as Record<'critical' | 'warning', string>,
+    viewTrade: 'Voir le trade',
+    dismiss: 'Masquer',
+    dismissAll: 'Tout masquer',
+    showMore: (n: number) => `Voir ${n > 1 ? `les ${n} autres alertes` : 'l’autre alerte'}`,
+    showLess: 'Réduire',
+    onAccount: (name: string) => `Compte « ${name} »`,
+    dismissError: (detail: string) => `Impossible de masquer l’alerte : ${detail}`,
+    messages: {
+      consecutiveLosses: (count: number, threshold: number) =>
+        `${count} pertes d’affilée aujourd’hui (seuil : ${threshold}). Risque de surtrading : faites une pause avant le prochain trade.`,
+      tradesPerDayReached: (count: number, threshold: number) =>
+        `${count} trades pris aujourd’hui : votre maximum de ${threshold} par jour est atteint.`,
+      tradesPerDayExceeded: (count: number, threshold: number) =>
+        `${count} trades pris aujourd’hui : votre maximum de ${threshold} par jour est dépassé.`,
+      tradesPerWindowReached: (count: number, threshold: number, window: string) =>
+        `${count} trades pris en moins de ${window} : votre maximum de ${threshold} est atteint.`,
+      tradesPerWindowExceeded: (count: number, threshold: number, window: string) =>
+        `${count} trades pris en moins de ${window} : votre maximum de ${threshold} est dépassé.`,
+      dailyLoss: (loss: string, pct: string, limits: string) =>
+        `Résultat du jour : ${loss}${pct ? ` (${pct} du solde de début de journée)` : ''}. Limite atteinte : ${limits}. Stop pour aujourd’hui.`,
+      weeklyLoss: (loss: string, pct: string, limits: string) =>
+        `Résultat de la semaine : ${loss}${pct ? ` (${pct} du solde de début de semaine)` : ''}. Limite atteinte : ${limits}. Levez le pied jusqu’à lundi.`,
+      limitsJoin: ' et ',
+      revenge: (gap: string, ratio: string, factor: string) =>
+        `Trade pris ${gap} après une perte, avec une exposition ${ratio} celle du trade perdant (seuil : ×${factor}). Risque de trade de revanche.`,
+      outsideHours: (time: string, hours: string) => `Trade entré à ${time}, hors de vos horaires (${hours}).`,
+      unusualSession: (session: string, count: number, history: number, share: string) =>
+        `Trade pris en session ${session}, où vous tradez rarement (${count} sur vos ${history} trades précédents, ${share}).`,
+      noStopLossOpen: 'Position ouverte sans stop loss prévu.',
+      noStopLossClosed: 'Trade du jour pris sans stop loss prévu.',
+    },
+  },
 }
 
 export type Messages = typeof fr
