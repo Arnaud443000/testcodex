@@ -78,3 +78,12 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - **Temps en position** : le ratio gagnants / perdants n'est chiffré qu'avec au moins 5 trades de chaque côté ; les trades à plat sont montrés à part.
 - **Scaling du capital** : compare le risque moyen en % du solde entre la première et la seconde moitié de vos trades (avec stop loss). Seuils choisis, à confirmer : 5 trades minimum par moitié, écart de 20 % du risque en % pour parler de « sur-dimensionné » ou « sous-dimensionné », capital « ayant bougé » à partir de 10 %. Les dépôts et retraits comptent dans le solde (capital réel) mais jamais dans la performance. Ce sont des constats, pas des ordres.
 - **Aucune migration** dans ce lot. Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2 ni avec la vraie base SQLite (le coût d'opportunité est testé en Rust contre une base SQLite en mémoire, les trois autres sur des journaux en mémoire).
+
+
+## Lot 17 (comparaisons et exposition) — points à vérifier
+- Nouvelle page « Comparaisons » : comptes côte à côte, risque max par trade contre votre limite, exposition par catégorie d'actif. **Aucune migration.**
+- Comparaison de comptes : aucune somme ni « meilleur compte ». Avec des devises différentes, les lignes en argent sont grisées et signalées ; seuls les ratios se comparent. Les « pistes » (frais plus lourds, R moyen plus bas) ne sont **pas** des conclusions : seuils choisis par moi (10 points de part de frais, 0,25 R, 5 trades minimum, un actif en commun) — à confirmer.
+- Benchmark du risque : nécessite la limite de Paramètres > Seuils de discipline. Un trade exactement à la limite est respecté. Les trades sans stop ne sont pas jugés.
+- Exposition : porte sur les trades **clôturés** de la période (pas les positions ouvertes). Le « % du capital » est la somme des risques par trade, pas un solde.
+- Point à trancher : ces pages s'appuient sur le risque « à l'entrée » (constat 10 toujours ouvert).
+- Vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2 ni avec la vraie base SQLite (sauf tests Rust sur base en mémoire). Le drawdown en % est vide dans le faux backend du navigateur.

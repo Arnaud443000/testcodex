@@ -440,3 +440,118 @@ export interface ScalingReport {
   capitalMoved: boolean
   verdict: ScalingVerdict
 }
+// --- Comparaisons et exposition (lot 17) ---
+
+/** Une ligne de la comparaison entre comptes (3.7.6) : un compte, calculé seul. */
+export interface AccountRow {
+  accountId: number
+  name: string
+  broker: string
+  currency: string
+  summary: Summary
+  /** Frais / trades clôturés (positif = coût) ; null sans trade. */
+  feesPerTrade: Decimal | null
+  /** frais / PnL brut ; null si le brut n'est pas positif. */
+  feesShareOfGross: number | null
+  /** Moins de `minSample` trades clôturés : affiché, jamais utilisé pour une piste. */
+  lowSample: boolean
+}
+
+/** `fees` : le compte paie une plus grande part de son brut en frais que l'autre. `execution` : son R moyen est plus bas. */
+export type AccountHintKind = 'fees' | 'execution'
+
+/** Une piste à vérifier, jamais une conclusion. */
+export interface AccountHint {
+  kind: AccountHintKind
+  accountId: number
+  otherAccountId: number
+  /** Frais : écart de part (0,10 = 10 points). Exécution : écart de R moyen. */
+  gap: number
+  /** Instruments clôturés sur les deux comptes. */
+  sharedInstruments: number
+}
+
+export interface AccountComparison {
+  rows: AccountRow[]
+  currencies: string[]
+  /** Plus d'une devise : aucun montant ne se somme ni ne se compare. */
+  mixedCurrencies: boolean
+  minSample: number
+  feesGapThreshold: number
+  rGapThreshold: number
+  hints: AccountHint[]
+}
+
+/** Un trade au-dessus de la limite de risque (3.4.11). */
+export interface RiskViolation {
+  tradeId: number
+  accountId: number
+  symbol: string
+  direction: Direction
+  exitTime: number
+  initialRisk: Decimal
+  balanceAtEntry: Decimal
+  /** Risque / solde à l'entrée (0,015 = 1,5 %). */
+  riskPct: number
+  /** La limite en argent au solde à l'entrée. */
+  limitAmount: Decimal
+  /** riskPct − limite, en fraction (0,005 = un demi-point au-dessus). */
+  excessPct: number
+  /** riskPct / limite (1,5 = 50 % au-dessus). */
+  overFactor: number
+}
+
+export interface RiskMonth {
+  /** AAAA-MM, mois local de sortie. */
+  key: string
+  evaluatedCount: number
+  overCount: number
+  complianceRate: number | null
+}
+
+export type ComplianceTrend = 'notEnoughData' | 'improving' | 'stable' | 'worsening'
+
+export interface RiskBenchmark {
+  /** Limite de l'utilisateur en pourcentage ; null = aucune limite réglée, rien n'est évalué. */
+  limitPercent: Decimal | null
+  tradeCount: number
+  evaluatedCount: number
+  withoutStopCount: number
+  respectedCount: number
+  overCount: number
+  complianceRate: number | null
+  avgRiskPct: number | null
+  maxRiskPct: number | null
+  trend: ComplianceTrend
+  olderRate: number | null
+  recentRate: number | null
+  minTrendTrades: number
+  months: RiskMonth[]
+  points: TradeRisk[]
+  /** Du plus récent au plus ancien. */
+  violations: RiskViolation[]
+}
+
+/** Exposition d'une catégorie d'actif (3.7.9). */
+export interface ExposureRow {
+  assetClass: AssetClass
+  tradeCount: number
+  /** Trades avec un stop valide, donc un risque connu. */
+  riskTradeCount: number
+  withoutStopCount: number
+  riskAmount: Decimal
+  /** Part du risque total (en argent) ; null si le risque de la catégorie ou le total est inconnu / nul. */
+  shareOfRisk: number | null
+  /** Somme des risques par trade, en % du solde à l'entrée (0,035 = 3,5 %). */
+  riskPctOfCapital: number | null
+  avgRiskPct: number | null
+}
+
+export interface ExposureReport {
+  currency: string | null
+  tradeCount: number
+  withoutStopCount: number
+  totalRisk: Decimal
+  totalRiskPct: number | null
+  rows: ExposureRow[]
+}

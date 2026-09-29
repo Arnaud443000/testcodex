@@ -15,6 +15,12 @@ const PATHS = {
     </>
   ),
   analytics: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  comparisons: (
+    <>
+      <path d="M7 4v16M17 4v16" />
+      <path d="M3 8l4-4 4 4M13 16l4 4 4-4" />
+    </>
+  ),
   behavior: (
     <>
       <circle cx="12" cy="12" r="9" />

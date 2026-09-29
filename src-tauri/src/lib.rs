@@ -632,7 +632,10 @@ pub fn run() {
             save_dashboard_layout,
             rename_dashboard_layout,
             delete_dashboard_layout,
-            set_default_dashboard_layout
+            set_default_dashboard_layout,
+            get_account_comparison,
+            get_risk_benchmark,
+            get_exposure_report
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -835,4 +838,23 @@ fn get_duration_report(state: State<AppState>, query: StatsQuery) -> Result<puls
 fn get_scaling_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::analyses::ScalingReport, String> {
     let conn = state.db.lock().map_err(err)?;
     pulse_core::stats::analyses::scaling_report(&conn, &query).map_err(err)
+}
+// --- Lot 17 : comparaison de comptes, benchmark du risque max, exposition par catégorie d'actif ---
+
+#[tauri::command]
+fn get_account_comparison(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::comparisons::AccountComparison, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::comparisons::account_comparison(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_risk_benchmark(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::comparisons::RiskBenchmark, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::comparisons::risk_benchmark_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_exposure_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::comparisons::ExposureReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::comparisons::exposure_report(&conn, &query).map_err(err)
 }
