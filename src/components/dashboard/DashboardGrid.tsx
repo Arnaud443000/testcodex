@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { readingOrder } from '../../lib/gridLayout'
 import { GRID_COLUMNS, type WidgetInstance } from '../../types/dashboardLayout'
 import type { ScopeEnv } from '../../lib/widgetScope'
@@ -10,18 +10,18 @@ export const MARGIN = 12
 /** En dessous de cette largeur, les widgets s'empilent (lecture seule). */
 export const STACK_BELOW = 760
 
-/** Largeur d'un élément, suivie avec un ResizeObserver. */
-export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T | null>(null)
+/** Largeur d'un élément, suivie avec un ResizeObserver. Le ref est une fonction : l'élément peut apparaître après le premier rendu. */
+export function useWidth<T extends HTMLElement>(): [(el: T | null) => void, number] {
   const [width, setWidth] = useState(0)
-  useEffect(() => {
-    const el = ref.current
+  const observer = useRef<ResizeObserver | null>(null)
+  const ref = useCallback((el: T | null) => {
+    observer.current?.disconnect()
+    observer.current = null
     if (!el) return
     setWidth(el.getBoundingClientRect().width)
     if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => setWidth(entries[0].contentRect.width))
-    ro.observe(el)
-    return () => ro.disconnect()
+    observer.current = new ResizeObserver((entries) => setWidth(entries[0].contentRect.width))
+    observer.current.observe(el)
   }, [])
   return [ref, width]
 }
