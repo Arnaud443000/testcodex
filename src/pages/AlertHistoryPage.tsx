@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AlertRules } from '../components/AlertRules'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { alertMessage } from '../lib/alertFormat'
+import { useAlertRules } from '../lib/alertRules'
 import { ALERT_KINDS, filterHistory } from '../lib/alertHistory'
 import { api } from '../lib/api'
 import { formatDateTime } from '../lib/format'
@@ -45,6 +47,7 @@ export function AlertHistoryPage() {
     return filterHistory(records, { ...periodRange(period, Date.now(), localTzOffsetMin()), kind })
   }, [records, period, kind])
 
+  const rulesOf = useAlertRules(shown)
   const account = selectedId === null ? h.allAccounts : (allAccounts.find((a) => a.id === selectedId)?.name ?? h.allAccounts)
   const showAccount = accounts.length > 1 && selectedId === null
   const header = (
@@ -125,6 +128,7 @@ export function AlertHistoryPage() {
                     {showAccount && acc && <span className="ml-2 text-xs font-normal text-tx3">{t.alerts.onAccount(acc.name)}</span>}
                   </div>
                   <p className="mt-1 max-w-[80ch] text-[13px] leading-relaxed text-tx2">{alertMessage(t, r.alert)}</p>
+                  <AlertRules texts={rulesOf(r)} />
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <span className="text-xs text-tx3">{r.dismissedAt === null ? h.notDismissed : h.dismissedOn(formatDateTime(r.dismissedAt))}</span>

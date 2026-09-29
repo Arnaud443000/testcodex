@@ -1400,6 +1400,7 @@ export const fr = {
     noAccountText: 'Les alertes se déclenchent à partir des trades d’un compte.',
     createAccount: 'Créer un compte',
     bannerLink: 'Voir l’historique',
+    brokenRules: (n: number) => `${n > 1 ? 'Règles personnelles notées non respectées' : 'Règle personnelle notée non respectée'} sur ce trade`,
   },
 
   // Analyses d'étape 3 (lot 14) : par actif, frais, stratégies, système / discrétionnaire.

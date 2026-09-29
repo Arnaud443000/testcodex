@@ -4,8 +4,10 @@ import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
 import { alertMessage } from '../lib/alertFormat'
+import { useAlertRules } from '../lib/alertRules'
 import { localTzOffsetMin } from '../lib/period'
 import type { Alert } from '../types/alerts'
+import { AlertRules } from './AlertRules'
 import { Notice } from './ui'
 
 /** Alertes affichées d'emblée ; les suivantes sont repliées. */
@@ -43,6 +45,8 @@ export function AlertBanner() {
     }
   }, [location.pathname])
 
+  const rulesOf = useAlertRules(alerts)
+
   const dismiss = useCallback(
     async (ids: string[]) => {
       setError(null)
@@ -74,6 +78,9 @@ export function AlertBanner() {
             {expanded && alerts.length > FIRST && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setExpanded(false)}>{a.showLess}</button>
             )}
+            {location.pathname !== '/alerts' && (
+              <Link to="/alerts" className="btn btn-secondary btn-sm">{t.alertHistory.bannerLink}</Link>
+            )}
             {alerts.length > 1 && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => void dismiss(alerts.map((x) => x.id))}>{a.dismissAll}</button>
             )}
@@ -88,10 +95,11 @@ export function AlertBanner() {
             return (
               <li key={x.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide">{a.severity[x.severity]}</span>
-                <span className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
                   {severalAccounts && account ? `${a.onAccount(account.name)} · ` : ''}
                   {alertMessage(t, x)}
-                </span>
+                  <AlertRules texts={rulesOf(x)} />
+                </div>
                 <span className="flex gap-2">
                   {tradePath && location.pathname !== tradePath && (
                     <Link to={tradePath} className="btn btn-secondary btn-sm">{a.viewTrade}</Link>

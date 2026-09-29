@@ -57,8 +57,17 @@ Registre des retours après essai de l'application installée. Chaque retour est
 ## Lot 12 (alertes à seuils) — points à vérifier
 - Une bannière « Garde-fou déclenché » apparaît en haut de chaque page quand une alerte est active (pertes d'affilée, trop de trades, perte du jour ou de la semaine, revanche, heures ou session inhabituelles, trade sans stop loss). « Masquer » la fait disparaître pour de bon ; elle ne revient que si la situation s'aggrave (une perte de plus, un trade de plus au-delà de la limite…).
 - Valeurs par défaut choisies (à confirmer ou ajuster) : 3 pertes d'affilée, 3 trades maximum par heure, perte du jour 3 % du solde, perte de la semaine 6 %, revanche / session inhabituelle / trade sans stop actifs ; seuils en argent et plage horaire désactivés. La limite de trades **par jour** reste celle des Seuils de discipline (désactivée tant qu'elle n'est pas réglée).
-- Les seuils ne se règlent pas encore depuis l'interface (page de réglages à venir).
+- ~~Les seuils ne se règlent pas encore depuis l'interface~~ — fait au lot 15 (voir ci-dessous).
 - **Migration v8** (historique des alertes) : sauvegarde automatique avant migration comme d'habitude ; testée en Rust sur une base en mémoire avec des données existantes, **pas** sur votre vraie base.
 - Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2. Le calcul du décalage horaire côté coque (évaluation juste après l'enregistrement d'un trade) n'a pas été essayé sous Windows.
 - Signalé, non corrigé : le faux backend du navigateur annonce une version de schéma 6 dans ses sauvegardes simulées (`mockBackend.ts`, `infoOf`) ; sans effet sur l'application réelle.
+
+## Lot 15 (réglages et historique des alertes) — points à vérifier
+- Paramètres > « Alertes et garde-fous » : une carte par alerte avec son interrupteur, son explication, sa valeur par défaut. **Un champ vide désactive l'alerte.** Les valeurs par défaut sont toujours des propositions à confirmer.
+- **Deux réglages sont communs avec le score de discipline** : le nombre maximum de trades par jour et la définition de la revanche (délai, facteur). Les modifier ici modifie aussi la page Seuils de discipline, le score et la page Comportement. Ils sont signalés par un badge orange.
+- Nouvelle page « Historique des alertes » (lien depuis les réglages et depuis la bannière). Elle suit le compte et la période de la barre du haut ; le type se choisit sur la page. Une alerte masquée y reste visible.
+- **Règles personnelles** : il n'existe toujours aucun lien enregistré entre une règle et une alerte. La page montre seulement, sur une alerte qui vise un trade précis, les règles que vous avez vous-même notées « non respectées » sur ce trade. À dire si vous voulez un vrai lien règle ↔ seuil (cela demanderait une migration et un écran de liaison).
+- Signalé, non corrigé : l'enregistrement des réglages d'alertes se fait en deux commandes (comportement puis alertes), non atomique ; en cas d'échec de la seconde, la première reste enregistrée (le formulaire relit l'état réel).
+- Signalé, non corrigé (lot 13, cosmétique) : en mode « Modifier le dashboard », la barre de titre d'un widget recouvre le haut de son contenu (pastilles « Perte / trades »).
+- Aucune migration, aucun changement Rust dans ce lot. Rendu vérifié en Chromium headless (1280×720, 1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2 ni avec la vraie base SQLite. Le parcours « je change un seuil puis je vois l'alerte se déclencher » n'a pas été essayé de bout en bout sur l'application réelle (seulement testé sur le faux backend).
 
