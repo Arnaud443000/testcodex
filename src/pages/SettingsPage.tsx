@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
 import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
@@ -176,6 +177,7 @@ export function SettingsPage() {
       <RulesSection />
       <ChecklistSection />
       <BehaviorSettingsPanel />
+      <AlertSettingsPanel />
       <CashFlowsPanel />
       <ReminderPanel />
       <DataPanel />

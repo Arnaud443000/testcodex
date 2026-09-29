@@ -203,6 +203,29 @@ export function Notice({ level, children, actions }: { level: 'ok' | 'warn' | 'b
   )
 }
 
+/** Interrupteur (charte 5.5) : un bouton `role="switch"`, jamais la couleur seule (le libellé dit « Activée » / « Désactivée »). */
+export function Switch({ on, onChange, label, describedBy }: { on: boolean; onChange: (on: boolean) => void; label: string; describedBy?: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      aria-describedby={describedBy}
+      onClick={() => onChange(!on)}
+      className={`relative h-6 w-[42px] shrink-0 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet ${
+        on ? 'border-violet/60' : 'border-white/10 bg-white/10'
+      }`}
+      style={on ? { background: 'var(--grad)' } : undefined}
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${on ? 'left-[21px]' : 'left-[2px] opacity-70'}`}
+      />
+    </button>
+  )
+}
+
 /** Carte à numéro (sections du formulaire). */
 /** `raised` : la carte contient un menu déroulant qui doit passer au-dessus des cartes suivantes. */
 export function StepCard({ n, title, children, raised = false }: { n: number; title: string; children: ReactNode; raised?: boolean }) {
