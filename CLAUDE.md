@@ -81,6 +81,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étape 4 — Intelligence et approfondissement (à découper en lots)
 Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparaisons, verrouillage…).
+- [ ] Lot 19 — Moteur des insights automatiques (3.5.1 à 3.5.3), déterministe, sans IA ni réseau, sans interface : `crates/pulse-core/src/insights/`, **migration v11** (`insight_log`, à renuméroter à la fusion), commandes `get_insights`, `dismiss_insight`, `get_insight_history`, types `src/types/insights.ts`, faux backend testé, gabarits `insights` de `fr.ts`. Voir « Insights automatiques (lot 19) » (**Opus, élevé**). L'affichage est le lot 19 bis.
 
 
 ### Étapes 4 et 5 (suite)
@@ -422,3 +423,79 @@ Trois analyses : comparaison entre comptes / brokers (3.7.6), benchmark du risqu
 - Filtre « catégorie d'actif » dans la liste des trades (le lien de l'exposition renvoie vers la page Analyses ; celui des dépassements vers le détail du trade).
 
 **Interface (lot 17)** : page `/comparisons` (entrée « Comparaisons » de la barre latérale), trois onglets. « Comptes » : choix de comptes propre à l'onglet (tous les comptes actifs par défaut), tableau un compte par colonne, lignes en argent grisées et marquées quand les devises diffèrent, pistes à vérifier. « Risque max » et « Exposition » suivent le compte de la barre du haut et affichent un état vide si les devises sont mélangées. Sans limite : état vide avec lien vers `/settings#behavior-settings-title`. Un dépassement est un losange plein (forme + libellé, jamais la couleur seule). Captures : `docs/captures/lot17-*.png`. Limite du faux backend : son drawdown en % est vide (« — ») dans le navigateur ; le vrai calcul est celui de pulse-core.
+
+## Insights automatiques (lot 19) — interprétation
+
+Module 3.5.1 à 3.5.3 du cahier : il **ne crée aucune donnée**, il lit les rapports existants et met en avant ce qui dépasse un seuil. Code : `crates/pulse-core/src/insights/` (`mod.rs` évaluation pure, `trends.rs` 3.5.1, `highlights.rs` 3.5.2, `suggestions.rs` 3.5.3, `log.rs` historique et insights masqués, `tests.rs` journaux calculés à la main). **Déterministe, local, sans IA ni appel réseau** : un insight est un **gabarit** (clé de traduction `messageKey` + valeurs chiffrées venant des rapports de `pulse-core`), jamais un texte généré. Les gabarits français sont dans la clé `insights` de `fr.ts`.
+
+Principes (mêmes que les lots 3, 8, 12) : tout est recalculé depuis les données sources à chaque appel ; argent en `Decimal`, ratios en `f64` ; dépôts / retraits **jamais** dans une performance (ils n'entrent que dans les soldes, donc dans le risque en % du capital) ; **valeur absente ou échantillon trop petit = pas d'insight** (jamais un insight « par défaut », jamais un 0 à la place d'une valeur inconnue) ; **aucune causalité** : les gabarits disent « en même temps », « sur la même période », jamais « parce que » ; aucun insight n'est un ordre.
+
+### Portée, instant, fenêtres
+
+- **Chaque compte est évalué seul** (comme les alertes du lot 12) : un compte n'influence jamais les insights d'un autre, et deux devises ne se mélangent jamais. Liste de comptes vide = comptes actifs (archivés exclus, lisibles s'ils sont nommés).
+- **Instant `now`** et décalage `tz_offset_min` fournis par l'appelant (la coque lit l'horloge). Le compte est lu « tel qu'à `now` » (même règle que les alertes : trade entré après `now` ignoré, sorti après `now` = ouvert, dépôt/retrait après `now` ignoré). Seuls les trades **clôturés** comptent.
+- **Fenêtre de tendance** (3.5.1, dérives « sur les N derniers trades ») : les **20 derniers trades clôturés** du compte (ordre de sortie, égalité : id), coupés en **deux moitiés de 10** : moitié ancienne, moitié récente. Avec moins de 20 trades : deux moitiés de ⌊n/2⌋ (nombre impair : le trade du milieu n'est dans aucune moitié, comme la tendance des règles et le scaling). Chaque série exige au moins **5 valeurs dans chaque moitié** (`TREND_MIN_HALF`), sinon pas d'insight.
+- **Fenêtre d'analyse** (règles, patterns, segments, suggestions) : les **90 jours locaux se terminant aujourd'hui** (exactement la période « 3M » du tableau de bord : de minuit local d'il y a 89 jours à minuit local de demain), trades comptés dans la fenêtre où ils sont **clôturés**. Un `StatsQuery` sur un seul compte est passé tel quel aux rapports existants.
+
+### Tendances (3.5.1) — `category = trend`
+
+| Insight (`kind`) | Source réutilisée | Définition exacte | Seuil (atteint = insight) |
+|---|---|---|---|
+| Dérive du risque (`riskDrift`, sens `up` / `down`) | `stats::risk::risk` (risque en % du capital par trade, solde à l'entrée, lot 8 ; même donnée que le scaling du lot 16) | fenêtre de tendance ; moyenne du risque % des trades **ayant un risque %** (stop valide, solde > 0) dans chaque moitié ; `change = récente / ancienne − 1`. Valeurs jointes : les deux moyennes en %, le risque moyen **en argent** de chaque moitié et sa variation (pour dire « taille de position + 23 % »), nombre de trades pris en compte. | `change ≥ +20 %` → `up` ; `≤ −20 %` → `down` (bande `SCALING_VERDICT_BAND` du lot 16, bornes incluses, tolérance 1e-9) |
+| Discipline (`disciplineTrend`, `down` / `up`) | `behavior::discipline` (score par trade) | fenêtre de tendance ; moyenne des scores (trades notés) de chaque moitié, au moins 5 notés par moitié (`MIN_SCORED_TRADES`) ; `difference = récente − ancienne` en points | `≤ −10` → `down` ; `≥ +10` → `up` (écart `DISCIPLINE_GAP` du lot 8 bis) |
+| Respect du plan (`planDrop`) | composante `plan` du score de discipline (oui 1, partiel 0,5, non 0) | fenêtre de tendance ; moyenne de la composante sur les trades où le plan est renseigné, au moins 5 par moitié ; `difference = récente − ancienne` (fraction : −0,30 = −30 points) | `≤ −0,25` (seule la baisse est un insight) |
+| Respect d'une règle (`ruleAdherenceDrop`) | `behavior::rule_adherence` (tendance du lot 8 : taux de la moitié récente des coches − moitié ancienne) | fenêtre d'analyse ; une règle, **au moins 10 coches** (`RULE_MIN_CHECKS`, 5 par moitié : le minimum de 4 du lot 8 est trop bruité pour un insight) | `trend ≤ −0,25` ; au plus **2** règles (la plus forte baisse d'abord, égalité : ordre de la liste des règles) |
+| Hausse des frais (`feesUp`) | frais par trade du rapport des frais (`stats::analyses::fees`, courbe cumulée) | fenêtre de tendance ; frais moyens par trade de chaque moitié (tous les trades, frais nuls compris) ; `change = récente / ancienne − 1`, **indéfini si les frais moyens anciens sont ≤ 0** (crédits de swap) | `change ≥ +25 %` |
+| Taille après une perte (`sizeUpAfterLoss`) | `behavior::size_change` (lot 8 bis) | fenêtre d'analyse ; variation moyenne d'exposition après une perte et après un gain (chacune ≥ 5 cas, règle du rapport) | variation moyenne après une perte `≥ +20 %` **et** `lossVsWin ≥ +20 points` (si la taille monte autant après un gain, ce n'est pas une réaction aux pertes) |
+| Revanche répétée (`revengePattern`) | `behavior::patterns` (détection du lot 8) | fenêtre d'analyse ; trades de revanche clôturés dans la fenêtre, avec leur `Summary` | au moins **2** trades de revanche (un seul cas relève de l'alerte temps réel) |
+| Surtrading répété (`overtradingPattern`) | `behavior::patterns` | fenêtre d'analyse ; jours de surtrading (exige `behavior.max_trades_per_day`) | au moins **2** jours |
+
+Les baisses du risque (`riskDrift.down`) et la hausse de la discipline (`disciplineTrend.up`) sont des constats d'information (priorité basse), jamais des ordres d'augmenter la taille.
+
+### Meilleur setup / meilleure session (3.5.2) — `category = highlight`
+
+- Source : les segments du lot 3 (`SegmentBy::Tag(Setup)`, `SegmentBy::Tag(Session)`) sur la fenêtre d'analyse. **Tags seulement** : un trade sans tag de session n'est dans aucune session (la session déduite de l'heure n'est pas utilisée ici ; à décider si besoin). Le groupe « none » n'est jamais classé.
+- Critère : **expectancy en R** (indépendante de la taille). Segment **éligible** = au moins **10 trades ayant un R** (`SEGMENT_MIN_R_TRADES` : une affirmation « meilleur » demande plus que le minimum d'affichage de 5). Il faut **au moins 2 segments éligibles**, sinon rien.
+- Référence = expectancy R de **tous** les trades de la fenêtre ayant un R.
+- `bestSegment` (`setup` / `session`) : le segment éligible à l'expectancy la plus haute (égalité : plus de trades avec R, puis nom, puis id), seulement si elle est **> 0** et **≥ référence + 0,25 R** (`EXPECTANCY_GAP_R` du lot 8 bis). Sinon aucun segment ne se détache : pas d'insight.
+- `weakSegment` : symétrique (la plus basse, **< 0** et **≤ référence − 0,25 R**). Constat, pas un conseil d'arrêter le setup.
+- Valeurs jointes : le `Summary` du segment, la référence, le nombre de segments éligibles, l'écart ; lien `/trades?setup=ID` (setup) ou la liste des trades (session).
+
+### Suggestions (3.5.3) — `category = suggestion`
+
+Chaque suggestion est un gabarit : une phrase de constat (« en même temps ») puis une **piste** fixe par clé (`fr.ts`), jamais un ordre ni une cause.
+
+| Insight | Source | Définition | Seuil |
+|---|---|---|---|
+| Erreur coûteuse (`costlyMistake`, `tag` / `rule`) | `behavior::mistakes` (3.4.7, 3.4.8 : tags d'erreur et règles non respectées) | fenêtre d'analyse ; classement **par coût** du rapport ; `shareOfLosses = coût / pertes totales de la fenêtre` | erreur présente sur **au moins 3 trades** (récurrente), coût > 0 et **≥ 10 % des pertes** de la fenêtre ; au plus **2** (ordre du rapport) |
+| Émotion avant d'entrer (`emotionLower`) | segments `SegmentBy::Emotion(Before)` (3.4.2) | fenêtre d'analyse ; **moment « avant » seulement** (l'émotion « après » dépend du résultat : la comparer au résultat serait circulaire) ; groupe = trades portant cette émotion avant, autres = les autres trades de la fenêtre ; `difference` = expectancy R du groupe − celle des autres | chaque côté a **au moins 5 trades avec R** (`MIN_R_TRADES`) et `difference ≤ −0,25 R` ; au plus **2** (écart le plus négatif d'abord, égalité : nom, id) |
+| Facteur externe (`factorLower`, un par facteur) | `behavior::external_factors` (3.4.9) | fenêtre d'analyse ; verdicts du rapport (5 jours par côté, 10 points de discipline, 0,25 R, 5 trades avec R) | discipline **ou** expectancy au verdict `lower` ; ordre des facteurs du rapport |
+
+### Structure d'un insight
+
+`id` (identité stable, voir plus bas), `situation` (ce dont il parle, sans niveau ni épisode), `level`, `accountId`, `currency`, `category` (`trend` / `highlight` / `suggestion`), `kind`, `priority` (`high` / `medium` / `low`), `messageKey` (ex. `riskDrift.up`), `period` (`basis` = `lastTrades` avec les bornes de sortie et le nombre de trades de la fenêtre, ou `days` avec `from` / `to` / 90 jours), **preuve** : `source` (le rapport qui l'a produit : `risk`, `discipline`, `fees`, `ruleAdherence`, `sizeChange`, `patterns`, `segments`, `mistakes`, `emotions`, `externalFactors`), `tradeIds` (les trades en cause), `filter` éventuel (`mistake` tag/règle, `setup`), et les **valeurs** propres au `kind` (moyennes, écarts, seuil franchi, effectifs) ; puis l'état : `firstSeenAt`, `dismissedAt`.
+
+### Priorité et ordre
+
+| Priorité | Insights |
+|---|---|
+| `high` | `riskDrift.up`, `disciplineTrend.down`, `sizeUpAfterLoss`, `revengePattern` |
+| `medium` | `planDrop`, `ruleAdherenceDrop`, `feesUp`, `overtradingPattern`, `costlyMistake`, `emotionLower`, `factorLower`, `weakSegment` |
+| `low` | `riskDrift.down`, `disciplineTrend.up`, `bestSegment` |
+
+Ordre : priorité (haute d'abord), puis l'ordre des tableaux ci-dessus (tendances, suggestions, mises en avant), puis le compte, puis le rang dans son rapport.
+
+### Tolérance au bruit
+
+Un insight n'apparaît jamais pour un écart insignifiant : seuils ci-dessus (20 % de risque, 10 points de discipline, 25 points de plan ou de règle, 25 % de frais, 0,25 R), échantillons minimaux (5 valeurs par moitié, 10 coches, 10 trades avec R par segment, 3 trades par erreur, 5 trades avec R par côté, 5 jours par côté), plafonds (2 règles, 2 erreurs, 2 émotions), et identité par **paliers** (ci-dessous) : une petite variation ne fait pas réapparaître un insight masqué.
+
+### Identité, insights masqués, historique (migration v11)
+
+- **Situation** = `kind:compte:sujet` (sujet : `up`/`down`, id de règle, `tag:ID` / `rule:ID`, id d'émotion, clé du facteur, `setup:ID` / `session:ID`, ou le nom du motif). **Palier** (`level`) : une mesure grossière de la gravité — tranches de 10 % pour le risque, de 10 points pour la discipline, le plan et les règles, de 25 % pour les frais, de 10 points pour `lossVsWin` ; le **nombre** de trades de revanche, de jours de surtrading, de trades portant l'erreur ; le nombre de comparaisons `lower` d'un facteur (1 ou 2) ; tranches de 0,25 R pour une émotion ; 0 pour les mises en avant.
+- **Épisode** : une situation revue au moins une fois dans les **14 derniers jours** (`EPISODE_GAP`) continue le même épisode ; une situation qui n'a plus été vue depuis plus de 14 jours (elle s'était résorbée, ou Pulse n'a pas été ouvert) ouvre un **nouvel épisode**. `id = situation:palier#épisode`.
+- **Masquer** (`dismiss_insight`) : l'insight ne réapparaît plus tant que son épisode dure et que son palier ne dépasse pas le plus haut palier masqué ; une **aggravation** (palier supérieur) le fait réapparaître, une amélioration non. Un nouvel épisode le fait réapparaître. Quand la situation se résorbe, l'insight disparaît de lui-même (tout est recalculé).
+- **Migration v11** : table `insight_log` (`insight_id` unique, compte avec suppression en cascade, `situation`, `level`, `episode`, `kind`, `category`, `priority`, `payload` = l'insight en JSON tel qu'affiché la première fois, `first_seen_at`, `last_seen_at`, `dismissed_at`). Journal d'événements, pas un cache. `get_insight_history` le relit (plus récents d'abord).
+
+### Commandes
+
+`get_insights(accountIds, tzOffsetMin, includeDismissed)` (instant lu par la coque), `dismiss_insight(insightId)`, `get_insight_history(accountIds, limit)`. Types : `src/types/insights.ts` ; faux backend : `src/lib/mockInsights.ts` (branché par `mockInsights` à la fin de `mockBackend.ts`), vérifié contre le même journal que Rust.
