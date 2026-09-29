@@ -1,4 +1,4 @@
-import type { Account, AppInfo, CashFlow, NewAccount, NewCashFlow } from '../types/account'
+import type { Account, AccountUpdate, AppInfo, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type {
   ChecklistItem,
   Instrument,
@@ -119,4 +119,9 @@ export const api = {
     inTauri ? invoke('inspect_backup', { folder }) : mock.inspectBackup(folder),
   restoreBackup: (folder: string, confirmed: boolean): Promise<RestoreResult> =>
     inTauri ? invoke('restore_backup', { folder, confirmed }) : mock.restoreBackup(folder, confirmed),
+  updateAccount: (id: number, account: AccountUpdate): Promise<Account> =>
+    inTauri ? invoke('update_account', { id, account }) : mock.updateAccount(id, account),
+  setAccountArchived: (id: number, archived: boolean): Promise<Account> =>
+    inTauri ? invoke('set_account_archived', { id, archived }) : mock.setAccountArchived(id, archived),
 }
+

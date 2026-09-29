@@ -9,9 +9,16 @@ export interface Account {
   broker: string
   currency: string
   initialCapital: Decimal
+  /** Archivé : absent des sélecteurs et des totaux par défaut, historique conservé. */
+  archived: boolean
+  /** Au moins un trade, dépôt/retrait ou trade manqué : devise verrouillée, suppression impossible. */
+  hasHistory: boolean
 }
 
-export type NewAccount = Omit<Account, 'id'>
+export type NewAccount = Omit<Account, 'id' | 'archived' | 'hasHistory'>
+
+/** Champs modifiables d'un compte (la devise est refusée si le compte a de l'historique). */
+export type AccountUpdate = NewAccount
 
 export interface AppInfo {
   version: string

@@ -27,14 +27,14 @@ import type { Calendar, Dashboard, Summary } from '../types/stats'
 type Tone = 'gain' | 'loss' | 'accent'
 
 export function DashboardPage() {
-  const { accounts, loading, selectedId } = useAccounts()
+  const { accounts, allAccounts, loading, selectedId } = useAccounts()
   const { period } = usePeriod()
   const t = useT()
   const [data, setData] = useState<Dashboard | null>(null)
   const [month, setMonth] = useState<Calendar | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const chosen = useMemo(() => (selectedId === null ? accounts : accounts.filter((a) => a.id === selectedId)), [accounts, selectedId])
+  const chosen = useMemo(() => (selectedId === null ? accounts : allAccounts.filter((a) => a.id === selectedId)), [accounts, allAccounts, selectedId])
   const accountIds = useMemo(() => (selectedId === null ? [] : [selectedId]), [selectedId])
   const mixedCurrencies = chosen.some((a) => a.currency !== chosen[0].currency)
   const ready = !loading && chosen.length > 0 && !mixedCurrencies
