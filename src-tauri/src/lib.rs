@@ -2,6 +2,7 @@ use pulse_core::accounts::{self, Account, NewAccount};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
+use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
 use pulse_core::tags::{self, Tag, TagKind};
 use pulse_core::trade_view::{self, Preview, TradeView};
 use pulse_core::trades::{self, TradeData, TradeFilter};
@@ -145,6 +146,25 @@ fn preview_trade(state: State<AppState>, trade: TradeData) -> Result<Preview, St
     trade_view::preview(&conn, &trade).map_err(err)
 }
 
+/// Dashboard of one period against the previous one, computed by pulse-core.
+#[tauri::command]
+fn get_dashboard(state: State<AppState>, query: DashboardQuery) -> Result<Dashboard, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboard::dashboard(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_calendar(state: State<AppState>, query: CalendarQuery) -> Result<Calendar, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboard::calendar(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_day_trades(state: State<AppState>, account_ids: Vec<i64>, day: String) -> Result<Vec<DayTrade>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboard::day_trades(&conn, &account_ids, &day).map_err(err)
+}
+
 /// `image` is the file as base64 (a `data:` URL is accepted); returns the relative path to store on the trade.
 #[tauri::command]
 fn save_screenshot(state: State<AppState>, image: String) -> Result<String, String> {
@@ -183,6 +203,9 @@ pub fn run() {
             update_trade,
             delete_trade,
             preview_trade,
+            get_dashboard,
+            get_calendar,
+            get_day_trades,
             save_screenshot,
             read_screenshot
         ])

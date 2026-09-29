@@ -12,6 +12,7 @@
 //! flows this equals the plain "balance / starting balance" curve; with flows,
 //! a deposit never shows up as performance.
 
+pub mod dashboard;
 mod load;
 pub mod pnl;
 mod segments;
