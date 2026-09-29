@@ -25,6 +25,8 @@ import type {
   StatsQuery,
 } from '../types/stats'
 import type { AssetRow, ExecutionReport, FeeGranularity, FeeReport, StrategyRow } from '../types/stats'
+import type { AccountComparison, ExposureReport, RiskBenchmark } from '../types/stats'
+import { mockComparisons } from './mockBackend'
 import type {
   BehaviorSettings,
   DisciplineReport,
@@ -309,6 +311,17 @@ export const api = {
     inTauri ? invoke('delete_dashboard_layout', { key }) : mockDashboards.deleteDashboardLayout(key),
   setDefaultDashboardLayout: (key: string): Promise<DashboardLayout> =>
     inTauri ? invoke('set_default_dashboard_layout', { key }) : mockDashboards.setDefaultDashboardLayout(key),
+
+  // --- Lot 17 : comparaisons et exposition ---
+  /** Comptes côte à côte (3.7.6) ; chaque compte est calculé seul, les devises peuvent différer. */
+  getAccountComparison: (query: StatsQuery): Promise<AccountComparison> =>
+    inTauri ? invoke('get_account_comparison', { query }) : mockComparisons.getAccountComparison(query),
+  /** Risque pris trade par trade contre la limite « risque max » (3.4.11). */
+  getRiskBenchmark: (query: StatsQuery): Promise<RiskBenchmark> =>
+    inTauri ? invoke('get_risk_benchmark', { query }) : mockComparisons.getRiskBenchmark(query),
+  /** Répartition du risque pris par catégorie d'actif (3.7.9). */
+  getExposureReport: (query: StatsQuery): Promise<ExposureReport> =>
+    inTauri ? invoke('get_exposure_report', { query }) : mockComparisons.getExposureReport(query),
 }
 
 

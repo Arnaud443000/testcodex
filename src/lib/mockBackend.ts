@@ -20,6 +20,7 @@ import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
 import * as analyses from './mockAnalyses'
+import * as comparisons from './mockComparisons'
 import type { FeeGranularity } from '../types/stats'
 import { ASSET_CATALOG } from './assetCatalog'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
@@ -756,4 +757,18 @@ export const mockAnalyses = {
   getFeeReport: async (q: StatsQuery, by?: FeeGranularity) => analyses.mockFees(behaviorInput(q.accountIds), q, by),
   getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
   getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
+}
+
+// --- Lot 17 : comparaison de comptes, benchmark du risque max, exposition par catégorie d'actif ---
+export const mockComparisons = {
+  /** Chaque compte est calculé seul : les devises peuvent différer (aucune somme entre comptes). */
+  getAccountComparison: async (q: StatsQuery) => {
+    const chosen = q.accountIds?.length ? accounts.filter((a) => q.accountIds!.includes(a.id)) : accounts.filter((a) => !a.archived)
+    return comparisons.mockCompareAccounts(
+      chosen.map((account) => ({ account, input: behaviorInput([account.id]) })),
+      q,
+    )
+  },
+  getRiskBenchmark: async (q: StatsQuery) => comparisons.mockRiskBenchmark(behaviorInput(q.accountIds), q),
+  getExposureReport: async (q: StatsQuery) => comparisons.mockExposure(behaviorInput(q.accountIds), q),
 }
