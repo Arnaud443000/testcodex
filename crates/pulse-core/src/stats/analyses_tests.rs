@@ -418,3 +418,109 @@ mod database {
         assert!(!execution_report(&conn, &all()).unwrap().comparable);
     }
 }
+
+// --- opportunity cost (3.3.18) ---------------------------------------------------
+//
+// Journal K — capital 10 000, multiplier 1, no fees, one trade per day from 1 Sept 2026.
+// TP = planned take profit, after = price typed by hand after the exit.
+//
+// | # | side  | entry → exit | size | TP | after | move after exit | left on table (capped at TP)        |
+// |---|-------|--------------|------|----|-------|-----------------|-------------------------------------|
+// | 1 | long  | 100 → 105    | 10   | 110| 112   | (112−105)×10 = 70   | min(112,110)=110 → 5×10 = 50   |
+// | 2 | long  | 200 → 204    | 5    | 210| 206   | 2×5 = 10            | 206 → 10                       |
+// | 3 | short | 50 → 48      | 20   | 45 | 44    | (44−48)×−1×20 = 80  | max(44,45)=45 → 3×20 = 60      |
+// | 4 | long  | 30 → 28      | 10   | 35 | 25    | −3×10 = −30         | 25 → −30, floored at 0         |
+// | 5 | long  | 10 → 12      | 100  | 11 | 13    | 1×100 = 100         | exit already beyond TP: 11 → −100 → 0 |
+// | 6 | long  | 20 → 21      | 1    | —  | 25    | excluded: no target                                   |
+// | 7 | long  | 40 → 41      | 1    | 45 | —     | excluded: no price after exit                         |
+// | 8 | short | 60 → 58      | 1    | 65 | 57    | excluded: a short's target above its entry is invalid |
+// | 9 | long  | 30 → (open)  | 1    | 35 | 40    | open: not a closed trade                              |
+//
+// Net PnL of 1–5: +50, +20, +40, −20, +200 = +290.
+
+fn opp_trade(id: i64, side: crate::trades::Direction, entry: &str, exit: Option<&str>, size: &str, day: i64, tp: Option<&str>) -> TradeFacts {
+    let mut t = trade(id, side, entry, exit, size, None, "0", day);
+    t.position.planned_tp = tp.map(dec);
+    t
+}
+
+fn journal_k() -> (Ledger, HashMap<i64, Decimal>) {
+    let trades = vec![
+        opp_trade(1, Long, "100", Some("105"), "10", 0, Some("110")),
+        opp_trade(2, Long, "200", Some("204"), "5", 1, Some("210")),
+        opp_trade(3, Short, "50", Some("48"), "20", 2, Some("45")),
+        opp_trade(4, Long, "30", Some("28"), "10", 3, Some("35")),
+        opp_trade(5, Long, "10", Some("12"), "100", 4, Some("11")),
+        opp_trade(6, Long, "20", Some("21"), "1", 5, None),
+        opp_trade(7, Long, "40", Some("41"), "1", 6, Some("45")),
+        opp_trade(8, Short, "60", Some("58"), "1", 7, Some("65")),
+        opp_trade(9, Long, "30", None, "1", 8, Some("35")),
+    ];
+    let after = [(1, "112"), (2, "206"), (3, "44"), (4, "25"), (5, "13"), (6, "25"), (8, "57"), (9, "40")];
+    (ledger("10000", trades, vec![]), after.into_iter().map(|(id, p)| (id, dec(p))).collect())
+}
+
+#[test]
+fn opportunity_journal_k() {
+    let (l, after) = journal_k();
+    let r = opportunity(&l, &after, &all()).unwrap();
+    assert_eq!((r.trade_count, r.eligible_count, r.excluded_count), (8, 5, 3));
+    assert_eq!((r.without_target_count, r.without_price_after_count), (2, 1)); // 6 and 8 / 7
+    assert!(!r.low_sample);
+    assert_eq!(r.total_left_on_table, d("120")); // 50 + 10 + 60
+    assert_eq!((r.left_count, r.left_per_early_exit), (3, Some(d("40"))));
+    assert_eq!((r.avoided_count, r.total_avoided), (1, d("30")));
+    assert_eq!(r.net_pnl_of_eligible, d("290"));
+    let order: Vec<i64> = r.trades.iter().map(|t| t.trade_id).collect();
+    assert_eq!(order, [3, 1, 2, 4, 5]); // most left first, ties by id
+    let moves: Vec<Decimal> = r.trades.iter().map(|t| t.move_after_exit).collect();
+    assert_eq!(moves, [d("80"), d("70"), d("10"), d("-30"), d("100")]);
+    let lefts: Vec<Decimal> = r.trades.iter().map(|t| t.left_on_table).collect();
+    assert_eq!(lefts, [d("60"), d("50"), d("10"), d("0"), d("0")]);
+}
+
+#[test]
+fn opportunity_respects_the_period_and_flags_small_samples() {
+    let (l, after) = journal_k();
+    // Only trades 1 and 2 close before day 2 → 2 eligible trades: shown, flagged.
+    let q = StatsQuery { to: Some(SEP_1 + 2 * DAY), ..all() };
+    let r = opportunity(&l, &after, &q).unwrap();
+    assert_eq!((r.trade_count, r.eligible_count, r.excluded_count), (2, 2, 0));
+    assert!(r.low_sample);
+    assert_eq!(r.total_left_on_table, d("60"));
+    assert_eq!(r.left_per_early_exit, Some(d("30")));
+}
+
+#[test]
+fn opportunity_with_one_trade_zero_trades_or_no_data() {
+    let (l, after) = journal_k();
+    let one = opportunity(&l, &after, &StatsQuery { from: Some(SEP_1), to: Some(SEP_1 + DAY), ..all() }).unwrap();
+    assert_eq!((one.eligible_count, one.total_left_on_table, one.left_count, one.left_per_early_exit), (1, d("50"), 1, Some(d("50"))));
+    assert!(one.low_sample);
+
+    let empty = opportunity(&ledger("10000", vec![], vec![]), &HashMap::new(), &all()).unwrap();
+    assert_eq!((empty.trade_count, empty.eligible_count, empty.excluded_count), (0, 0, 0));
+    assert_eq!((empty.total_left_on_table, empty.left_per_early_exit, empty.trades.len()), (d("0"), None, 0));
+
+    // Trades exist but none has a price after exit: everything is excluded, nothing invented.
+    let none = opportunity(&l, &HashMap::new(), &all()).unwrap();
+    assert_eq!((none.trade_count, none.eligible_count, none.excluded_count, none.without_price_after_count), (8, 0, 8, 8));
+    assert_eq!((none.total_left_on_table, none.left_per_early_exit, none.avoided_count), (d("0"), None, 0));
+}
+
+#[test]
+fn opportunity_report_reads_the_price_after_exit_from_sqlite() {
+    use crate::trades::{self, TradeData};
+    let conn = crate::db::open_in_memory().unwrap();
+    let account = crate::test_support::account(&conn, "10000");
+    let eur = crate::test_support::instrument(&conn, "EURUSD", "100000");
+    let mut data = TradeData::new(account, eur, Long, dec("1"), dec("1.0842"), 1_700_000_000_000);
+    data.exit_price = Some(dec("1.0871"));
+    data.exit_time = Some(1_700_004_320_000);
+    data.planned_tp = Some(dec("1.0900"));
+    data.price_after_exit = Some(dec("1.0950"));
+    trades::create(&conn, &data).unwrap();
+    // 1 lot × 100 000: (min(1.0950, 1.0900) − 1.0871) × 100 000 = 290 left on the table.
+    let r = opportunity_report(&conn, &StatsQuery::default()).unwrap();
+    assert_eq!((r.eligible_count, r.total_left_on_table), (1, d("290")));
+}

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { AssetsPanel } from '../components/analyses/AssetsPanel'
 import { ExecutionPanel } from '../components/analyses/ExecutionPanel'
 import { FeesPanel } from '../components/analyses/FeesPanel'
+import { OpportunityPanel } from '../components/analyses/OpportunityPanel'
+import { useReport } from '../components/analyses/useReport'
 import { StrategiesPanel } from '../components/analyses/StrategiesPanel'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -13,12 +15,17 @@ import { api } from '../lib/api'
 import { localTzOffsetMin, periodRange, usePeriod } from '../lib/period'
 import type { AssetRow, ExecutionReport, FeeGranularity, FeeReport, StatsQuery, StrategyRow } from '../types/stats'
 
-type Tab = 'assets' | 'fees' | 'strategies' | 'execution'
+type Tab = 'assets' | 'fees' | 'strategies' | 'execution' | MoreTab
+/** Onglets du lot 16 (deuxième rangée). */
+type MoreTab = 'opportunity'
+const MORE_TABS: MoreTab[] = ['opportunity']
+const isMore = (tab: Tab): tab is MoreTab => (MORE_TABS as string[]).includes(tab)
 
 /** Page « Analyses » (étape 3) : quatre analyses de pulse-core, sans aucun calcul ici (on formate, on trie, on dessine). */
 export function AnalysesPage() {
   const t = useT()
   const a = t.analyses
+  const more = t.analysesMore
   const { accounts, allAccounts, loading, selectedId } = useAccounts()
   const { period } = usePeriod()
   const [tab, setTab] = useState<Tab>('assets')
@@ -32,6 +39,7 @@ export function AnalysesPage() {
   const mixedCurrencies = chosen.some((x) => x.currency !== chosen[0].currency)
   const ready = !loading && chosen.length > 0 && !mixedCurrencies
   const query = useMemo<StatsQuery>(() => ({ accountIds, ...periodRange(period, Date.now(), localTzOffsetMin()) }), [accountIds, period])
+  const opportunity = useReport(() => api.getOpportunityReport(query), [query], ready && tab === 'opportunity')
 
   useEffect(() => {
     if (!ready) return
@@ -96,9 +104,9 @@ export function AnalysesPage() {
   const currency = chosen[0].currency
   return wrap(
     <>
-      <div className="max-w-[980px]">
+      <div className="flex max-w-[980px] flex-col gap-2">
         <Segmented<Tab>
-          value={tab}
+          value={isMore(tab) ? null : tab}
           label={a.tabsLabel}
           onChange={(v) => v && setTab(v)}
           options={[
@@ -108,11 +116,25 @@ export function AnalysesPage() {
             { value: 'execution', label: a.tabs.execution },
           ]}
         />
+        <Segmented<Tab>
+          value={isMore(tab) ? tab : null}
+          label={more.tabsLabelMore}
+          onChange={(v) => v && setTab(v)}
+          options={[{ value: 'opportunity', label: more.tabs.opportunity }]}
+        />
       </div>
       {tab === 'assets' && <AssetsPanel rows={data.assets} currency={currency} />}
       {tab === 'fees' && (fees ? <FeesPanel report={fees} currency={currency} granularity={granularity} onGranularity={setGranularity} /> : <p className="px-1 text-sm text-tx2">{t.common.loading}</p>)}
       {tab === 'strategies' && <StrategiesPanel rows={data.strategies} currency={currency} />}
       {tab === 'execution' && <ExecutionPanel report={data.execution} currency={currency} />}
+      {tab === 'opportunity' && <Lazy state={opportunity} loading={more.loading} error={a.loadError}>{(r) => <OpportunityPanel report={r} currency={currency} />}</Lazy>}
     </>,
   )
+}
+
+/** Affiche le rapport d'un onglet chargé à la demande : chargement, erreur, puis contenu. */
+function Lazy<T>({ state, loading, error, children }: { state: { data: T | null; error: string | null }; loading: string; error: (detail: string) => string; children: (data: T) => React.ReactNode }) {
+  if (state.error) return <div className="nt nt-bad" role="alert">{error(state.error)}</div>
+  if (!state.data) return <p className="px-1 text-sm text-tx2">{loading}</p>
+  return <>{children(state.data)}</>
 }

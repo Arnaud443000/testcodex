@@ -304,3 +304,41 @@ export interface ExecutionReport {
   expectancyRDelta: number | null
   avgNetPnlDelta: Decimal | null
 }
+
+// --- Analyses complémentaires (lot 16) ---------------------------------------------------
+
+/** Un trade pris en compte dans le coût d'opportunité (3.3.18) : il a un TP valide et un prix après sortie. */
+export interface OpportunityTrade {
+  tradeId: number
+  symbol: string
+  direction: Direction
+  exitPrice: Decimal
+  plannedTp: Decimal
+  priceAfterExit: Decimal
+  /** (prix après − sortie) × sens × taille × multiplicateur : positif si le prix a continué dans le sens du trade. */
+  moveAfterExit: Decimal
+  /** Même mouvement, prix après sortie plafonné au TP prévu, jamais négatif. */
+  leftOnTable: Decimal
+  netPnl: Decimal
+}
+
+/** Coût d'opportunité (3.3.18) : une estimation d'après un prix saisi à la main, jamais un conseil. */
+export interface OpportunityReport {
+  /** Trades clôturés de la sélection. */
+  tradeCount: number
+  eligibleCount: number
+  excludedCount: number
+  /** Sans TP valide. Peut chevaucher `withoutPriceAfterCount` (un trade sans rien compte dans les deux). */
+  withoutTargetCount: number
+  withoutPriceAfterCount: number
+  minSample: number
+  lowSample: boolean
+  totalLeftOnTable: Decimal
+  leftCount: number
+  leftPerEarlyExit: Decimal | null
+  /** Trades dont le prix est allé contre eux après la sortie, et l'argent que la sortie a épargné (positif). */
+  avoidedCount: number
+  totalAvoided: Decimal
+  netPnlOfEligible: Decimal
+  trades: OpportunityTrade[]
+}

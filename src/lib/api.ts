@@ -309,8 +309,16 @@ export const api = {
     inTauri ? invoke('delete_dashboard_layout', { key }) : mockDashboards.deleteDashboardLayout(key),
   setDefaultDashboardLayout: (key: string): Promise<DashboardLayout> =>
     inTauri ? invoke('set_default_dashboard_layout', { key }) : mockDashboards.setDefaultDashboardLayout(key),
+
+  // --- Lot 16 : analyses complémentaires ---
+  /** Coût d'opportunité : gains laissés sur la table d'après le TP prévu et le prix après sortie saisi (3.3.18). */
+  getOpportunityReport: (query: StatsQuery): Promise<OpportunityReport> =>
+    inTauri ? invoke('get_opportunity_report', { query }) : mockAnalysesMore.getOpportunityReport(query),
+  // (fin lot 16)
 }
 
 
 import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
 import { mockAlerts } from './mockBackend'
+import type { OpportunityReport } from '../types/stats'
+import { mockAnalysesMore } from './mockBackend'

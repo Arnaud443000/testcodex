@@ -757,3 +757,9 @@ export const mockAnalyses = {
   getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
   getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
 }
+
+// --- Lot 16 : analyses complémentaires (coût d'opportunité, année précédente, temps en position, scaling) ---
+import * as analysesMore from './mockAnalysesMore'
+export const mockAnalysesMore = {
+  getOpportunityReport: async (q: StatsQuery) => analysesMore.mockOpportunity(behaviorInput(q.accountIds), q),
+}

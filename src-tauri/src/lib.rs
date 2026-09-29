@@ -621,6 +621,7 @@ pub fn run() {
             get_fee_report,
             get_strategy_report,
             get_execution_report,
+            get_opportunity_report,
             list_widget_catalog,
             list_dashboard_layouts,
             get_dashboard_layout,
@@ -805,4 +806,12 @@ fn delete_dashboard_layout(state: State<AppState>, key: String) -> Result<(), St
 fn set_default_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
     let conn = state.db.lock().map_err(err)?;
     dashboards::set_default(&conn, &key).map_err(err)
+}
+
+// --- Analyses complémentaires (lot 16) ---
+
+#[tauri::command]
+fn get_opportunity_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::analyses::OpportunityReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::opportunity_report(&conn, &query).map_err(err)
 }

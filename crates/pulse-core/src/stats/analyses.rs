@@ -14,7 +14,7 @@ use crate::money::Decimal;
 use crate::tags::TagKind;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// Closed trades a group needs before its figures stand on their own; below
 /// it a group is shown but flagged `low_sample`. Same threshold as the discipline score.
@@ -302,4 +302,121 @@ pub fn executions(ledger: &Ledger, query: &StatsQuery) -> Result<ExecutionReport
 
 pub fn execution_report(conn: &Connection, query: &StatsQuery) -> Result<ExecutionReport> {
     executions(&load(conn, &query.account_ids)?, query)
+}
+
+// --- opportunity cost (3.3.18) -------------------------------------------------------
+
+/// One closed trade that has both a valid planned target and a price after its exit.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpportunityTrade {
+    pub trade_id: i64,
+    pub symbol: String,
+    pub direction: crate::trades::Direction,
+    pub exit_price: Decimal,
+    pub planned_tp: Decimal,
+    pub price_after_exit: Decimal,
+    /// (price after − exit) × side × size × multiplier: positive when the price kept going the trade's way.
+    pub move_after_exit: Decimal,
+    /// Same move with the price after exit capped at the planned target, floored at 0.
+    pub left_on_table: Decimal,
+    pub net_pnl: Decimal,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpportunityReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades with both data: the only ones measured.
+    pub eligible_count: usize,
+    pub excluded_count: usize,
+    /// No planned take profit on the right side of the entry. Overlaps `without_price_after_count`.
+    pub without_target_count: usize,
+    pub without_price_after_count: usize,
+    pub min_sample: usize,
+    pub low_sample: bool,
+    pub total_left_on_table: Decimal,
+    /// Trades that left something on the table.
+    pub left_count: usize,
+    /// Average over those trades; `None` when there are none.
+    pub left_per_early_exit: Option<Decimal>,
+    /// Trades whose price went against them after the exit, and the money the exit spared (positive, uncapped).
+    pub avoided_count: usize,
+    pub total_avoided: Decimal,
+    pub net_pnl_of_eligible: Decimal,
+    /// Biggest amount left first (ties: trade id).
+    pub trades: Vec<OpportunityTrade>,
+}
+
+/// `price_after_exit` maps a trade id to the price typed by hand after the exit.
+pub fn opportunity(ledger: &Ledger, price_after_exit: &HashMap<i64, Decimal>, query: &StatsQuery) -> Result<OpportunityReport> {
+    let replay = replay(ledger)?;
+    let selected = replay.selected(query);
+    let zero = Decimal::ZERO;
+    let (mut without_target, mut without_after) = (0, 0);
+    let (mut left_total, mut avoided_total, mut net_total) = (zero, zero, zero);
+    let (mut left_count, mut avoided_count) = (0, 0);
+    let mut trades = Vec::new();
+    for c in &selected {
+        let p = &c.facts.position;
+        let target = p.planned_tp.filter(|tp| tp.checked_sub(p.entry_price).is_some_and(|d| d * p.direction.sign() > zero));
+        let after = price_after_exit.get(&c.facts.id).copied();
+        without_target += usize::from(target.is_none());
+        without_after += usize::from(after.is_none());
+        let (Some(tp), Some(after), Some(exit)) = (target, after, p.exit_price) else { continue };
+        let cost = |to: Decimal| crate::trade_view::opportunity_cost(p.direction, Some(exit), Some(to), p.size, p.multiplier);
+        let moved = cost(after)?.unwrap_or(zero);
+        let capped = if p.direction.sign() > zero { after.min(tp) } else { after.max(tp) };
+        let left = cost(capped)?.unwrap_or(zero).max(zero);
+        left_total = checked(left_total.checked_add(left))?;
+        net_total = checked(net_total.checked_add(c.figures.net_pnl))?;
+        if left > zero {
+            left_count += 1;
+        }
+        if moved < zero {
+            avoided_count += 1;
+            avoided_total = checked(avoided_total.checked_sub(moved))?;
+        }
+        trades.push(OpportunityTrade {
+            trade_id: c.facts.id,
+            symbol: c.facts.symbol.clone(),
+            direction: p.direction,
+            exit_price: exit,
+            planned_tp: tp,
+            price_after_exit: after,
+            move_after_exit: moved,
+            left_on_table: left,
+            net_pnl: c.figures.net_pnl,
+        });
+    }
+    trades.sort_by(|a, b| b.left_on_table.cmp(&a.left_on_table).then(a.trade_id.cmp(&b.trade_id)));
+    let eligible = trades.len();
+    Ok(OpportunityReport {
+        trade_count: selected.len(),
+        eligible_count: eligible,
+        excluded_count: selected.len() - eligible,
+        without_target_count: without_target,
+        without_price_after_count: without_after,
+        min_sample: MIN_SAMPLE,
+        low_sample: eligible < MIN_SAMPLE,
+        total_left_on_table: left_total,
+        left_count,
+        left_per_early_exit: if left_count == 0 { None } else { left_total.checked_div(Decimal::from(left_count)) },
+        avoided_count,
+        total_avoided: avoided_total,
+        net_pnl_of_eligible: net_total,
+        trades,
+    })
+}
+
+pub fn opportunity_report(conn: &Connection, query: &StatsQuery) -> Result<OpportunityReport> {
+    let ledger = load(conn, &query.account_ids)?;
+    let mut stmt = conn.prepare("SELECT id, price_after_exit FROM trades WHERE price_after_exit IS NOT NULL")?;
+    let mut after = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, crate::money::col(r, 1)?)))? {
+        let (id, price) = row?;
+        after.insert(id, price);
+    }
+    opportunity(&ledger, &after, query)
 }
