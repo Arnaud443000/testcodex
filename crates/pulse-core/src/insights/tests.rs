@@ -412,6 +412,161 @@ fn best_and_weakest_setup_and_session() {
     assert!(run(&ledger(journal_b(false))).iter().all(|i| i.category != Category::Highlight));
 }
 
+// --- 3.5.3 Suggestions ---------------------------------------------------------------------------
+
+#[test]
+fn costly_recurring_mistakes() {
+    // Journal M — 10 trades, one a day. Mistake tags M1 (30), M2 (31), M3 (32), M4 (33); rule 7 broken.
+    // | # | tags    | rule 7 | exit | net  |
+    // | 1 | M1 M4   |        | 90   | −10  |
+    // | 2 | M1 M4   |        | 90   | −10  |
+    // | 3 | M1      |        | 90   | −10  |
+    // | 4 | M2      | ✗      | 80   | −20  |
+    // | 5 | M2      | ✗      | 80   | −20  |
+    // | 6 | M3      |        | 95   | −5   |
+    // | 7–9 | M3    |        | 110  | +10  |
+    // | 10 | M4     | ✗      | 45   | −55  |
+    // Losses of the window: 130. Costs: rule 7 = 95 (3 trades), M4 = 75 (3), M2 = 40 (2 trades: not
+    // recurring), M1 = 30 (3), M3 = 5 (5 × 10 < 130). Qualifying by cost: rule 7, M4, M1 → capped at 2.
+    let m = |id: i64| tag(id, TagKind::Mistake, &format!("M{}", id - 29));
+    let spec: [(&[i64], bool, &str); 10] = [
+        (&[30, 33], false, "90"),
+        (&[30, 33], false, "90"),
+        (&[30], false, "90"),
+        (&[31], true, "80"),
+        (&[31], true, "80"),
+        (&[32], false, "95"),
+        (&[32], false, "110"),
+        (&[32], false, "110"),
+        (&[32], false, "110"),
+        (&[33], true, "45"),
+    ];
+    let t: Vec<TradeFacts> = spec
+        .iter()
+        .enumerate()
+        .map(|(k, (tags, broken, exit))| {
+            let mut t = trade(k as i64 + 1, k as i64 - 9, "1", exit);
+            t.tags = tags.iter().map(|&id| m(id)).collect();
+            if *broken {
+                t.journal.rule_checks.push(RuleCheckFact { rule_id: 7, text: "Pas de trade sans plan".into(), respected: false });
+            }
+            t
+        })
+        .collect();
+    let v = run(&ledger(t));
+    // Discipline (halves of 5): trades 4, 5, 10 score (0 + 10 + 10) / 45 = 44.44, the others 100:
+    // (300 + 88.89) / 5 = 77.78 then (400 + 44.44) / 5 = 88.89 → +11.1 points (low priority, last).
+    assert_eq!(keys(&v), ["costlyMistake.rule", "costlyMistake.tag", "disciplineTrend.up"]);
+    let InsightDetail::CostlyMistake { source, id, trade_count, cost, total_losses, share_of_losses, net_pnl, .. } = &v[0].detail else { panic!() };
+    assert_eq!((*source, *id, *trade_count, *cost, *total_losses, *net_pnl), (MistakeSource::Rule, 7, 3, dec("95"), dec("130"), dec("-95")));
+    approx(share_of_losses.unwrap(), 95.0 / 130.0);
+    assert_eq!((v[0].situation.as_str(), v[0].level, v[0].trade_ids.clone()), ("costlyMistake:1:rule:7", 3, vec![4, 5, 10]));
+    assert_eq!(v[0].filter, Some(EvidenceFilter::Mistake { source: MistakeSource::Rule, id: 7 }));
+    let InsightDetail::CostlyMistake { id, cost, label, .. } = &v[1].detail else { panic!() };
+    assert_eq!((*id, *cost, label.as_str(), v[1].situation.as_str()), (33, dec("75"), "M4", "costlyMistake:1:tag:33"));
+}
+
+#[test]
+fn a_mistake_costing_exactly_a_tenth_of_the_losses() {
+    // Three trades tagged M (−10 each: cost 30) and one untagged loss of 270 (size 27, stopped out)
+    // → losses 300, 30 × 10 = 300: reached.
+    let build = |other_size: &str| {
+        let mut t: Vec<TradeFacts> = (1..=3)
+            .map(|i| {
+                let mut t = trade(i, i - 4, "1", "90");
+                t.tags = vec![tag(30, TagKind::Mistake, "M")];
+                t
+            })
+            .collect();
+        t.push(trade(4, 0, other_size, "90"));
+        t
+    };
+    let v = run(&ledger(build("27")));
+    assert_eq!(keys(&v), ["costlyMistake.tag"]);
+    approx(match &v[0].detail {
+        InsightDetail::CostlyMistake { share_of_losses, .. } => share_of_losses.unwrap(),
+        _ => panic!(),
+    }, 0.1);
+    // One cent more of other losses (300.01): below 10 % → nothing.
+    assert!(run(&ledger(build("27.001"))).is_empty());
+}
+
+#[test]
+fn an_emotion_declared_before_entry_that_goes_with_a_lower_expectancy() {
+    // Journal E — 12 trades, one a day. Before entry: FOMO (40) on 1–5, Calme (41) on 6–10.
+    // After exit: Frustration (42) on 1, 2, 3, 5, 8 (5 losses: never compared, it follows the result).
+    // R: 1–5: −1 −1 −1 +1 −1 ; 6–12: +1 +1 −1 +1 +1 0 +1.
+    // FOMO: −3 / 5 = −0.6 against the 7 others 4 / 7 = 0.5714 → −1.1714 R (level ⌊4.69⌋ = 4).
+    // Calme: 3 / 5 = 0.6 against −2 / 7: higher → nothing.
+    let exits = ["90", "90", "90", "110", "90", "110", "110", "90", "110", "110", "100", "110"];
+    let t: Vec<TradeFacts> = exits
+        .iter()
+        .enumerate()
+        .map(|(k, exit)| {
+            let i = k as i64 + 1;
+            let mut t = trade(i, i - 12, "1", exit);
+            if i <= 5 {
+                t.journal.emotions.push((EmotionMoment::Before, tag(40, TagKind::Emotion, "FOMO")));
+            } else if i <= 10 {
+                t.journal.emotions.push((EmotionMoment::Before, tag(41, TagKind::Emotion, "Calme")));
+            }
+            if [1, 2, 3, 5, 8].contains(&i) {
+                t.journal.emotions.push((EmotionMoment::After, tag(42, TagKind::Emotion, "Frustration")));
+            }
+            t
+        })
+        .collect();
+    let v = run(&ledger(t.clone()));
+    assert_eq!(keys(&v), ["emotionLower"]);
+    let InsightDetail::EmotionLower { tag_id, name, group, others, difference, .. } = &v[0].detail else { panic!() };
+    assert_eq!((*tag_id, name.as_str(), group.r_trade_count, others.r_trade_count), (40, "FOMO", 5, 7));
+    approx(group.expectancy_r.unwrap(), -0.6);
+    approx(others.expectancy_r.unwrap(), 4.0 / 7.0);
+    approx(*difference, -0.6 - 4.0 / 7.0);
+    assert_eq!((v[0].level, v[0].situation.as_str(), v[0].trade_ids.clone()), (4, "emotionLower:1:40", vec![1, 2, 3, 4, 5]));
+    // FOMO on four trades only: too small a group → nothing.
+    let mut small = t;
+    small[4].journal.emotions.clear();
+    assert!(run(&ledger(small)).is_empty());
+}
+
+#[test]
+fn an_external_factor_that_goes_with_lower_discipline_and_expectancy() {
+    // Journal X — 10 days (−9 … 0), one trade a day. Days −9 … −5: sleep 1, plan no, exit 90 (−1 R),
+    // score (0 + 10 + 10) / 50 = 40. Days −4 … 0: sleep 4, plan yes, exit 110 (+1 R), score 100.
+    // Poor sleep: 5 days on each side; discipline 40 against 100 (−60), expectancy −1 against +1 (−2):
+    // both lower → level 2. Late hours: no day ticked → no verdict. Fatigue and mood: not declared.
+    let t: Vec<TradeFacts> = (1..=10)
+        .map(|i| {
+            let mut t = trade(i, i - 10, "1", if i <= 5 { "90" } else { "110" });
+            t.journal.plan_followed = Some(if i <= 5 { PlanFollowed::No } else { PlanFollowed::Yes });
+            t
+        })
+        .collect();
+    let journal: Vec<JournalEntry> = (1..=10)
+        .map(|i| JournalEntry {
+            day: crate::stats::time::day_key(TUE + (i - 10) * DAY, 0),
+            mood: None,
+            sleep_quality: Some(if i <= 5 { 1 } else { 4 }),
+            fatigue: None,
+            late_hours: false,
+            went_well: String::new(),
+            to_improve: String::new(),
+            notes: String::new(),
+        })
+        .collect();
+    let v = run_with(&ledger(t), NOW, &BehaviorSettings::default(), &journal, &[]);
+    // The discipline also rose from 40 to 100 over the two halves of 5 (+60, low priority).
+    assert_eq!(keys(&v), ["factorLower", "disciplineTrend.up"]);
+    let InsightDetail::FactorLower { factor, present_days, absent_days, discipline, expectancy_r, .. } = &v[0].detail else { panic!() };
+    assert_eq!((*factor, *present_days, *absent_days, v[0].level, v[0].situation.as_str()), (FactorKey::PoorSleep, 5, 5, 2, "factorLower:1:poorSleep"));
+    approx(discipline.difference.unwrap(), -60.0);
+    approx(expectancy_r.difference.unwrap(), -2.0);
+    assert_eq!(v[0].trade_ids, [1, 2, 3, 4, 5]);
+    // Without the journal: nothing to compare.
+    assert_eq!(keys(&run(&ledger(journal_p(PlanFollowed::Yes, [PlanFollowed::Yes; 2])))), Vec::<&str>::new());
+}
+
 #[test]
 fn no_trade_no_insight() {
     assert!(run(&ledger(Vec::new())).is_empty());

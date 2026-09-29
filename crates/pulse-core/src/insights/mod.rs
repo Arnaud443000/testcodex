@@ -9,6 +9,7 @@
 
 mod highlights;
 pub mod log;
+mod suggestions;
 mod trends;
 
 pub use log::{InsightRecord, active_insights, dismiss, history};
@@ -453,6 +454,7 @@ pub fn evaluate(
             },
         };
         trends::collect(&scope, &mut out)?;
+        suggestions::collect(&scope, &mut out)?;
         highlights::collect(&scope, &mut out)?;
     }
     sort(&mut out);
