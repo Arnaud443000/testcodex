@@ -13,6 +13,7 @@ mod mistakes;
 mod patterns;
 mod factors;
 mod sequences;
+mod simulation;
 
 pub use analysis::{
     EmotionReport, FirstTradeReport, PlanReport, RankGroup, Streak, StreakReport, emotion_report, emotions, first_trade,
@@ -35,6 +36,7 @@ pub use sequences::{
     AfterLossesReport, MIN_SEQUENCE_TRADES, MIN_SIZE_CASES, SequenceGroup, SizeChangeCase, SizeChangeGroup, SizeChangeReport, after_losses,
     after_losses_report, size_change, size_change_report,
 };
+pub use simulation::{PlanSimulation, Scenario, SimulatedResult, plan_simulation, plan_simulation_report};
 
 use crate::error::Result;
 use crate::money::Decimal;

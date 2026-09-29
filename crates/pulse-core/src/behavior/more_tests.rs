@@ -441,3 +441,78 @@ fn size_change_compares_sizes_without_a_stop_and_never_across_accounts() {
     assert_eq!((empty.trade_count, empty.no_previous_count, empty.after_loss.case_count), (0, 0, 0));
     assert_eq!((empty.after_loss.mean_change, empty.loss_vs_win), (None, None));
 }
+
+// --- Plan simulation -------------------------------------------------------------------
+
+#[test]
+fn plan_simulation_on_journal_d() {
+    use super::tests::journal_d;
+    // Journal D in exit order: 1 yes +100 (R 2), 2 partial −150 (R −1), 3 no +80 (R 0.8),
+    // 4 yes −50 (R −2.5), 5 undeclared −100 (R −2.5), 6 yes 0 (no R); 7 is open.
+    let r = plan_simulation(&ledger("10000", journal_d()), &all()).unwrap();
+    assert_eq!(r.declared_trade_count, 5);
+    // Actual: −120; 2 wins of 6; R (2 − 1 + 0.8 − 2.5 − 2.5) / 5; PF 180 / 300;
+    // cumulative 100, −50, 30, −20, −120, −120 → drawdown 100 − (−120) = 220.
+    let a = &r.actual;
+    assert_eq!((a.trade_count, a.net_pnl, a.max_drawdown), (6, dec("-120"), dec("220")));
+    approx(a.win_rate, 2.0 / 6.0);
+    approx(a.expectancy_r, -0.64);
+    approx(a.profit_factor, 0.6);
+
+    // Without 3 (off plan): −200, i.e. 80 less; kept 1, 2, 4, 5, 6.
+    let s = &r.without_off_plan;
+    assert_eq!((s.excluded_trade_ids.clone(), s.excluded_net_pnl, s.difference), (vec![3], dec("80"), Some(dec("-80"))));
+    // 1 win of 5; R (2 − 1 − 2.5 − 2.5) / 4 = −1; PF 100 / 300; cumulative 100, −50, −100, −200, −200 → 300.
+    assert_eq!((s.result.trade_count, s.result.net_pnl, s.result.max_drawdown), (5, dec("-200"), dec("300")));
+    approx(s.result.win_rate, 0.2);
+    approx(s.result.expectancy_r, -1.0);
+    approx(s.result.profit_factor, 1.0 / 3.0);
+
+    // Without 2 and 3: −50, i.e. 70 more; kept 1, 4, 5, 6: 1 win of 4; R (2 − 2.5 − 2.5) / 3 = −1;
+    // PF 100 / 150; cumulative 100, 50, −50, −50 → 150. Trade 5 (undeclared) is kept.
+    let p = &r.without_off_plan_or_partial;
+    assert_eq!((p.excluded_trade_ids.clone(), p.excluded_net_pnl, p.difference), (vec![2, 3], dec("-70"), Some(dec("70"))));
+    assert_eq!((p.result.net_pnl, p.result.max_drawdown, p.result.r_trade_count), (dec("-50"), dec("150"), 3));
+    approx(p.result.win_rate, 0.25);
+    approx(p.result.expectancy_r, -1.0);
+    approx(p.result.profit_factor, 2.0 / 3.0);
+}
+
+#[test]
+fn plan_simulation_without_declared_plans_or_trades() {
+    // Journal F declares no plan: nothing to simulate.
+    let r = plan_simulation(&ledger("10000", journal_f()), &all()).unwrap();
+    assert_eq!((r.declared_trade_count, r.without_off_plan.difference, r.without_off_plan.excluded_trade_count), (0, None, 0));
+    assert_eq!(r.without_off_plan.result.net_pnl, r.actual.net_pnl);
+
+    // Plans declared, none off plan: a real 0.
+    let mut t = journal_f();
+    t[0].journal.plan_followed = Some(PlanFollowed::Yes);
+    let r = plan_simulation(&ledger("10000", t), &all()).unwrap();
+    assert_eq!((r.without_off_plan.difference, r.without_off_plan_or_partial.difference), (Some(Decimal::ZERO), Some(Decimal::ZERO)));
+
+    let empty = plan_simulation(&ledger("10000", vec![]), &all()).unwrap();
+    assert_eq!((empty.actual.trade_count, empty.actual.win_rate, empty.without_off_plan.difference), (0, None, None));
+}
+
+#[test]
+fn plan_simulation_follows_the_selection_of_two_accounts() {
+    // Account 2 has one off-plan loss of 40; selecting only account 1's trades (via the
+    // ledger) or both changes the result, never mixing balances.
+    let mut t = journal_f();
+    t[3].journal.plan_followed = Some(PlanFollowed::No); // trade 4, +30
+    let mut other = trade(30, Long, "100", Some("60"), "1", Some("90"), 2, 12 * 60, 13 * 60);
+    other.account_id = 2;
+    other.journal.plan_followed = Some(PlanFollowed::No);
+    t.push(other);
+    let mut l = ledger("10000", t);
+    l.accounts.push(AccountCapital { id: 2, initial_capital: dec("10000") });
+    let r = plan_simulation(&l, &all()).unwrap();
+    // Journal F totals −30; with trade 30: −70. Removing 4 (+30) and 30 (−40): +10 better.
+    assert_eq!((r.actual.net_pnl, r.without_off_plan.excluded_net_pnl, r.without_off_plan.difference), (dec("-70"), dec("-10"), Some(dec("10"))));
+    assert_eq!(r.without_off_plan.excluded_trade_ids, [30, 4]);
+    // A period filter applies to the simulation like to any report: from day 3, trade 30 is out.
+    let q = StatsQuery { from: Some(SEP_1 + 3 * DAY), ..StatsQuery::default() };
+    let r = plan_simulation(&l, &q).unwrap();
+    assert_eq!((r.without_off_plan.excluded_trade_ids.clone(), r.without_off_plan.difference), (vec![4], Some(dec("-30"))));
+}
