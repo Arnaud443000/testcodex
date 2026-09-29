@@ -9,6 +9,7 @@ import { DataPanel } from '../components/DataPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
+import { SecurityPanel } from '../components/SecurityPanel'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
@@ -190,6 +191,7 @@ export function SettingsPage() {
       <CashFlowsPanel />
       <ReminderPanel />
       <DataPanel />
+      <SecurityPanel />
       <AiSettingsPanel />
 
       <section className="glass-card p-6">

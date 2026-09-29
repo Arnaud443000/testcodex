@@ -67,9 +67,21 @@ import type { DashboardLayout, DashboardScope, DashboardSummary, ImportResult, R
 const mockDashboards = createDashboardsMock(() => mock.listAccounts())
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
+/** Lot 22 : appelés quand une commande répond `lock:locked` (Pulse s'est verrouillé entre-temps). */
+const lockedListeners = new Set<() => void>()
+export function onLockedError(listener: () => void): () => void {
+  lockedListeners.add(listener)
+  return () => lockedListeners.delete(listener)
+}
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke<T>(cmd, args)
+  try {
+    return await invoke<T>(cmd, args)
+  } catch (e) {
+    if (isLockedError(e)) lockedListeners.forEach((f) => f())
+    throw e
+  }
 }
 
 export const api = {
@@ -194,10 +206,11 @@ export const api = {
     inTauri ? invoke('export_trades_csv', { accountIds, path }) : mock.exportTradesCsv(path),
   createBackup: (destDir: string): Promise<BackupInfo> =>
     inTauri ? invoke('create_backup', { destDir }) : mock.createBackup(destDir),
-  inspectBackup: (folder: string): Promise<BackupInfo> =>
-    inTauri ? invoke('inspect_backup', { folder }) : mock.inspectBackup(folder),
-  restoreBackup: (folder: string, confirmed: boolean): Promise<RestoreResult> =>
-    inTauri ? invoke('restore_backup', { folder, confirmed }) : mock.restoreBackup(folder, confirmed),
+  /** `password` : seulement pour une sauvegarde chiffrée (lot 22), celui du moment où elle a été faite. */
+  inspectBackup: (folder: string, password?: string): Promise<BackupInfo> =>
+    inTauri ? invoke('inspect_backup', { folder, password: password ?? null }) : mock.inspectBackup(folder, password),
+  restoreBackup: (folder: string, confirmed: boolean, password?: string): Promise<RestoreResult> =>
+    inTauri ? invoke('restore_backup', { folder, confirmed, password: password ?? null }) : mock.restoreBackup(folder, confirmed, password),
   updateAccount: (id: number, account: AccountUpdate): Promise<Account> =>
     inTauri ? invoke('update_account', { id, account }) : mock.updateAccount(id, account),
   setAccountArchived: (id: number, archived: boolean): Promise<Account> =>
@@ -417,6 +430,33 @@ export const api = {
     inTauri ? invoke('delete_coach_conversation', { id }) : mockCoach.deleteCoachConversation(id),
   deleteAllCoachConversations: (): Promise<number> =>
     inTauri ? invoke('delete_all_coach_conversations') : mockCoach.deleteAllCoachConversations(),
+
+  // --- Lot 22 : verrouillage par mot de passe (simulation sans chiffrement dans le navigateur) ---
+  // Les mots de passe ne font que passer : jamais gardés dans un état global ni dans localStorage.
+  /** Disponible même verrouillé (écran de déverrouillage). */
+  getLockStatus: (): Promise<LockStatus> => (inTauri ? invoke('get_lock_status') : mockLock.status()),
+  unlockDatabase: (password: string): Promise<LockStatus> => (inTauri ? invoke('unlock_database', { password }) : mockLock.unlock(password)),
+  /** `confirmed` : case « J'ai compris » (mot de passe perdu = données irrécupérables), vérifiée aussi par pulse-core. */
+  enableLock: (password: string, confirmed: boolean, encryptCopies: boolean): Promise<LockStatus> =>
+    inTauri ? invoke('enable_lock', { password, confirmed, encryptCopies }) : mockLock.enable(password, confirmed, encryptCopies),
+  disableLock: (password: string): Promise<LockStatus> => (inTauri ? invoke('disable_lock', { password }) : mockLock.disable(password)),
+  changeLockPassword: (oldPassword: string, newPassword: string): Promise<LockStatus> =>
+    inTauri ? invoke('change_lock_password', { oldPassword, newPassword }) : mockLock.changePassword(oldPassword, newPassword),
+  lockNow: (): Promise<LockStatus> => (inTauri ? invoke('lock_now') : mockLock.lockNow()),
+  /** `null` = jamais (défaut). */
+  setLockIdle: (minutes: number | null): Promise<LockStatus> => (inTauri ? invoke('set_lock_idle', { minutes }) : mockLock.setIdle(minutes)),
+  /** Activité de l'utilisateur (clavier, souris), signalée au plus toutes les 30 s. */
+  lockTouch: (): Promise<void> => (inTauri ? invoke('lock_touch') : mockLock.touch()),
+  retryPersist: (): Promise<LockStatus> => (inTauri ? invoke('retry_persist') : mockLock.retryPersist()),
+  quitDiscardingChanges: (): Promise<void> => (inTauri ? invoke('quit_discarding_changes') : Promise.resolve()),
+  /** Événements de la coque : verrouillage (manuel ou inactivité) et échec d'écriture. Rien dans le navigateur. */
+  onLockEvents: async (onLocked: () => void, onPersistFailed: () => void): Promise<() => void> => {
+    if (!inTauri) return () => {}
+    const { listen } = await import('@tauri-apps/api/event')
+    const offs = await Promise.all([listen('pulse://locked', onLocked), listen('pulse://persist-failed', onPersistFailed)])
+    return () => offs.forEach((off) => off())
+  },
+  isBrowserPreview: !inTauri,
 }
 
 
@@ -430,3 +470,6 @@ import type { AiSendPreview, AiSettingsUpdate, AiStatus, ScreenshotNote } from '
 import { mockAi } from './mockBackend'
 import type { AskCoachRequest, CoachStatus, CoachTurn, Conversation, ConversationSummary } from '../types/coach'
 import { mockCoach } from './mockBackend'
+import type { LockStatus } from '../types/lock'
+import { mockLock } from './mockBackend'
+import { isLockedError } from './lockView'

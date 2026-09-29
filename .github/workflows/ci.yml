@@ -23,4 +23,6 @@ jobs:
       - run: cargo test -p pulse-core
       # Lot 20: the network crate is tested against a fake local server; the key vault is checked for Windows.
       - run: cargo test -p pulse-ai -p pulse-vault
-      - run: rustup target add x86_64-pc-windows-msvc && cargo check -p pulse-vault --target x86_64-pc-windows-msvc --all-targets
+      # Lot 22: the lock's cryptography is pure Rust, tested here and checked for Windows like the vault.
+      - run: cargo test -p pulse-lock
+      - run: rustup target add x86_64-pc-windows-msvc && cargo check -p pulse-vault -p pulse-lock --target x86_64-pc-windows-msvc --all-targets

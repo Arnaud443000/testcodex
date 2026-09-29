@@ -2,6 +2,8 @@ import { NavLink } from 'react-router-dom'
 import { useT, type Messages } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { useInsights } from '../lib/insights'
+import { api } from '../lib/api'
+import { useLock } from '../lib/lock'
 import { Icon, type IconName } from './Icon'
 import { Logo } from './Logo'
 
@@ -25,6 +27,7 @@ export function Sidebar() {
   const { accounts } = useAccounts()
   const t = useT()
   const { unseen } = useInsights()
+  const { status, setStatus } = useLock()
   return (
     <aside className="glass-bar flex w-[248px] shrink-0 flex-col border-r px-4 py-[26px]">
       <div className="flex items-center gap-3 px-2.5 pb-[30px]">
@@ -68,6 +71,19 @@ export function Sidebar() {
             {t.sidebar.local} · {t.sidebar.accounts(accounts.length)}
           </span>
         </div>
+        {status?.enabled && (
+          <button
+            type="button"
+            className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border text-tx2 transition hover:bg-white/5 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
+            style={{ borderColor: 'rgba(255,255,255,.14)' }}
+            aria-label={t.lock.sidebar.lockHint}
+            title={t.lock.sidebar.lockHint}
+            data-testid="sidebar-lock"
+            onClick={() => void api.lockNow().then(setStatus).catch(() => {})}
+          >
+            <Icon name="lock" size={17} />
+          </button>
+        )}
       </div>
     </aside>
   )

@@ -1541,9 +1541,12 @@ export const fr = {
   ai: frAi,
   // Lot 21 : coach IA
   coach: frCoach,
+  // Lot 22 : verrouillage par mot de passe
+  lock: frLock,
 }
 
 export type Messages = typeof fr
 
 import { frInsights } from './fr.insights'
 import { frCoach } from './fr.coach'
+import { frLock } from './fr.lock'
