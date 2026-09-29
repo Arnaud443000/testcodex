@@ -205,7 +205,8 @@ export function DashboardPage() {
     />
   )
   const wrap = (body: React.ReactNode) => (
-    <div className="flex flex-col gap-5">
+    // La bibliothèque est un panneau fixe à droite : le contenu lui laisse la place (les boutons Enregistrer restent visibles).
+    <div className={`flex flex-col gap-5 ${editing && libraryOpen ? 'pr-[436px]' : ''}`}>
       {header}
       {body}
     </div>
