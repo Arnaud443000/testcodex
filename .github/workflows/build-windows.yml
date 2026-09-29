@@ -19,6 +19,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
       - run: cargo test -p pulse-core
+      # Lot 22: the lock's tests (real files, atomic renames) run here on a real Windows runner.
+      - run: cargo test -p pulse-lock
       - run: npm run tauri build
       - uses: actions/upload-artifact@v4
         with:
