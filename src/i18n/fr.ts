@@ -713,6 +713,48 @@ export const fr = {
     rules: 'Règles',
     autoLabel: (score: string) => `Calcul automatique : ${score} / 100`,
   },
+  // --- Lot 9 : réglages des seuils de l'analyse ---
+  behaviorSettings: {
+    title: 'Seuils de discipline',
+    intro:
+      'Ces seuils servent à détecter le surtrading et les trades de revanche, et à noter votre discipline. Rien n’est imposé : laissez un champ vide pour désactiver le seuil correspondant.',
+    riskLabel: 'Risque maximum par trade',
+    riskUnit: '% du solde',
+    riskEffect:
+      'Effet sur le score : un trade dont le risque dépasse cette part du solde perd la composante « Risque dans la limite » (10 % du score). Sans limite, cette composante est exclue du score, jamais comptée comme 0.',
+    riskDefault: 'Par défaut : aucune limite',
+    tradesLabel: 'Trades maximum par jour',
+    tradesUnit: 'trades',
+    tradesEffect:
+      'Effet sur le score : les trades pris au-delà de cette limite le même jour sont du surtrading et perdent la composante « Sans revanche ni surtrading » (10 % du score). Sans limite, aucun surtrading n’est détecté.',
+    tradesDefault: 'Par défaut : aucune limite',
+    windowLabel: 'Délai de revanche',
+    windowUnit: 'minutes',
+    windowEffect:
+      'Effet sur le score : un trade pris moins de ce délai après une perte, avec une exposition plus grande, est une revanche et perd la composante « Sans revanche ni surtrading » (10 % du score).',
+    windowDefault: (v: number) => `Par défaut : ${v} minutes`,
+    factorLabel: 'Facteur de revanche',
+    factorUnit: '×',
+    factorEffect:
+      'Effet sur le score : le trade doit avoir une exposition au moins égale à ce multiple de celle du trade perdant pour être une revanche. Plus il est élevé, moins il y a de revanches détectées.',
+    factorDefault: (v: string) => `Par défaut : ${v}`,
+    disabledHint: 'Vide = désactivé',
+    errors: {
+      maxRiskPercent: 'Entrez un pourcentage supérieur à 0 et au plus 100, par exemple 1,5.',
+      maxTradesPerDay: 'Entrez un nombre entier d’au moins 1, ou laissez vide.',
+      revengeWindowMin: 'Entrez un nombre entier de minutes entre 1 et 1 440.',
+      revengeSizeFactor: 'Entrez un facteur d’au moins 1 (par exemple 1,5).',
+    } as Record<string, string>,
+    save: 'Enregistrer les seuils',
+    reset: 'Valeurs par défaut',
+    saved: 'Seuils enregistrés.',
+    saveError: (detail: string) => `Impossible d’enregistrer les seuils : ${detail}`,
+    loadError: (detail: string) => `Impossible de charger les seuils : ${detail}`,
+    currentScore: 'Score de discipline actuel',
+    currentScoreHint: 'Sur tout l’historique des comptes actifs ; recalculé à chaque enregistrement.',
+    currentScoreEmpty: (need: number) => `non établi (moins de ${need} trades clôturés)`,
+    currentScoreValue: (score: string) => `${score} / 100`,
+  },
   // --- Lot 11 : objectifs mensuels et replay ---
   goalsPage: {
     monthPrevious: 'Mois précédent',

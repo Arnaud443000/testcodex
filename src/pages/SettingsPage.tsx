@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
+import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
 import { DataPanel } from '../components/DataPanel'
 import { EditableList } from '../components/EditableList'
@@ -174,6 +175,7 @@ export function SettingsPage() {
 
       <RulesSection />
       <ChecklistSection />
+      <BehaviorSettingsPanel />
       <CashFlowsPanel />
       <ReminderPanel />
       <DataPanel />
