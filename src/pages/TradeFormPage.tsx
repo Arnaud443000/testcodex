@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
+import { AssetPicker } from '../components/AssetPicker'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 import { PreviewPanel } from '../components/PreviewPanel'
@@ -15,7 +16,7 @@ import { isPositiveDecimal } from '../lib/decimal'
 import { formatDecimal } from '../lib/format'
 import { useReferenceData } from '../lib/referenceData'
 import { buildTradeData, emptyForm, formFromTrade, toggleEmotion, type FormErrorCode, type TradeForm } from '../lib/tradeForm'
-import type { AssetClass, EmotionMoment, Preview, TagKind } from '../types/trade'
+import type { AssetClass, EmotionMoment, Instrument, Preview, TagKind } from '../types/trade'
 
 const ASSET_CLASSES: AssetClass[] = ['forex', 'index', 'crypto', 'stock', 'commodity', 'future', 'other']
 const MOMENTS: EmotionMoment[] = ['before', 'during', 'after']
@@ -132,6 +133,8 @@ export function TradeFormPage() {
     )
   }
 
+  // Choisir un actif pré-remplit le multiplicateur (modifiable ensuite).
+  const pickInstrument = (i: Instrument) => setForm((f) => (f ? { ...f, instrumentId: i.id, multiplier: i.defaultMultiplier } : f))
   const errorText = (code: FormErrorCode) => (attempted && built.errors[code] ? t.form.errors[code] : undefined)
   const hasErrors = Object.keys(built.errors).length > 0
   const currency = account?.currency ?? ''
@@ -172,21 +175,17 @@ export function TradeFormPage() {
   const noStop = form.plannedSl.trim() === ''
 
   const basics = (
-    <StepCard n={1} title={t.form.sections.basics}>
+    <StepCard n={1} title={t.form.sections.basics} raised>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label={t.form.fields.asset} htmlFor="f-asset" error={errorText('instrument')}>
-          <SelectBox
+          <AssetPicker
             id="f-asset"
             error={!!errorText('instrument')}
-            value={form.instrumentId ?? ''}
-            onChange={(v) => (v === 'new' ? setNewAsset(true) : set('instrumentId', v === '' ? null : Number(v)))}
-          >
-            <option value="" className="bg-bg">{t.form.placeholders.select}</option>
-            {ref.instruments.map((i) => (
-              <option key={i.id} value={i.id} className="bg-bg">{i.symbol} · {t.common.assetClasses[i.assetClass]}</option>
-            ))}
-            <option value="new" className="bg-bg">{t.form.addInstrument}</option>
-          </SelectBox>
+            instruments={ref.instruments}
+            value={form.instrumentId}
+            onChange={pickInstrument}
+            onAddCustom={() => setNewAsset(true)}
+          />
         </Field>
         <Field label={t.form.fields.side}>
           <Segmented
@@ -244,7 +243,7 @@ export function TradeFormPage() {
           onCancel={() => setNewAsset(false)}
           onCreate={async (n) => {
             const i = await ref.addInstrument(n)
-            set('instrumentId', i.id)
+            pickInstrument(i)
             setNewAsset(false)
           }}
         />
@@ -265,7 +264,19 @@ export function TradeFormPage() {
           <input id="f-exit-time" type="datetime-local" className="input sm:max-w-[260px]" value={form.exitTime} onChange={(e) => set('exitTime', e.target.value)} />
         </Field>
       </div>
-      {instrument && <p className="text-xs text-tx3">{t.form.multiplierHint(formatDecimal(instrument.defaultMultiplier))}</p>}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Field label={t.form.fields.multiplier} htmlFor="f-mult" error={errorText('multiplier')}>
+          <input
+            id="f-mult"
+            className={`input ${errorText('multiplier') ? 'input-error' : ''}`}
+            inputMode="decimal"
+            value={form.multiplier}
+            onChange={(e) => set('multiplier', e.target.value)}
+            placeholder={instrument ? formatDecimal(instrument.defaultMultiplier) : '1'}
+          />
+        </Field>
+        <p className="text-xs text-tx3 sm:col-span-2 sm:self-end sm:pb-3">{t.form.multiplierHelp}</p>
+      </div>
     </StepCard>
   )
 
@@ -540,11 +551,12 @@ function NewInstrumentForm({
   onCreate,
   onCancel,
 }: {
-  onCreate: (n: { symbol: string; assetClass: AssetClass; defaultMultiplier: string }) => Promise<void>
+  onCreate: (n: { symbol: string; name: string; assetClass: AssetClass; defaultMultiplier: string }) => Promise<void>
   onCancel: () => void
 }) {
   const t = useT()
   const [symbol, setSymbol] = useState('')
+  const [name, setName] = useState('')
   const [assetClass, setAssetClass] = useState<AssetClass>('forex')
   const [multiplier, setMultiplier] = useState('1')
   const [error, setError] = useState<string | null>(null)
@@ -553,7 +565,7 @@ function NewInstrumentForm({
     if (!symbol.trim()) return setError(t.form.errors.instrument)
     if (!isPositiveDecimal(multiplier)) return setError(t.form.instrumentMultiplier)
     try {
-      await onCreate({ symbol, assetClass, defaultMultiplier: multiplier.trim().replace(',', '.') })
+      await onCreate({ symbol, name, assetClass, defaultMultiplier: multiplier.trim().replace(',', '.') })
     } catch (e) {
       setError(String(e).replace(/^Error: /, ''))
     }
@@ -562,9 +574,12 @@ function NewInstrumentForm({
   return (
     <fieldset className="flex flex-col gap-3 rounded-inner border p-4" style={{ borderColor: 'var(--hairline)', background: 'rgba(255,255,255,.04)' }}>
       <legend className="caption px-1">{t.form.newInstrument}</legend>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Field label={t.form.instrumentSymbol} htmlFor="ni-symbol">
           <input id="ni-symbol" autoFocus className="input" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="EURUSD" />
+        </Field>
+        <Field label={t.form.instrumentName} htmlFor="ni-name">
+          <input id="ni-name" className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t.form.instrumentClass} htmlFor="ni-class">
           <SelectBox id="ni-class" value={assetClass} onChange={(v) => setAssetClass(v as AssetClass)}>

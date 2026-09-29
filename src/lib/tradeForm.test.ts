@@ -35,6 +35,13 @@ describe('buildTradeData', () => {
     expect(data!.entryTime).toBe(NOW)
   })
 
+  it('envoie le multiplicateur saisi (virgule normalisée) ou null pour garder celui de l’actif', () => {
+    expect(build(valid({ multiplier: '' })).data!.multiplier).toBeNull()
+    expect(build(valid({ multiplier: '100 000' })).data!.multiplier).toBe('100000')
+    expect(build(valid({ multiplier: '0,5' })).data!.multiplier).toBe('0.5')
+    for (const bad of ['0', '-1', 'abc']) expect(build(valid({ multiplier: bad })).errors.multiplier).toBe(true)
+  })
+
   it('garde les prix comme chaînes, sans les convertir en nombres', () => {
     const { data } = build(valid({ entryPrice: '90071992547409931.25', plannedSl: '0,00000001' }))
     expect(data!.entryPrice).toBe('90071992547409931.25')

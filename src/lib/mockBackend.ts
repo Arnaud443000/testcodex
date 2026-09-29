@@ -17,6 +17,7 @@ import type {
 } from '../types/trade'
 import type { CalendarQuery, DashboardQuery } from '../types/stats'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
+import { ASSET_CATALOG } from './assetCatalog'
 
 /**
  * MOCK EN MÉMOIRE — uniquement pour `npm run dev` dans un navigateur, sans Rust.
@@ -76,12 +77,14 @@ const starterTags: [TagKind, string][] = [
   ['mistake', 'Pas de plan'], ['mistake', 'Mauvaise gestion du risque'], ['mistake', 'Stop déplacé'],
 ]
 const tags: Tag[] = starterTags.map(([kind, name]) => ({ id: id(), kind, name, archived: false }))
-const instruments: Instrument[] = [
-  { id: id(), symbol: 'EURUSD', assetClass: 'forex', defaultMultiplier: '100000' },
-  { id: id(), symbol: 'XAUUSD', assetClass: 'commodity', defaultMultiplier: '100' },
-  { id: id(), symbol: 'NAS100', assetClass: 'index', defaultMultiplier: '1' },
-  { id: id(), symbol: 'BTCUSD', assetClass: 'crypto', defaultMultiplier: '1' },
-]
+// Même catalogue intégré que la migration v4 de pulse-core (généré depuis un fichier commun).
+const instruments: Instrument[] = ASSET_CATALOG.map(([symbol, name, assetClass, defaultMultiplier]) => ({
+  id: id(),
+  symbol,
+  name,
+  assetClass,
+  defaultMultiplier,
+}))
 const rules: Rule[] = []
 const checklist: ChecklistItem[] = []
 const cashFlows: CashFlow[] = []
@@ -217,7 +220,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 3, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 4, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
 })
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
@@ -276,7 +279,7 @@ export const mock = {
     if (!k) throw invalid('symbol must contain letters or digits')
     if (sign(parse(n.defaultMultiplier)) <= 0) throw invalid('multiplier must be greater than zero')
     if (instruments.some((i) => i.symbol.replace(/[^A-Za-z0-9.]/g, '').toUpperCase() === k)) throw invalid(`instrument ${symbol} already exists`)
-    const i = { ...n, symbol, id: id() }
+    const i = { ...n, symbol, name: (n.name ?? '').split(/\s+/).filter(Boolean).join(' '), id: id() }
     instruments.push(i)
     return i
   },
