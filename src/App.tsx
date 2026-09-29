@@ -22,9 +22,27 @@ import { TradeFormPage } from './pages/TradeFormPage'
 import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CoachPage } from './pages/CoachPage'
+import { LockProvider, useLock } from './lib/lock'
+import { LockScreen, LockSplash } from './components/LockScreen'
+import { PersistBanner } from './components/PersistBanner'
+import type { ReactNode } from 'react'
+
+/**
+ * Lot 22 : tant que la base chiffrée n'est pas ouverte, seul l'écran de déverrouillage existe ; aucun
+ * fournisseur de données n'est monté (donc aucune requête). Un nouveau verrouillage démonte toute
+ * l'application : les données affichées quittent l'interface.
+ */
+function LockGate({ children }: { children: ReactNode }) {
+  const { status } = useLock()
+  if (!status) return <LockSplash />
+  if (status.locked) return <LockScreen />
+  return <>{children}</>
+}
 
 export default function App() {
   return (
+    <LockProvider>
+    <LockGate>
     <AccountsProvider>
       <PeriodProvider>
       <HashRouter>
@@ -36,6 +54,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-7 py-6">
               {/* Largeur max du contenu : au-delà, les grilles s’étireraient et les cartes se déséquilibreraient. */}
               <div className="mx-auto w-full max-w-[1480px]">
+              <PersistBanner />
               <AlertBanner />
               <ReminderBanner />
               <Routes>
@@ -65,5 +84,7 @@ export default function App() {
       </HashRouter>
       </PeriodProvider>
     </AccountsProvider>
+    </LockGate>
+    </LockProvider>
   )
 }

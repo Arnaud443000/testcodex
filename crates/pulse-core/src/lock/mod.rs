@@ -67,7 +67,8 @@ pub struct LockStatus {
     pub persist_failed: bool,
     /// `lock:inconsistentFiles` when both files were found at startup.
     pub warning: Option<String>,
-    /// Plaintext copies in `backups/` (proposed for encryption at activation).
+    /// Plaintext copies in `backups/`: proposed for encryption at activation, listed afterwards
+    /// if the user kept them (they are not protected).
     pub plain_copies: Vec<String>,
     pub min_password_chars: usize,
 }
@@ -89,7 +90,7 @@ pub fn status(data_dir: &Path, store: Option<&Store>, warning: Option<String>, n
         },
         persist_failed: store.is_some_and(|s| s.persist_failed()),
         warning,
-        plain_copies: if enabled { Vec::new() } else { plain_copies(data_dir) },
+        plain_copies: plain_copies(data_dir),
         min_password_chars: MIN_PASSWORD_CHARS,
     })
 }

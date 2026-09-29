@@ -1,4 +1,5 @@
 import type { BackupInfo, RestoreResult } from '../types/data'
+import { createLockMock, type MockSeal } from './mockLock'
 import type { Account, AccountUpdate, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
@@ -245,6 +246,9 @@ function behaviorInput(accountIds: number[] = []): behavior.BehaviorInput {
 // Sauvegardes du faux backend : instantanés en mémoire, indexés par « dossier ».
 type Snapshot = ReturnType<typeof snapshot>
 const backups = new Map<string, Snapshot>()
+/** Lot 22 : faux verrou (simulation, aucun chiffrement). Une sauvegarde faite verrou actif garde l'empreinte du moment. */
+export const mockLock = createLockMock()
+const backupSeals = new Map<string, MockSeal>()
 let nextBackup = 1
 const snapshot = () =>
   structuredClone({
@@ -253,7 +257,16 @@ const snapshot = () =>
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
   path, schemaVersion: 13, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  encrypted: backupSeals.has(path),
 })
+/** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
+function openBackup(folder: string, password?: string): Snapshot {
+  const s = backups.get(folder)
+  if (!s) throw invalid('this folder does not contain a pulse.db file')
+  const seal = backupSeals.get(folder)
+  if (seal) mockLock.checkBackupPassword(seal, password)
+  return s
+}
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
   put(accounts, s.accounts); put(tags, s.tags); put(instruments, s.instruments)
@@ -271,19 +284,18 @@ export const mock = {
     const path = `${destDir}/pulse-backup-${nextBackup++}`
     const s = snapshot()
     backups.set(path, s)
+    const seal = mockLock.currentSeal()
+    if (seal) backupSeals.set(path, seal)
     return infoOf(path, s)
   },
-  inspectBackup: async (folder: string): Promise<BackupInfo> => {
-    const s = backups.get(folder)
-    if (!s) throw invalid('this folder does not contain a pulse.db file')
-    return infoOf(folder, s)
-  },
-  restoreBackup: async (folder: string, confirmed: boolean): Promise<RestoreResult> => {
+  inspectBackup: async (folder: string, password?: string): Promise<BackupInfo> => infoOf(folder, openBackup(folder, password)),
+  restoreBackup: async (folder: string, confirmed: boolean, password?: string): Promise<RestoreResult> => {
     if (!confirmed) throw invalid('the restore was not confirmed')
-    const s = backups.get(folder)
-    if (!s) throw invalid('this folder does not contain a pulse.db file')
-    const safetyCopy = `(dossier de démonstration)/pulse-avant-restauration-${nextBackup++}.db`
+    const s = openBackup(folder, password)
+    const seal = mockLock.currentSeal()
+    const safetyCopy = `(dossier de démonstration)/pulse-avant-restauration-${nextBackup++}.db${seal ? '.enc' : ''}`
     backups.set(safetyCopy, snapshot())
+    if (seal) backupSeals.set(safetyCopy, seal)
     replaceWith(structuredClone(s))
     return { info: infoOf(folder, s), safetyCopy }
   },
