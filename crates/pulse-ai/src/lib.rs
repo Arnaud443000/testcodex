@@ -7,6 +7,7 @@
 //! request or the response body.
 
 mod claude;
+pub mod coach;
 pub mod service;
 
 pub use claude::{Claude, API_BASE, ANTHROPIC_VERSION, FALLBACK_BETA};
@@ -44,6 +45,45 @@ pub trait Provider: Send + Sync {
     /// Checks the key and access to the model without sending any trading data.
     fn check(&self, key: &ApiKey, model: &str) -> Result<(), AiError>;
     fn analyze_image(&self, key: &ApiKey, request: &ImageRequest) -> Result<AnalysisReply, AiError>;
+    /// One request of a conversation with tools (lot 21, coach). The caller runs the tools and loops.
+    fn converse(&self, key: &ApiKey, request: &ConverseRequest) -> Result<ConverseReply, AiError>;
+}
+
+/// One request of the coach's conversation: the fixed instructions and tools, the whole message list
+/// (history of the same conversation, then this question's messages), and whether tools may be called.
+#[derive(Clone, Copy)]
+pub struct ConverseRequest<'a> {
+    pub model: &'a str,
+    pub system: &'a str,
+    pub tools: &'a serde_json::Value,
+    pub messages: &'a [serde_json::Value],
+    /// `false` on the last request allowed for a question: the AI must answer with what it has.
+    pub allow_tools: bool,
+}
+
+impl fmt::Debug for ConverseRequest<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ConverseRequest({}, {} messages, tools allowed: {})", self.model, self.messages.len(), self.allow_tools)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopReason {
+    /// The answer is complete.
+    EndTurn,
+    /// The AI asks for one or more tools (`tool_use` blocks of `content`).
+    ToolUse,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConverseReply {
+    /// The AI's content blocks, to send back **unchanged** in the next requests (thinking blocks included).
+    pub content: Vec<serde_json::Value>,
+    pub stop: StopReason,
+    /// The model that actually answered (may differ after a server-side refusal fallback).
+    pub model: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
 }
 
 #[derive(Debug, Clone, Copy)]

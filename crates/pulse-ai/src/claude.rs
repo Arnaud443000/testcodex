@@ -1,7 +1,7 @@
 //! Claude through the Anthropic Messages API (raw HTTPS: there is no official Rust SDK).
 //! Request shape, headers and error types follow the `claude-api` skill documentation.
 
-use crate::{AiError, AnalysisReply, ApiKey, ImageRequest, Provider, Timeouts};
+use crate::{AiError, AnalysisReply, ApiKey, ConverseReply, ConverseRequest, ImageRequest, Provider, StopReason, Timeouts};
 use serde_json::{json, Value};
 use ureq::Agent;
 
@@ -117,6 +117,60 @@ pub(crate) fn parse_reply(body: &str) -> Result<AnalysisReply, AiError> {
     Ok(AnalysisReply { text, model })
 }
 
+/// The coach's request body (lot 21): manual tool loop, non-streamed, `tool_choice` `auto` (forced tool use
+/// is refused by Claude Opus 5.5 / Sonnet 5.5) or `none` for the last request, automatic prompt caching.
+/// No `thinking` and no sampling parameter: each model keeps its defaults.
+pub(crate) fn converse_body(r: &ConverseRequest) -> Value {
+    let mut body = json!({
+        "model": r.model,
+        "max_tokens": MAX_TOKENS,
+        "system": r.system,
+        "tools": r.tools,
+        "tool_choice": { "type": if r.allow_tools { "auto" } else { "none" } },
+        "messages": r.messages,
+        "cache_control": { "type": "ephemeral" }
+    });
+    if uses_fallback(r.model) {
+        body["fallbacks"] = json!("default");
+    }
+    body
+}
+
+/// Content to replay: after a mid-output refusal fallback, the thinking and tool-use blocks before the last
+/// `fallback` block belong to the declined attempt and are left out (documented echo rule).
+pub(crate) fn echoable(content: Vec<Value>) -> Vec<Value> {
+    let Some(boundary) = content.iter().rposition(|b| b["type"] == "fallback") else { return content };
+    content
+        .into_iter()
+        .enumerate()
+        .filter(|(i, b)| *i > boundary || !matches!(b["type"].as_str(), Some("thinking" | "redacted_thinking" | "tool_use")))
+        .map(|(_, b)| b)
+        .collect()
+}
+
+/// Reads a 200 answer of the coach: stop reason first, then the content.
+pub(crate) fn parse_converse(body: &str) -> Result<ConverseReply, AiError> {
+    let v: Value = serde_json::from_str(body).map_err(|_| AiError::UnexpectedResponse)?;
+    let stop = match v["stop_reason"].as_str() {
+        Some("refusal") => return Err(AiError::Refused),
+        Some("max_tokens") => return Err(AiError::Truncated),
+        Some("end_turn" | "stop_sequence") => StopReason::EndTurn,
+        Some("tool_use") => StopReason::ToolUse,
+        _ => return Err(AiError::UnexpectedResponse),
+    };
+    let content = echoable(v["content"].as_array().ok_or(AiError::UnexpectedResponse)?.clone());
+    if stop == StopReason::ToolUse && !content.iter().any(|b| b["type"] == "tool_use") {
+        return Err(AiError::UnexpectedResponse);
+    }
+    Ok(ConverseReply {
+        content,
+        stop,
+        model: v["model"].as_str().ok_or(AiError::UnexpectedResponse)?.to_owned(),
+        input_tokens: v["usage"]["input_tokens"].as_u64().unwrap_or(0),
+        output_tokens: v["usage"]["output_tokens"].as_u64().unwrap_or(0),
+    })
+}
+
 fn transport_error(e: ureq::Error) -> AiError {
     match e {
         ureq::Error::Timeout(_) => AiError::Timeout,
@@ -175,6 +229,27 @@ impl Provider for Claude {
         let response = call.send(body.as_bytes()).map_err(transport_error)?;
         match read(response)? {
             (200, body) => parse_reply(&body),
+            (status, body) => Err(status_error(status, &body)),
+        }
+    }
+
+    fn converse(&self, key: &ApiKey, request: &ConverseRequest) -> Result<ConverseReply, AiError> {
+        if !valid_model(request.model) {
+            return Err(AiError::Rejected);
+        }
+        let body = converse_body(request).to_string();
+        let mut call = self
+            .analysis_agent
+            .post(format!("{}/v1/messages", self.base))
+            .header("x-api-key", key.expose())
+            .header("anthropic-version", ANTHROPIC_VERSION)
+            .header("content-type", "application/json");
+        if uses_fallback(request.model) {
+            call = call.header("anthropic-beta", FALLBACK_BETA);
+        }
+        let response = call.send(body.as_bytes()).map_err(transport_error)?;
+        match read(response)? {
+            (200, body) => parse_converse(&body),
             (status, body) => Err(status_error(status, &body)),
         }
     }

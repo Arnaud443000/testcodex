@@ -21,6 +21,7 @@ import { TradeDetailPage } from './pages/TradeDetailPage'
 import { TradeFormPage } from './pages/TradeFormPage'
 import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { CoachPage } from './pages/CoachPage'
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="/replay" element={<ReplayPage />} />
                 <Route path="/alerts" element={<AlertHistoryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/coach" element={<CoachPage />} />
               </Routes>
               </div>
             </div>

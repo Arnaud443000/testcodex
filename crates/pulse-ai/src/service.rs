@@ -26,6 +26,10 @@ pub enum ServiceError {
     KeyFormat,
     VaultUnavailable,
     VaultFailure,
+    /// Lot 21: an empty question, or one over the length limit.
+    QuestionInvalid,
+    /// Lot 21: the conversation is full or was written with another list of tools.
+    ConversationClosed,
     Ai(AiError),
     /// A database or validation error of pulse-core (its message holds no key and no AI answer).
     Core(String),
@@ -43,6 +47,8 @@ impl ServiceError {
             ServiceError::KeyFormat => "keyFormat",
             ServiceError::VaultUnavailable => "vaultUnavailable",
             ServiceError::VaultFailure => "vaultFailure",
+            ServiceError::QuestionInvalid => "questionInvalid",
+            ServiceError::ConversationClosed => "conversationClosed",
             ServiceError::Ai(e) => e.code(),
             ServiceError::Core(_) => return None,
         })
@@ -230,6 +236,9 @@ mod tests {
         fn analyze_image(&self, key: &ApiKey, r: &ImageRequest) -> Result<AnalysisReply, AiError> {
             self.calls.lock().unwrap().push(format!("analyze {} {} {} | {}", r.model, key.expose(), r.image_media_type, r.text));
             self.answer.clone()
+        }
+        fn converse(&self, _key: &ApiKey, _r: &crate::ConverseRequest) -> Result<crate::ConverseReply, AiError> {
+            Err(AiError::UnexpectedResponse)
         }
     }
 

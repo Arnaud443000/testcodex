@@ -111,6 +111,8 @@ const PATHS = {
       <path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" />
     </>
   ),
+  // Lot 21 : coach IA (bulle de discussion).
+  coach: <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 9.5h8M8 12.5h5" />,
 } as const
 
 export type IconName = keyof typeof PATHS

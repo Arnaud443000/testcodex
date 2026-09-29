@@ -40,6 +40,8 @@ pub mod dashboards;
 pub mod insights;
 // Lot 20 (IA optionnelle, sans réseau ici).
 pub mod ai;
+// Lot 21 (coach IA : outils locaux, historique ; sans réseau ici).
+pub mod coach;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

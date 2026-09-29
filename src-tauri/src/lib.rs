@@ -654,7 +654,15 @@ pub fn run() {
             preview_screenshot_analysis,
             analyze_screenshot,
             list_screenshot_notes,
-            delete_screenshot_note
+            delete_screenshot_note,
+            get_coach_status,
+            record_coach_consent,
+            ask_coach,
+            list_coach_conversations,
+            get_coach_conversation,
+            rename_coach_conversation,
+            delete_coach_conversation,
+            delete_all_coach_conversations
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1106,4 +1114,150 @@ fn list_screenshot_notes(state: State<AppState>, trade_id: i64) -> Result<Vec<pu
 fn delete_screenshot_note(state: State<AppState>, id: i64) -> Result<(), String> {
     let conn = state.db.lock().map_err(err)?;
     pulse_core::ai::delete_note(&conn, id).map_err(err)
+}
+
+// --- Lot 21 : coach IA (outils locaux en lecture seule dans pulse-core, boucle d'outils dans pulse-ai) ---
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CoachLimits {
+    max_question_chars: usize,
+    max_tool_calls: usize,
+    max_requests: usize,
+    max_turns: usize,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CoachToolInfo {
+    name: String,
+    description: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CoachStatus {
+    enabled: bool,
+    vault_available: bool,
+    key_stored: bool,
+    /// When the user accepted the coach's own first-use explanation; `None` = never, or since turned off.
+    consent_at: Option<i64>,
+    model: String,
+    provider: &'static str,
+    provider_host: &'static str,
+    limits: CoachLimits,
+    /// The closed list of tools the AI may call, as sent to it.
+    tools: Vec<CoachToolInfo>,
+}
+
+fn coach_status(conn: &Connection, ai: &AiState) -> Result<CoachStatus, String> {
+    let settings = pulse_core::ai::get_settings(conn).map_err(err)?;
+    let key = pulse_ai::service::key_status(ai.vault.as_ref());
+    let tools = pulse_core::coach::tools::definitions()
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .map(|t| CoachToolInfo { name: t["name"].as_str().unwrap_or_default().to_owned(), description: t["description"].as_str().unwrap_or_default().to_owned() })
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(CoachStatus {
+        enabled: settings.enabled,
+        vault_available: key.vault_available,
+        key_stored: key.stored,
+        consent_at: pulse_core::coach::coach_consent_at(conn).map_err(err)?,
+        model: settings.model,
+        provider: ai.provider.id(),
+        provider_host: AI_PROVIDER_HOST,
+        limits: CoachLimits {
+            max_question_chars: pulse_core::coach::MAX_QUESTION_CHARS,
+            max_tool_calls: pulse_core::coach::MAX_TOOL_CALLS,
+            max_requests: pulse_core::coach::MAX_REQUESTS,
+            max_turns: pulse_core::coach::MAX_TURNS,
+        },
+        tools,
+    })
+}
+
+#[tauri::command]
+fn get_coach_status(state: State<AppState>, ai: State<AiState>) -> Result<CoachStatus, String> {
+    let conn = state.db.lock().map_err(err)?;
+    coach_status(&conn, &ai)
+}
+
+/// The user ticked the coach's first-use explanation.
+#[tauri::command]
+fn record_coach_consent(state: State<AppState>, ai: State<AiState>) -> Result<CoachStatus, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::record_coach_consent(&conn, now_ms()).map_err(err)?;
+    coach_status(&conn, &ai)
+}
+
+/// On demand only, after the user clicked « Envoyer » (`confirmed`). Async: the network calls run off the
+/// main thread; the database is locked only to prepare, for each tool call, and to store the turn.
+#[tauri::command]
+async fn ask_coach(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    ai: State<'_, AiState>,
+    conversation_id: Option<i64>,
+    question: String,
+    account_ids: Vec<i64>,
+    tz_offset_min: i32,
+    confirmed: bool,
+) -> Result<pulse_core::coach::CoachTurn, String> {
+    let request = pulse_ai::coach::AskRequest { conversation_id, question, account_ids, tz_offset_min, confirmed };
+    let prepared = {
+        let conn = state.db.lock().map_err(err)?;
+        pulse_ai::coach::prepare_question(&conn, &request, now_ms()).map_err(|e| e.to_string())?
+    };
+    let (vault, provider) = (ai.vault.clone(), ai.provider.clone());
+    let (prepared, result) = tauri::async_runtime::spawn_blocking(move || {
+        let mut run_tool = |scope: &pulse_core::coach::ToolScope, name: &str, input: &serde_json::Value| {
+            let state = app.state::<AppState>();
+            let guard = state.db.lock();
+            match guard {
+                Ok(conn) => pulse_core::coach::tools::run(&conn, scope, name, input),
+                Err(_) => pulse_core::coach::ToolOutput { content: serde_json::json!({ "error": "Base de données indisponible." }), is_error: true },
+            }
+        };
+        let result = pulse_ai::coach::run_question(&prepared, vault.as_ref(), provider.as_ref(), &mut run_tool);
+        (prepared, result)
+    })
+    .await
+    .map_err(err)?;
+    let result = result.map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(err)?;
+    pulse_ai::coach::store_question(&conn, &prepared, ai.provider.id(), &result, now_ms()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_coach_conversations(state: State<AppState>) -> Result<Vec<pulse_core::coach::ConversationSummary>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::list_conversations(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn get_coach_conversation(state: State<AppState>, id: i64) -> Result<pulse_core::coach::Conversation, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::get_conversation(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn rename_coach_conversation(state: State<AppState>, id: i64, title: String) -> Result<pulse_core::coach::ConversationSummary, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::rename_conversation(&conn, id, &title).map_err(err)
+}
+
+#[tauri::command]
+fn delete_coach_conversation(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::delete_conversation(&conn, id).map_err(err)
+}
+
+/// Deletes every conversation (the interface asks for confirmation first); returns how many there were.
+#[tauri::command]
+fn delete_all_coach_conversations(state: State<AppState>) -> Result<usize, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::coach::delete_all_conversations(&conn).map_err(err)
 }

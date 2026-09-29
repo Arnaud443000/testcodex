@@ -48,6 +48,8 @@ pub fn set_settings(conn: &Connection, update: &AiSettingsUpdate) -> Result<AiSe
     write(&tx, MODEL, (model != DEFAULT_MODEL).then_some(model))?;
     if !update.enabled {
         write(&tx, CONSENT_AT, None)?;
+        // Lot 21: the coach's own consent goes too.
+        write(&tx, crate::coach::COACH_CONSENT_AT, None)?;
     }
     tx.commit()?;
     get_settings(conn)
