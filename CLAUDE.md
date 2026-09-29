@@ -69,7 +69,8 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étapes 3 à 5
 Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé** : alertes à seuils (à relier aux réglages du lot 8 et aux règles personnelles), coach IA. Le reste : Sonnet, moyen.
-- [ ] Lot 12 — Alertes à seuils (garde-fous, 3.6.1 à 3.6.7) : moteur dans `pulse-core` (`alerts/`), seuils `alerts.*` + réglages `behavior.*` repris, historique et alertes masquées (migration v8), commandes Tauri, types TS, faux backend, bannière dans la coque ; voir « Alertes à seuils (lot 12) » (**Opus, élevé**)
+- [x] Lot 12 — Alertes à seuils (garde-fous, 3.6.1 à 3.6.7) : moteur dans `pulse-core` (`alerts/`), seuils `alerts.*` + réglages `behavior.*` repris, historique et alertes masquées (migration v8), commandes Tauri, types TS, faux backend, bannière dans la coque ; voir « Alertes à seuils (lot 12) » (**Opus, élevé**)
+  - **Fait** : `crates/pulse-core/src/alerts/` (moteur pur, seuils, historique ; 22 tests Rust dont la migration v8), commandes `get_active_alerts`, `dismiss_alert`, `get_alert_history`, `get/set_alert_settings` (fin de `src-tauri/src/lib.rs`), types `src/types/alerts.ts`, faux backend `src/lib/mockAlerts.ts` + `mockAlerts` en fin de `mockBackend.ts` (vérifié par `mockAlerts.test.ts` sur les mêmes journaux), bannière `components/AlertBanner.tsx` (textes `alerts` de `fr.ts`, formatage `lib/alertFormat.ts`). Captures : `docs/captures/lot12-*.png`. **Migration v8** (`alert_log`) : à renuméroter si une autre branche ajoute aussi une v8.
 
 ## Argent, prix et temps (décision du lot 2)
 
@@ -260,3 +261,11 @@ Ordre de la liste : gravité (critical d'abord), puis l'ordre du tableau, puis l
 - **Migration v8** : table `alert_log` (`alert_id` unique, compte avec suppression en cascade, `kind`, `severity`, `trade_id` sans clé étrangère pour survivre à la suppression du trade, `payload` = l'alerte en JSON telle qu'affichée la première fois, `first_seen_at`, `dismissed_at`). `active_alerts` y inscrit chaque alerte la première fois qu'elle est vue (c'est un **journal d'événements**, pas un cache : les alertes actives sont toujours recalculées) et ne renvoie pas les alertes masquées. `alert_history` relit ce journal (plus récentes d'abord).
 - **Quand** : la coque évalue le compte du trade juste après `create_trade` / `update_trade` (inscription dans l'historique à l'instant de la saisie ; une erreur d'évaluation n'empêche jamais l'enregistrement) ; l'interface appelle `get_active_alerts` à l'ouverture, à chaque changement de page, au retour sur la fenêtre et toutes les minutes.
 - Interface (lot 12) : seulement une bannière dans la coque (`AlertBanner`, même style que la bannière du rappel du journal) avec « Voir le trade » et « Masquer ». La page de réglages des seuils sera faite ensuite.
+
+### Laissé pour plus tard (lot 12)
+
+- Page de réglages des seuils `alerts.*` (une autre conversation) ; les réglages `behavior.*` repris restent dans Paramètres > Seuils de discipline.
+- Avertissement « sans stop loss » **dans le formulaire**, avant validation (3.6.6) : l'aperçu renvoie déjà `stopLoss = missing`, le formulaire n'affiche pour l'instant que le stop du mauvais côté. De même, aucune évaluation « si j'enregistre ce trade » (revanche, limite du jour) avant l'enregistrement.
+- Lien entre une **règle personnelle** et un seuil (3.6.9, « règle quantifiable reliée à une alerte ») : aucune colonne ni interface pour l'instant.
+- Aucune notification Windows pour les alertes : seulement la bannière dans l'application.
+- Alerte de dépassement du risque max par trade (`behavior.max_risk_percent`, 3.4.11) : non demandée dans 3.6.1 à 3.6.6, facile à ajouter sur le même modèle.

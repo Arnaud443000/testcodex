@@ -53,3 +53,12 @@ Registre des retours après essai de l'application installée. Chaque retour est
 - « Moyenne après 2 pertes », « Taille après une perte », simulation du plan et facteurs externes s'affichent sur la page Comportement. La simulation est étiquetée « Simulation » : elle retire des trades passés, elle ne rejoue pas les sorties.
 - Les facteurs externes sont sur la page Comportement (pas dans l'onglet Journal) : à confirmer que cet emplacement vous convient.
 - Rendu vérifié en Chromium headless (1440×900, 1920×1080) avec des données de démonstration du faux backend uniquement ; **pas** sur un vrai Windows / WebView2, ni avec la vraie base SQLite.
+
+## Lot 12 (alertes à seuils) — points à vérifier
+- Une bannière « Garde-fou déclenché » apparaît en haut de chaque page quand une alerte est active (pertes d'affilée, trop de trades, perte du jour ou de la semaine, revanche, heures ou session inhabituelles, trade sans stop loss). « Masquer » la fait disparaître pour de bon ; elle ne revient que si la situation s'aggrave (une perte de plus, un trade de plus au-delà de la limite…).
+- Valeurs par défaut choisies (à confirmer ou ajuster) : 3 pertes d'affilée, 3 trades maximum par heure, perte du jour 3 % du solde, perte de la semaine 6 %, revanche / session inhabituelle / trade sans stop actifs ; seuils en argent et plage horaire désactivés. La limite de trades **par jour** reste celle des Seuils de discipline (désactivée tant qu'elle n'est pas réglée).
+- Les seuils ne se règlent pas encore depuis l'interface (page de réglages à venir).
+- **Migration v8** (historique des alertes) : sauvegarde automatique avant migration comme d'habitude ; testée en Rust sur une base en mémoire avec des données existantes, **pas** sur votre vraie base.
+- Rendu vérifié en Chromium headless (1440×900, 1920×1080) sur le faux backend uniquement ; **pas** sur un vrai Windows / WebView2. Le calcul du décalage horaire côté coque (évaluation juste après l'enregistrement d'un trade) n'a pas été essayé sous Windows.
+- Signalé, non corrigé : le faux backend du navigateur annonce une version de schéma 6 dans ses sauvegardes simulées (`mockBackend.ts`, `infoOf`) ; sans effet sur l'application réelle.
+
