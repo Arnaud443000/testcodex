@@ -3,8 +3,8 @@
 //!
 //! Every figure comes from the same engines as the rest of the application
 //! (`stats::report`, `execution_quality::report`); nothing is stored but the
-//! target. The discipline score is not a goal metric yet: it will be added with
-//! the behaviour module.
+//! target. The discipline score (0–100, `behavior::discipline_report`) is a metric like
+//! the others; like everywhere else it is undefined (`no_data`) below 5 scored trades.
 //!
 //! - A trade counts in the month where it is **closed**, in the trader's local days
 //!   (the offset is given by the caller, like the calendar).
@@ -13,6 +13,7 @@
 //! - Without a closed trade in the month there is nothing to measure: `no_data`.
 //! - "Month over" means the local day `today` is after the last day of the month.
 
+use crate::behavior;
 use crate::error::{CoreError, Result};
 use crate::execution_quality;
 use crate::money::{self, Decimal};
@@ -34,6 +35,7 @@ text_enum!(
         ExpectancyR => "expectancy_r",
         ExecutionQuality => "execution_quality",
         MaxDrawdown => "max_drawdown",
+        DisciplineScore => "discipline_score",
     }
 );
 
@@ -63,7 +65,7 @@ pub struct Goal {
     pub month: String,
     pub metric: GoalMetric,
     /// Money for `net_pnl` and `max_drawdown`; percent (0–100) for `win_rate`;
-    /// 1–5 for `execution_quality`; a plain ratio otherwise.
+    /// 1–5 for `execution_quality`; 0–100 for `discipline_score`; a plain ratio otherwise.
     pub target: Decimal,
 }
 
@@ -97,6 +99,9 @@ pub fn set(conn: &Connection, new: &NewGoal) -> Result<Goal> {
         }
         GoalMetric::ExecutionQuality if new.target > Decimal::from(5) => {
             return Err(CoreError::Invalid("an execution-quality target is between 1 and 5 stars".into()));
+        }
+        GoalMetric::DisciplineScore if new.target > Decimal::from(100) => {
+            return Err(CoreError::Invalid("a discipline-score target is between 1 and 100".into()));
         }
         _ => {}
     }
@@ -213,6 +218,13 @@ pub fn progress(conn: &Connection, q: &ProgressQuery) -> Result<Vec<GoalProgress
     let (from, to) = (midnight(first), midnight(first + days));
     let report = stats::report(conn, &StatsQuery { account_ids: q.account_ids.clone(), from: Some(from), to: Some(to), ..Default::default() })?;
     let quality = execution_quality::report(conn, &PeriodQuery { account_ids: q.account_ids.clone(), from: Some(from), to: Some(to) })?;
+    // The score has its own minimum (5 scored trades); only computed when a goal asks for it.
+    let discipline_score = if goals.iter().any(|g| g.metric == GoalMetric::DisciplineScore) {
+        let query = StatsQuery { account_ids: q.account_ids.clone(), from: Some(from), to: Some(to), ..Default::default() };
+        behavior::discipline_report(conn, &query)?.score
+    } else {
+        None
+    };
     let last_day = format!("{}-{:02}", q.month, days);
     let month_over = q.today.as_str() > last_day.as_str();
     let s = &report.summary;
@@ -230,6 +242,7 @@ pub fn progress(conn: &Connection, q: &ProgressQuery) -> Result<Vec<GoalProgress
                     GoalMetric::ProfitFactor => (None, s.profit_factor),
                     GoalMetric::ExpectancyR => (None, s.expectancy_r),
                     GoalMetric::ExecutionQuality => (None, quality.average_stars),
+                    GoalMetric::DisciplineScore => (None, discipline_score),
                 }
             };
             let direction = goal.metric.direction();
@@ -394,6 +407,44 @@ mod tests {
         let dd = of(GoalMetric::MaxDrawdown);
         assert_eq!((dd.direction, dd.actual_money, dd.status), (Direction::AtMost, Some(dec("10")), Status::InProgress));
         assert!((dd.fraction.unwrap() - 10.0 / 15.0).abs() < 1e-12);
+    }
+
+    /// With a planned stop, no rule, no checklist and no risk limit, only the plan (30), the stop (10) and
+    /// the behaviour (10) count: plan yes → 100, partial → (15 + 20) / 50 = 70, no → 20 / 50 = 40,
+    /// not filled in → the plan is left out → 20 / 20 = 100.
+    #[test]
+    fn discipline_score_goal_uses_the_monthly_score_and_needs_five_trades() {
+        let conn = db::open_in_memory().unwrap();
+        let a = account(&conn, "10000");
+        let i = instrument(&conn, "EURUSD", "1");
+        let plans = [Some(PlanFollowed::Yes), Some(PlanFollowed::No), Some(PlanFollowed::Partial), None, Some(PlanFollowed::Yes)];
+        for (n, plan) in plans.iter().enumerate() {
+            if n == 4 {
+                // Four trades so far: not enough for a score.
+                set(&conn, &new("2026-10", GoalMetric::DisciplineScore, "80")).unwrap();
+                let p = progress_on(&conn, "2026-10", "2026-10-31");
+                assert_eq!((p[0].trade_count, p[0].actual_ratio, p[0].fraction, p[0].status), (4, None, None, Status::NoData));
+            }
+            trade(&conn, a, i, (2026, 10, 1 + 2 * n as u32), "110", *plan);
+        }
+        // Scores 100, 40, 70, 100, 100 → mean 410 / 5 = 82.
+        let p = progress_on(&conn, "2026-10", "2026-10-31");
+        assert_eq!(p[0].direction, Direction::AtLeast);
+        assert!((p[0].actual_ratio.unwrap() - 82.0).abs() < 1e-9);
+        assert!((p[0].fraction.unwrap() - 82.0 / 80.0).abs() < 1e-12);
+        assert_eq!(p[0].status, Status::Reached);
+
+        // A higher target: in progress during the month, missed once it is over.
+        set(&conn, &new("2026-10", GoalMetric::DisciplineScore, "90")).unwrap();
+        assert_eq!(progress_on(&conn, "2026-10", "2026-10-31")[0].status, Status::InProgress);
+        assert_eq!(progress_on(&conn, "2026-10", "2026-11-01")[0].status, Status::Missed);
+
+        // A month without any trade has no data; targets above 100 are refused.
+        set(&conn, &new("2026-11", GoalMetric::DisciplineScore, "80")).unwrap();
+        assert_eq!(progress_on(&conn, "2026-11", "2026-11-30")[0].status, Status::NoData);
+        assert!(set(&conn, &new("2026-11", GoalMetric::DisciplineScore, "100.5")).is_err());
+        assert!(set(&conn, &new("2026-11", GoalMetric::DisciplineScore, "0")).is_err());
+        assert!(set(&conn, &new("2026-11", GoalMetric::DisciplineScore, "100")).is_ok());
     }
 
     #[test]

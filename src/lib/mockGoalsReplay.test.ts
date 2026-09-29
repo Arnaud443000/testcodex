@@ -49,14 +49,19 @@ describe('faux backend : objectifs', () => {
     await expect(mockGoalsReplay.setGoal({ month: '2026-09', metric: 'net_pnl', target: '0' })).rejects.toThrow('greater than zero')
     await expect(mockGoalsReplay.setGoal({ month: '2026-09', metric: 'win_rate', target: '101' })).rejects.toThrow('at most 100')
     await expect(mockGoalsReplay.setGoal({ month: '2026-09', metric: 'execution_quality', target: '6' })).rejects.toThrow('1 and 5')
+    await expect(mockGoalsReplay.setGoal({ month: '2026-09', metric: 'discipline_score', target: '101' })).rejects.toThrow('1 and 100')
     await mockGoalsReplay.setGoal({ month: '2026-09', metric: 'net_pnl', target: '20' })
   })
 
   it('mesure les objectifs sur le mois, comme pulse-core', async () => {
     await mockGoalsReplay.setGoal({ month: '2026-09', metric: 'win_rate', target: '80' })
     await mockGoalsReplay.setGoal({ month: '2026-09', metric: 'max_drawdown', target: '15' })
+    const discipline = await mockGoalsReplay.setGoal({ month: '2026-09', metric: 'discipline_score', target: '80' })
     const p = await mockGoalsReplay.getGoalProgress(query('2026-09', '2026-09-29'))
     const of = (m: string) => p.find((x) => x.goal.metric === m)!
+    // 4 trades clôturés seulement : le score de discipline n'est pas établi (minimum 5), jamais compté comme 0.
+    expect(of('discipline_score')).toMatchObject({ actualRatio: null, fraction: null, status: 'no_data' })
+    await mockGoalsReplay.deleteGoal(discipline.id)
     expect(of('net_pnl')).toMatchObject({ actualMoney: '25', fraction: 1.25, status: 'reached' })
     expect(of('win_rate')).toMatchObject({ actualRatio: 75, fraction: 0.9375, status: 'in_progress' })
     expect(of('max_drawdown')).toMatchObject({ direction: 'at_most', actualMoney: '10', status: 'in_progress' })

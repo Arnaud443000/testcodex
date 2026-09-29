@@ -29,6 +29,7 @@ describe('affichage des cibles et des valeurs', () => {
     expect(formatTarget('win_rate', '55.5', 'USD')).toBe('55,5\u00a0%')
     expect(formatTarget('execution_quality', '4', 'USD')).toBe('4,0 / 5')
     expect(formatTarget('profit_factor', '1.5', 'USD')).toBe('1,50')
+    expect(formatTarget('discipline_score', '80', 'USD')).toBe('80 / 100')
     expect(formatTarget('net_pnl', '500', 'USD')).toContain('500')
   })
   it('signe le P&L, écrit ∞ pour un profit factor sans perte, — sans mesure', () => {
@@ -38,6 +39,8 @@ describe('affichage des cibles et des valeurs', () => {
     expect(formatActual(progress({ metric: 'win_rate', actualRatio: 75 }), 'USD')).toBe('75,0\u00a0%')
     expect(formatActual(progress({ metric: 'profit_factor', fraction: 1, status: 'reached' }), 'USD')).toBe('∞')
     expect(formatActual(progress({ metric: 'net_pnl', status: 'no_data' }), 'USD')).toBe('—')
+    expect(formatActual(progress({ metric: 'discipline_score', actualRatio: 82 }), 'USD')).toBe('82 / 100')
+    expect(formatActual(progress({ metric: 'discipline_score', status: 'no_data' }), 'USD')).toBe('—')
     expect(formatActual(progress({ metric: 'expectancy_r', actualRatio: 0.625 }), 'USD')).toBe('+0,63\u00a0R')
   })
 })

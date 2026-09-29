@@ -21,6 +21,7 @@ export function checkGoal(month: string, metric: GoalMetric, target: Decimal): v
   const n = Number(target)
   if (!/^\d+(\.\d+)?$/.test(target) || !(n > 0)) throw new Error('invalid input: target must be greater than zero')
   if (metric === 'win_rate' && n > 100) throw new Error('invalid input: a win-rate target is a percentage: at most 100')
+  if (metric === 'discipline_score' && n > 100) throw new Error('invalid input: a discipline-score target is between 1 and 100')
   if (metric === 'execution_quality' && n > 5) throw new Error('invalid input: an execution-quality target is between 1 and 5 stars')
 }
 
@@ -30,6 +31,7 @@ export function mockProgress(
   summary: Summary,
   currency: string | null,
   averageStars: number | null,
+  disciplineScore: number | null,
   month: string,
   today: string,
 ): GoalProgress[] {
@@ -45,6 +47,7 @@ export function mockProgress(
       else if (goal.metric === 'win_rate') actualRatio = summary.winRate === null ? null : summary.winRate * 100
       else if (goal.metric === 'profit_factor') actualRatio = summary.profitFactor
       else if (goal.metric === 'expectancy_r') actualRatio = summary.expectancyR
+      else if (goal.metric === 'discipline_score') actualRatio = disciplineScore
       else actualRatio = averageStars
     }
     const direction = directionOf(goal.metric)

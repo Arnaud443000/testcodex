@@ -117,6 +117,7 @@ export function GoalsPage() {
     if (value === null || signOf(value) <= 0) return setFormError(g.errTarget)
     if (metric === 'win_rate' && Number(value) > 100) return setFormError(g.errWinRate)
     if (metric === 'execution_quality' && Number(value) > 5) return setFormError(g.errQuality)
+    if (metric === 'discipline_score' && Number(value) > 100) return setFormError(g.errDiscipline)
     setBusy(true)
     try {
       await api.setGoal({ month, metric, target: value })

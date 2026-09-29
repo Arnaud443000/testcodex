@@ -1,12 +1,12 @@
 import type { Decimal } from './money'
 
 /** Miroir de pulse-core::goals. */
-export type GoalMetric = 'net_pnl' | 'win_rate' | 'profit_factor' | 'expectancy_r' | 'execution_quality' | 'max_drawdown'
+export type GoalMetric = 'net_pnl' | 'win_rate' | 'profit_factor' | 'expectancy_r' | 'execution_quality' | 'max_drawdown' | 'discipline_score'
 export type GoalDirection = 'at_least' | 'at_most'
 export type GoalStatus = 'reached' | 'in_progress' | 'missed' | 'exceeded' | 'no_data'
 
 /** Les métriques proposées, dans l'ordre d'affichage. */
-export const GOAL_METRICS: GoalMetric[] = ['net_pnl', 'win_rate', 'profit_factor', 'expectancy_r', 'execution_quality', 'max_drawdown']
+export const GOAL_METRICS: GoalMetric[] = ['net_pnl', 'win_rate', 'profit_factor', 'expectancy_r', 'execution_quality', 'max_drawdown', 'discipline_score']
 
 export interface Goal {
   id: number

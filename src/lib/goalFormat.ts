@@ -30,6 +30,8 @@ export function formatTarget(metric: GoalMetric, target: Decimal, currency: stri
       return `${formatNumber(Number(target), Number.isInteger(Number(target)) ? 0 : 1)}\u00a0%`
     case 'execution_quality':
       return `${formatNumber(Number(target), 1)} / 5`
+    case 'discipline_score':
+      return `${formatNumber(Number(target), Number.isInteger(Number(target)) ? 0 : 1)} / 100`
     case 'expectancy_r':
       return formatR(Number(target)).replace(/^\+/, '')
     case 'profit_factor':
@@ -47,6 +49,8 @@ export function formatActual(p: GoalProgress, currency: string): string {
       return `${formatNumber(p.actualRatio, 1)}\u00a0%`
     case 'execution_quality':
       return `${formatNumber(p.actualRatio, 1)} / 5`
+    case 'discipline_score':
+      return `${formatNumber(p.actualRatio, 0)} / 100`
     case 'expectancy_r':
       return formatR(p.actualRatio, 2)
     default:

@@ -658,7 +658,10 @@ export const mockGoalsReplay = {
     const from = Date.UTC(year, month - 1, 1) - q.tzOffsetMin * 60_000
     const to = Date.UTC(year, month, 1) - q.tzOffsetMin * 60_000
     const quality = mockQualityReport(viewsOf(q.accountIds), { accountIds: q.accountIds, from, to })
-    return mockProgress(list, cal.summary, cal.currency, quality.averageStars, q.month, q.today)
+    const disciplineScore = list.some((g) => g.metric === 'discipline_score')
+      ? behavior.mockDiscipline(behaviorInput(q.accountIds), { accountIds: q.accountIds, from, to }).score
+      : null
+    return mockProgress(list, cal.summary, cal.currency, quality.averageStars, disciplineScore, q.month, q.today)
   },
   listReplay: async (filter?: ReplayFilter | null): Promise<ReplayItem[]> =>
     viewsOf(filter?.accountIds)

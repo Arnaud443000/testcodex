@@ -288,6 +288,21 @@ pub const MIGRATIONS: &[&str] = &[
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
         UNIQUE (month, metric)
     );",
+    // v7 — the discipline score becomes a goal metric (spec 3.7.2, 3.4.1). SQLite cannot change a CHECK
+    // in place, so `goals` is rebuilt with the wider list; ids, targets and dates are copied as they are.
+    "CREATE TABLE goals_new (
+        id         INTEGER PRIMARY KEY,
+        month      TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'),
+        metric     TEXT NOT NULL
+                   CHECK (metric IN ('net_pnl','win_rate','profit_factor','expectancy_r','execution_quality','max_drawdown','discipline_score')),
+        target     TEXT NOT NULL
+                   CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*' AND target GLOB '*[1-9]*'),
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (month, metric)
+    );
+    INSERT INTO goals_new (id, month, metric, target, created_at) SELECT id, month, metric, target, created_at FROM goals;
+    DROP TABLE goals;
+    ALTER TABLE goals_new RENAME TO goals;",
 ];
 
 pub fn latest_version() -> u32 {
@@ -569,7 +584,7 @@ mod tests {
         let account = account_v2(&conn);
         conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
 
-        migrate(&mut conn).unwrap();
+        migrate_to(&mut conn, 6).unwrap();
         assert_eq!(current_version(&conn).unwrap(), 6);
         let account_still_there: i64 =
             conn.query_row("SELECT COUNT(*) FROM accounts WHERE id = ?1", [account], |r| r.get(0)).unwrap();
@@ -590,5 +605,40 @@ mod tests {
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '0')", []).is_err());
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'sharpe', '1')", []).is_err());
         assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '1e2')", []).is_err());
+    }
+
+    #[test]
+    fn v7_adds_discipline_score_goals_and_keeps_existing_goals() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 6).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500.50')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '55')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-08', 'max_drawdown', '120')", []).unwrap();
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).is_err(), "not allowed before v7");
+        let before: Vec<(i64, String, String, String, String)> = conn
+            .prepare("SELECT id, month, metric, target, created_at FROM goals ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+            .unwrap()
+            .collect::<std::result::Result<_, _>>()
+            .unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 7);
+        let after: Vec<(i64, String, String, String, String)> = conn
+            .prepare("SELECT id, month, metric, target, created_at FROM goals ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+            .unwrap()
+            .collect::<std::result::Result<_, _>>()
+            .unwrap();
+        assert_eq!(before, after, "existing goals are kept exactly, ids and dates included");
+        // The new metric is accepted; the old guards still hold.
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).is_ok());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '85')", []).is_err(), "one goal per month and metric");
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '0')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'sharpe', '1')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '1e2')", []).is_err());
     }
 }
