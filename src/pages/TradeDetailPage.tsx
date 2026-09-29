@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -185,6 +186,8 @@ export function TradeDetailPage() {
               warn={oc !== null && signOf(oc) > 0}
             />
           </div>
+
+          <TradeDisciplineCard tradeId={trade.id} />
         </div>
 
         <aside className="flex flex-col gap-5">
