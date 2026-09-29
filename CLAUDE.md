@@ -759,3 +759,46 @@ Règle unique au démarrage : **si `pulse.db` existe, il fait foi** (il n'est ja
 - WebView2 : l'enregistrement automatique des mots de passe est désactivé par défaut dans WebView2 (réglage `IsPasswordAutosaveEnabled`), non vérifié dans Pulse installé.
 - Le faux backend ne simule pas l'échec d'écriture (bandeau « Vos dernières modifications ne sont pas enregistrées » jamais affiché en capture).
 
+
+## Calculateur de position (lot 27) — interprétation
+
+Code : `crates/pulse-core/src/sizing.rs` (module pur, `Decimal` partout, aucun flottant sauf le ratio gain / risque qui est un ratio sans unité). Point d'entrée pur : `sizing::size(&SizingInput)` ; enveloppe SQLite : `sizing::calculate(conn, &SizingRequest)`. Commande Tauri : `calculate_position_size`. **Aucune migration.** C'est un **calcul**, jamais une recommandation : ni la taille ni le risque choisi ne sont conseillés, l'interface le dit.
+
+### Formule
+
+- **Solde de référence** = solde réel du compte **maintenant** (comme le lot 8) : capital initial + dépôts / retraits + PnL nets des trades clôturés (`stats::replay(...).final_balance`). Les trades ouverts n'y comptent pas, les frais non plus (voir limites).
+- **Risque voulu** : au choix un **pourcentage du solde** (`1.5` = 1,5 %, `> 0` et `≤ 100`, solde > 0 obligatoire) ou un **montant** (devise du compte, `> 0`). `risque voulu = % × solde / 100` en mode pourcentage.
+- **Risque par unité de taille** = `|entrée − stop| × multiplicateur` (le multiplicateur est celui de l'instrument, modifiable dans le calculateur ; même sens que « Argent, prix et temps »).
+- **Taille brute** = `risque voulu / risque par unité`.
+- **Taille retenue** = taille brute arrondie **vers le bas** au pas de taille (`floor(brute / pas) × pas`). Jamais vers le haut : le risque réel ne dépasse jamais le risque voulu. Garde-fou : si, malgré l'arrondi de la division (28 chiffres), le risque réel dépassait le risque voulu, on retire un pas.
+- **Risque réel** = `taille retenue × risque par unité` (exact) ; en % du solde = risque réel / solde × 100 (arrondi à 4 décimales à l'**affichage** de la sortie seulement ; la comparaison à la limite se fait sur les valeurs exactes) ; **écart** = risque voulu − risque réel (≥ 0, dû au seul arrondi).
+- **Take profit** (optionnel) : bon côté (au-dessus de l'entrée pour un long, en dessous pour un short) → gain potentiel = `taille retenue × |TP − entrée| × multiplicateur` et ratio gain / risque = `|TP − entrée| / |entrée − stop|` (même fonction que le reste de l'application, `pnl::planned_reward_risk`). **TP du mauvais côté ou égal à l'entrée : pas de ratio** (comme ailleurs), le résultat porte `takeProfitWrongSide = true` et l'interface l'écrit ; ce n'est pas un refus (le calcul de taille n'en dépend pas).
+- **Limite de risque max** (`behavior.max_risk_percent`, lot 8) : si elle est réglée et que le solde est > 0, `dépasse = risque réel × 100 > limite × solde`, **comparaison exacte en `Decimal`** (`risk::within_limit`, comme le lot 17) ; **égalité = respecté**. La limite en argent est renvoyée. Sans limite ou sans solde > 0 : pas de contrôle (jamais un avertissement « par défaut »). Le calcul reste fourni : c'est un avertissement, pas un refus.
+
+### Pas de taille (aucune migration : décision)
+
+Aucune colonne « pas de taille » n'existe sur `instruments` : ajouter un champ demanderait une migration (et toucher au catalogue de 106 actifs), donc **non fait** ; à décider avec l'utilisateur. À la place : un **pas par défaut par classe d'actif**, **modifiable dans le calculateur** (champ « Pas de taille » pré-rempli, jamais enregistré dans l'instrument) :
+
+| Classe | Pas par défaut | Raison |
+|---|---|---|
+| Forex (`forex`) | `0.01` | micro-lot sur un multiplicateur de 100 000 |
+| Indice (`index`) | `0.01` | CFD d'indice, taille en contrats |
+| Matière première (`commodity`) | `0.01` | CFD, taille en lots |
+| Crypto (`crypto`) | `0.0001` | ≈ quelques dollars pour un BTC ; beaucoup de courtiers exigent bien plus gros : à ajuster |
+| Action (`stock`) | `1` | actions entières |
+| Future (`future`) | `1` | contrats entiers |
+| Autre (`other`) | `0.01` | par prudence |
+
+Ces pas sont des valeurs **courantes, à vérifier auprès du courtier** (le minimum et le pas réels varient d'un courtier à l'autre) ; le résultat indique quel pas a servi et s'il est celui par défaut (`sizeStepIsDefault`).
+
+### Refus (codes d'erreur traduisibles)
+
+Le résultat est une donnée : `{status: "ok", …}` ou `{status: "refused", code, detail}` (pas d'exception : ce sont des saisies invalides). Les erreurs de base de données restent des erreurs de commande. Codes : `priceNotPositive` (entrée, stop ou TP ≤ 0), `stopEqualsEntry`, `stopWrongSide` (stop au-dessus de l'entrée pour un long, en dessous pour un short), `riskNotPositive` (risque ≤ 0), `riskPercentTooHigh` (> 100 %), `balanceNotPositive` (solde ≤ 0 en mode pourcentage), `multiplierNotPositive`, `stepNotPositive`, `sizeZero` (**le risque voulu est trop faible pour le pas minimum** ; `detail` = le risque qu'aurait la taille minimum, pour l'expliquer ; on ne propose jamais la taille minimum en silence), `overflow` (débordement de calcul, jamais un plantage). Ordre de contrôle : prix, sens du stop, risque, solde, multiplicateur, pas, taille.
+
+### Limites connues
+
+- **Multiplicateur approximatif** pour une paire dont la devise de cotation n'est pas celle du compte (USDJPY sur compte USD) : le multiplicateur saisi est une approximation (voir « Argent, prix et temps »), donc le risque réel aussi.
+- **Frais, spread et slippage non inclus** : la taille est calculée sur la distance au stop seule ; un stop touché coûtera un peu plus que le risque affiché.
+- Le solde ne tient pas compte des trades ouverts (PnL latent) ni d'un dépôt / retrait futur.
+- Pas de conversion de devise : le montant de risque est dans la devise du compte.
+- Pas de marge, effet de levier ni taille maximale du courtier : rien n'est vérifié contre ce que le courtier autorise.
