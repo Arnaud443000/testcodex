@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
+import { DataPanel } from '../components/DataPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
@@ -210,6 +211,7 @@ export function SettingsPage() {
       <RulesSection />
       <ChecklistSection />
       <CashFlowsPanel />
+      <DataPanel />
 
       <section className="glass-card p-6">
         <h3 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h3>
