@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
 import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
@@ -141,6 +142,13 @@ export function SettingsPage() {
   const archived = allAccounts.filter((a) => a.archived)
   const t = useT()
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const { hash } = useLocation()
+  // Lien direct « /settings#alertes » : fait défiler jusqu'à la section une fois la page dessinée.
+  useEffect(() => {
+    if (!hash) return
+    const timer = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView(), 300)
+    return () => clearTimeout(timer)
+  }, [hash])
   useEffect(() => {
     api.appInfo().then(setInfo).catch(() => setInfo(null))
   }, [])

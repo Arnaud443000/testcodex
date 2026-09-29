@@ -11,6 +11,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { JournalPage } from './pages/JournalPage'
+import { AlertHistoryPage } from './pages/AlertHistoryPage'
 import { AnalysesPage } from './pages/AnalysesPage'
 import { ReplayPage } from './pages/ReplayPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
@@ -45,6 +46,7 @@ export default function App() {
                 <Route path="/journal" element={<JournalPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/replay" element={<ReplayPage />} />
+                <Route path="/alerts" element={<AlertHistoryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
               </div>

@@ -1364,6 +1364,44 @@ export const fr = {
     moneyNote: 'Les montants sont lus dans la devise de chaque compte. Avec des comptes de tailles très différentes, préférez les pourcentages.',
   },
 
+  // --- Lot 15 : historique des alertes ---
+  alertHistory: {
+    title: 'Historique des alertes',
+    subtitle: (period: string, account: string) => `Toutes les alertes déclenchées · ${period} · ${account}`,
+    allAccounts: 'tous les comptes',
+    settingsLink: 'Régler les seuils',
+    back: 'Retour',
+    typeFilter: 'Type d’alerte',
+    allTypes: 'Tous les types',
+    resetFilters: 'Réinitialiser le type',
+    kinds: {
+      consecutiveLosses: 'Pertes consécutives',
+      tradesPerDay: 'Trades par jour',
+      tradesPerWindow: 'Trades trop rapprochés',
+      dailyLoss: 'Stop pour aujourd’hui',
+      weeklyLoss: 'Stop pour la semaine',
+      revenge: 'Trade de revanche',
+      outsideHours: 'Hors de vos horaires',
+      unusualSession: 'Session inhabituelle',
+      noStopLoss: 'Trade sans stop loss',
+    } as Record<string, string>,
+    count: (shown: number, total: number) => (shown === total ? `${shown} ${shown > 1 ? 'alertes' : 'alerte'}` : `${shown} sur ${total} alertes`),
+    truncated: (n: number) => `Seules les ${n} alertes les plus récentes sont chargées.`,
+    dismissedOn: (date: string) => `Masquée le ${date}`,
+    notDismissed: 'Non masquée',
+    viewTrade: 'Voir le trade',
+    loadError: (detail: string) => `Impossible de charger l’historique : ${detail}`,
+    emptyTitle: 'Aucune alerte déclenchée',
+    emptyText:
+      'C’est bon signe : aucun de vos garde-fous ne s’est déclenché. Les alertes apparaissent ici dès qu’un seuil est franchi, même si vous les masquez ensuite.',
+    emptyFilteredTitle: 'Aucune alerte pour ces filtres',
+    emptyFilteredText: 'Élargissez la période (barre du haut), choisissez un autre compte ou un autre type d’alerte.',
+    noAccountTitle: 'Créez d’abord un compte',
+    noAccountText: 'Les alertes se déclenchent à partir des trades d’un compte.',
+    createAccount: 'Créer un compte',
+    bannerLink: 'Voir l’historique',
+  },
+
   // Analyses d'étape 3 (lot 14) : par actif, frais, stratégies, système / discrétionnaire.
   analyses: {
     subtitle: (period: string) => `Actifs, frais, stratégies et méthode · ${period}`,
