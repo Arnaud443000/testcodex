@@ -803,3 +803,100 @@ export const mockAi = createAiMock({
   screenshot: (path) => screenshots.get(path),
   now: () => Date.now(),
 })
+// --- Lot 21 : coach IA — SIMULATION, aucun appel réseau (voir mockCoach.ts) ---
+// Le faux coach n'appelle qu'une partie des outils de pulse-core (résumé de période, jours de la semaine,
+// erreurs récurrentes, discipline, comptes) ; les autres répondent « non simulé ».
+import { createCoachMock, type CoachScope, type CoachToolOutput } from './mockCoach'
+import { summarize } from './mockStats'
+const COACH_TOOLS: { name: string; description: string }[] = [
+  ['list_accounts', 'Comptes de la portée (identifiant, devise, type, archivé, nombre de trades clôturés) et date locale du jour.'],
+  ['period_summary', 'Indicateurs de performance d’une fenêtre (PnL, win rate, profit factor, expectancy, drawdown…), avec la fenêtre précédente en option.'],
+  ['segments', 'Indicateurs par segment : jour, heure, session, setup, émotion, actif, sens…'],
+  ['recurring_mistakes', 'Erreurs récurrentes (tags d’erreur et règles non respectées), par coût et par fréquence.'],
+  ['discipline', 'Score de discipline, composantes, gagnant / perdant × bien / mal exécuté.'],
+  ['streaks_and_sequences', 'Séries, revanches, surtrading, après 2 pertes, taille après une perte.'],
+  ['plan_and_rules', 'Dans le plan / hors plan, simulation du plan, respect des règles.'],
+  ['risk', 'Risque par trade en % du solde à l’entrée (sans solde ni capital).'],
+  ['external_factors', 'Résultats selon les facteurs notés du journal (jamais son texte).'],
+  ['fees_and_holding_time', 'Frais et temps en position.'],
+  ['insights', 'Insights automatiques du moment.'],
+  ['alerts_today', 'Alertes garde-fous d’aujourd’hui.'],
+  ['trade_list', 'Liste courte de trades (20 au plus) : identifiants et chiffres, jamais de texte libre.'],
+].map(([name, description]) => ({ name, description }))
+
+const COACH_PERIODS: Record<string, DashboardQuery['period']> = { '1J': 'day', '1S': 'week', '1M': 'month', '3M': 'quarter', '1A': 'year', Tout: 'all' }
+const coachError = (msg: string): CoachToolOutput => ({ content: { error: msg }, isError: true })
+
+function coachTool(scope: CoachScope, name: string, input: Record<string, unknown>): CoachToolOutput {
+  const accountId = input.accountId as number | undefined
+  if (accountId != null && !scope.accountIds.includes(accountId)) return coachError('accountId doit être un compte de la portée (voir list_accounts).')
+  const ids = accountId != null ? [accountId] : scope.accountIds
+  const label = (input.period as string | undefined) ?? '1M'
+  const period = COACH_PERIODS[label]
+  if (!period) return coachError(`Période inconnue : ${label} (1J, 1S, 1M, 3M, 1A ou Tout).`)
+  try {
+    const dash = mockDashboard(ledgerOf(ids), { accountIds: ids, period, nowMs: scope.nowMs, tzOffsetMin: scope.tzOffsetMin })
+    const window = { label, from: dash.from == null ? null : dayKey(dash.from, scope.tzOffsetMin), to: dayKey(scope.nowMs, scope.tzOffsetMin) }
+    const q: StatsQuery = { accountIds: ids, from: dash.from, to: dash.to }
+    switch (name) {
+      case 'list_accounts':
+        return {
+          content: {
+            today: dayKey(scope.nowMs, scope.tzOffsetMin),
+            accounts: accounts
+              .filter((a) => scope.accountIds.includes(a.id))
+              .map((a) => ({ id: a.id, currency: a.currency, type: a.kind, archived: a.archived, closedTradeCount: [...trades.values()].filter((t) => t.accountId === a.id && t.exitTime != null).length })),
+          },
+          isError: false,
+        }
+      case 'period_summary':
+        return {
+          content: {
+            window,
+            currency: dash.report.currency,
+            openTradeCount: dash.report.openTradeCount,
+            summary: dash.report.summary,
+            ...(input.comparePrevious && dash.previous ? { previous: { summary: dash.previous }, comparison: dash.comparison } : {}),
+          },
+          isError: false,
+        }
+      case 'segments': {
+        if (input.by !== 'weekday') return coachError('Découpage non simulé dans le navigateur (seulement weekday).')
+        const closed = ledgerOf(ids).closed.filter((c) => (dash.from == null || c.exitTime >= dash.from) && (dash.to == null || c.exitTime < dash.to))
+        const weekdayOf = (c: (typeof closed)[number]) => {
+          const t = trades.get(c.id)!
+          return ((new Date(t.entryTime + t.tzOffsetMin * 60_000).getUTCDay() + 6) % 7) + 1
+        }
+        const segments = [1, 2, 3, 4, 5, 6, 7].flatMap((d) => {
+          const set = closed.filter((c) => weekdayOf(c) === d)
+          if (!set.length) return []
+          const s = summarize(set)
+          return [{ key: String(d), label: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][d - 1], tradeCount: s.tradeCount, winRate: s.winRate, netPnl: s.netPnl, avgNetPnl: s.avgNetPnl, expectancyR: s.expectancyR }]
+        })
+        return { content: { window, currency: dash.report.currency, by: 'weekday', segments }, isError: false }
+      }
+      case 'recurring_mistakes': {
+        const m = behavior.mockMistakes(behaviorInput(ids), q)
+        const keep = (x: (typeof m.byCost)[number]) => ({ source: x.source, label: x.label, tradeCount: x.tradeCount, share: x.share, netPnl: x.netPnl, cost: x.cost, expectancyR: x.expectancyR })
+        return { content: { window, tradeCount: m.tradeCount, tradesWithMistake: m.tradesWithMistake, byCost: m.byCost.slice(0, 10).map(keep), byCount: m.byCount.slice(0, 10).map(keep) }, isError: false }
+      }
+      case 'discipline': {
+        const d = behavior.mockDiscipline(behaviorInput(ids), q)
+        return { content: { window, score: d.score, scoredTradeCount: d.scoredTradeCount, sampleTooSmall: d.sampleTooSmall, components: d.components, quadrants: d.quadrants }, isError: false }
+      }
+      default:
+        return coachError(`Outil non simulé dans le navigateur : ${name}.`)
+    }
+  } catch {
+    return coachError('Les comptes de la portée ont des devises différentes : précisez accountId (un compte).')
+  }
+}
+
+import { dayKey } from './mockStats'
+export const mockCoach = createCoachMock({
+  aiStatus: () => mockAi.getAiStatus(),
+  scope: (ids) => (ids.length ? ids.filter((id) => accounts.some((a) => a.id === id)) : accounts.filter((a) => !a.archived).map((a) => a.id)),
+  runTool: coachTool,
+  tools: () => COACH_TOOLS,
+  now: () => Date.now(),
+})

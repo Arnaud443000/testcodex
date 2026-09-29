@@ -400,6 +400,23 @@ export const api = {
     inTauri ? invoke('list_screenshot_notes', { tradeId }) : mockAi.listScreenshotNotes(tradeId),
   deleteScreenshotNote: (id: number): Promise<void> =>
     inTauri ? invoke('delete_screenshot_note', { id }) : mockAi.deleteScreenshotNote(id),
+
+  // --- Lot 21 : coach IA (outils locaux en lecture seule ; réseau seulement dans pulse-ai ; simulation dans le navigateur) ---
+  getCoachStatus: (): Promise<CoachStatus> => (inTauri ? invoke('get_coach_status') : mockCoach.getCoachStatus()),
+  /** Consentement propre au coach (distinct de celui de l'analyse de screenshot). */
+  recordCoachConsent: (): Promise<CoachStatus> => (inTauri ? invoke('record_coach_consent') : mockCoach.recordCoachConsent()),
+  /** À la demande, après le clic sur « Envoyer ». Erreurs : codes `ai:…` (voir `aiErrorMessage`). */
+  askCoach: (r: AskCoachRequest): Promise<CoachTurn> => (inTauri ? invoke('ask_coach', { ...r }) : mockCoach.askCoach(r)),
+  listCoachConversations: (): Promise<ConversationSummary[]> =>
+    inTauri ? invoke('list_coach_conversations') : mockCoach.listCoachConversations(),
+  getCoachConversation: (id: number): Promise<Conversation> =>
+    inTauri ? invoke('get_coach_conversation', { id }) : mockCoach.getCoachConversation(id),
+  renameCoachConversation: (id: number, title: string): Promise<ConversationSummary> =>
+    inTauri ? invoke('rename_coach_conversation', { id, title }) : mockCoach.renameCoachConversation(id, title),
+  deleteCoachConversation: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_coach_conversation', { id }) : mockCoach.deleteCoachConversation(id),
+  deleteAllCoachConversations: (): Promise<number> =>
+    inTauri ? invoke('delete_all_coach_conversations') : mockCoach.deleteAllCoachConversations(),
 }
 
 
@@ -411,3 +428,5 @@ import type { Insight, InsightRecord } from '../types/insights'
 import { mockInsights } from './mockBackend'
 import type { AiSendPreview, AiSettingsUpdate, AiStatus, ScreenshotNote } from '../types/ai'
 import { mockAi } from './mockBackend'
+import type { AskCoachRequest, CoachStatus, CoachTurn, Conversation, ConversationSummary } from '../types/coach'
+import { mockCoach } from './mockBackend'
