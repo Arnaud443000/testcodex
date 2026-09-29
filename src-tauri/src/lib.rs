@@ -766,7 +766,9 @@ pub fn run() {
             lock_cmds::set_lock_idle,
             lock_cmds::lock_touch,
             lock_cmds::retry_persist,
-            lock_cmds::quit_discarding_changes
+            lock_cmds::quit_discarding_changes,
+            get_trade_card_figures,
+            save_trade_card_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1364,4 +1366,21 @@ fn delete_coach_conversation(state: State<AppState>, id: i64) -> Result<(), Stri
 fn delete_all_coach_conversations(state: State<AppState>) -> Result<usize, String> {
     let conn = state.conn()?;
     pulse_core::coach::delete_all_conversations(&conn).map_err(err)
+}
+
+// --- Lot 24 : carte de trade partageable (3.7.7) ---
+
+/// R, return in percent and (for the optional « show the PnL » box) net PnL of one trade; never a balance.
+#[tauri::command]
+fn get_trade_card_figures(state: State<AppState>, trade_id: i64) -> Result<pulse_core::stats::trade_card::TradeCardFigures, String> {
+    let conn = state.conn()?;
+    pulse_core::stats::trade_card::trade_card_figures(&conn, trade_id).map_err(err)
+}
+
+/// Writes the card (PNG drawn by the interface, base64) to the path chosen in the native « save as » dialog.
+/// Local only, no network. Unlocked only, like the CSV export.
+#[tauri::command]
+fn save_trade_card_image(state: State<AppState>, path: String, image: String) -> Result<usize, String> {
+    let _open = state.conn()?;
+    pulse_core::stats::trade_card::write_png(std::path::Path::new(&path), &image).map_err(err)
 }
