@@ -5,6 +5,8 @@ import { AccountsProvider } from './lib/accounts'
 import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
 import { AlertBanner } from './components/AlertBanner'
+import { InsightsProvider } from './lib/insights'
+import { InsightsPage } from './pages/InsightsPage'
 import { DisciplinePage } from './pages/DisciplinePage'
 import { BehaviorPage } from './pages/BehaviorPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -25,6 +27,7 @@ export default function App() {
     <AccountsProvider>
       <PeriodProvider>
       <HashRouter>
+        <InsightsProvider>
         <div className="app-shell flex h-full">
           <Sidebar />
           <main className="flex min-w-0 flex-1 flex-col">
@@ -45,6 +48,7 @@ export default function App() {
                 <Route path="/comparisons" element={<ComparisonsPage />} />
                 <Route path="/behavior" element={<BehaviorPage />} />
                 <Route path="/discipline" element={<DisciplinePage />} />
+                <Route path="/insights" element={<InsightsPage />} />
                 <Route path="/journal" element={<JournalPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/replay" element={<ReplayPage />} />
@@ -55,6 +59,7 @@ export default function App() {
             </div>
           </main>
         </div>
+        </InsightsProvider>
       </HashRouter>
       </PeriodProvider>
     </AccountsProvider>

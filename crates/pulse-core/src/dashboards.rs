@@ -131,6 +131,8 @@ const LIBRARY: &[Def] = &[
     def("rules", "behavior", (10, 18), (8, 10), &[], true, true),
     def("hesitation", "behavior", (10, 18), (8, 10), &[], true, true),
     def("factors", "behavior", (20, 18), (12, 12), &[], true, true),
+    // Insights (lot 19 bis): fixed windows (last 20 trades, 90 days), so no period of its own.
+    def("insights", "behavior", (12, 20), (8, 10), &[], false, true),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

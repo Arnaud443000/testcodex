@@ -16,6 +16,7 @@ export const fr = {
     comparisons: 'Comparaisons',
     behavior: 'Comportement',
     discipline: 'Discipline',
+    insights: 'Insights',
     journal: 'Journal',
     goals: 'Objectifs',
     replay: 'Replay',

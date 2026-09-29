@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AssetsPanel } from '../components/analyses/AssetsPanel'
 import { ExecutionPanel } from '../components/analyses/ExecutionPanel'
 import { FeesPanel } from '../components/analyses/FeesPanel'
@@ -22,6 +22,8 @@ type Tab = 'assets' | 'fees' | 'strategies' | 'execution' | MoreTab
 /** Onglets du lot 16 (deuxième rangée). */
 type MoreTab = 'opportunity' | 'year' | 'duration' | 'scaling'
 const MORE_TABS: MoreTab[] = ['opportunity', 'year', 'duration', 'scaling']
+const ALL_TABS: Tab[] = ['assets', 'fees', 'strategies', 'execution', 'opportunity', 'year', 'duration', 'scaling']
+const parseTab = (v: string | null): Tab => ALL_TABS.find((t) => t === v) ?? 'assets'
 const isMore = (tab: Tab): tab is MoreTab => (MORE_TABS as string[]).includes(tab)
 
 /** Page « Analyses » (étape 3) : quatre analyses de pulse-core, sans aucun calcul ici (on formate, on trie, on dessine). */
@@ -31,7 +33,9 @@ export function AnalysesPage() {
   const more = t.analysesMore
   const { accounts, allAccounts, loading, selectedId } = useAccounts()
   const { period } = usePeriod()
-  const [tab, setTab] = useState<Tab>('assets')
+  // Depuis la page Insights : « /analytics?tab=scaling » ouvre directement l'onglet du rapport concerné.
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => parseTab(params.get('tab')))
   const [granularity, setGranularity] = useState<FeeGranularity>('month')
   const [data, setData] = useState<{ assets: AssetRow[]; strategies: StrategyRow[]; execution: ExecutionReport } | null>(null)
   const [fees, setFees] = useState<FeeReport | null>(null)

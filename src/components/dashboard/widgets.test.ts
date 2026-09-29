@@ -46,11 +46,21 @@ describe('bibliothèque de widgets', () => {
   it('devises mélangées : chaque widget lié à des comptes explique pourquoi il est vide', async () => {
     const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
     const mixed = env([account(1, 'USD'), account(2, 'EUR')])
-    for (const d of catalog) {
+    // Les insights évaluent chaque compte seul (chacun avec sa devise) : aucune somme, donc aucun blocage.
+    for (const d of catalog.filter((c) => c.kind !== 'insights')) {
       const out = html(instance(d.kind), mixed)
       expect(out, d.kind).toContain(fr.dashboardBuilder.mixedCurrencies)
       expect(out, d.kind).toContain(fr.dashboardBuilder.widgets[d.kind].title)
     }
+  })
+
+  it('insights : le widget ne bloque pas sur des devises mélangées et n’a pas de période propre', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'insights')!
+    expect([d.period, d.account, d.modes]).toEqual([false, true, []])
+    const out = html(instance('insights'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.insights.title)
   })
 
   it('compte fixé qui a disparu : message clair, jamais de chiffres de tous les comptes', async () => {

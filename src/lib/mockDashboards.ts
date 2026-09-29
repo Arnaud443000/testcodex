@@ -61,6 +61,8 @@ const LIBRARY: WidgetDefinition[] = [
   def('rules', 'behavior', [10, 18], [8, 10], [], true, true),
   def('hesitation', 'behavior', [10, 18], [8, 10], [], true, true),
   def('factors', 'behavior', [20, 18], [12, 12], [], true, true),
+  // Insights (lot 19 bis) : fenêtres fixes du moteur, donc pas de période propre.
+  def('insights', 'behavior', [12, 20], [8, 10], [], false, true),
 ]
 
 const w = (uid: string, kind: string, x: number, y: number, wd: number, h: number, mode: string | null = null): WidgetInstance => ({
