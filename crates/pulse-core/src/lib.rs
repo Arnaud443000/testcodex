@@ -44,6 +44,8 @@ pub mod ai;
 pub mod coach;
 // Lot 22 (verrouillage optionnel par mot de passe, chiffrement de la base et des captures).
 pub mod lock;
+// Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
+pub mod news;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

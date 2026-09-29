@@ -415,6 +415,27 @@ pub const MIGRATIONS: &[&str] = &[
             OR (status = 'failed' AND answer IS NULL AND transcript IS NULL AND error_code IS NOT NULL))
     );
     CREATE INDEX coach_conversations_by_update ON coach_conversations (updated_at);",
+    // v14 — economic calendar (lot 25, spec 3.6.8; to renumber if another branch also adds a v14).
+    // Events read from a file or a feed; nothing links them to a trade (the alert compares instants).
+    // `starts_at` is a UTC instant (NULL = no time given), `day` the Paris day; forecast / previous /
+    // actual are the source's text (unit included), never money, never added up.
+    "CREATE TABLE economic_events (
+        id         INTEGER PRIMARY KEY,
+        source     TEXT NOT NULL CHECK (length(source) BETWEEN 1 AND 20),
+        uid        TEXT NOT NULL CHECK (length(uid) BETWEEN 1 AND 400),
+        starts_at  INTEGER,
+        day        TEXT NOT NULL CHECK (length(day) = 10),
+        currency   TEXT NOT NULL DEFAULT '' CHECK (length(currency) IN (0, 3)),
+        title      TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
+        importance TEXT NOT NULL CHECK (importance IN ('low','medium','high')),
+        forecast   TEXT,
+        previous   TEXT,
+        actual     TEXT,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (source, uid)
+    );
+    CREATE INDEX economic_events_by_day ON economic_events (day);
+    CREATE INDEX economic_events_by_start ON economic_events (importance, starts_at);",
 ];
 
 pub fn latest_version() -> u32 {
