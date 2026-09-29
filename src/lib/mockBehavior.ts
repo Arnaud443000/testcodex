@@ -665,3 +665,9 @@ export function mockPlanSimulation(input: BehaviorInput, q: StatsQuery): PlanSim
   }
   return { declaredTradeCount, actual, withoutOffPlan: scenario(['no']), withoutOffPlanOrPartial: scenario(['no', 'partial']) }
 }
+
+// --- Lot 12 : alertes à seuils ---
+/** La détection de revanche du lot 8, telle quelle, pour les alertes du faux backend (`mockAlerts.ts`). */
+export function mockRevengeOf(input: BehaviorInput, t: TradeView): Revenge | null {
+  return context(input).revenge(t)
+}

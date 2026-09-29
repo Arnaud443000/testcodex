@@ -261,5 +261,20 @@ export const api = {
   /** Simulation sans les trades hors plan : à étiqueter comme une simulation, jamais un conseil. */
   getPlanSimulation: (query: StatsQuery): Promise<PlanSimulation> =>
     inTauri ? invoke('get_plan_simulation', { query }) : mockBehaviorExtra.getPlanSimulation(query),
+
+  // --- Lot 12 : alertes à seuils (garde-fous, 3.6) ---
+  /** Alertes actives maintenant (comptes actifs si la liste est vide), sans celles déjà masquées. */
+  getActiveAlerts: (accountIds: number[], tzOffsetMin: number): Promise<Alert[]> =>
+    inTauri ? invoke('get_active_alerts', { accountIds, tzOffsetMin }) : mockAlerts.getActiveAlerts(accountIds, tzOffsetMin),
+  /** Masque une alerte pour de bon : elle ne revient jamais sous le même identifiant. */
+  dismissAlert: (alertId: string): Promise<void> => (inTauri ? invoke('dismiss_alert', { alertId }) : mockAlerts.dismissAlert(alertId)),
+  getAlertHistory: (accountIds: number[], limit?: number): Promise<AlertRecord[]> =>
+    inTauri ? invoke('get_alert_history', { accountIds, limit: limit ?? null }) : mockAlerts.getAlertHistory(accountIds, limit),
+  /** Seuils alerts.* ; la limite de trades par jour et la revanche sont dans get/setBehaviorSettings. */
+  getAlertSettings: (): Promise<AlertSettings> => (inTauri ? invoke('get_alert_settings') : mockAlerts.getAlertSettings()),
+  setAlertSettings: (settings: AlertSettings): Promise<AlertSettings> =>
+    inTauri ? invoke('set_alert_settings', { settings }) : mockAlerts.setAlertSettings(settings),
 }
 
+import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
+import { mockAlerts } from './mockBackend'

@@ -683,3 +683,67 @@ export const mockBehaviorExtra = {
   getSizeChange: async (q: StatsQuery) => behavior.mockSizeChange(behaviorInput(q.accountIds), q),
   getPlanSimulation: async (q: StatsQuery) => behavior.mockPlanSimulation(behaviorInput(q.accountIds), q),
 }
+
+// --- Lot 12 : alertes à seuils (garde-fous) ---
+// (imports regroupés ici pour que le lot reste en fin de fichier ; ils sont remontés par le module ES)
+import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
+import { DEFAULT_ALERT_SETTINGS, checkAlertSettings, mockEvaluateAlerts, sortAlerts } from './mockAlerts'
+
+let alertSettings: AlertSettings = { ...DEFAULT_ALERT_SETTINGS }
+/** Historique : chaque alerte vue une fois, et l'instant où elle a été masquée. */
+const alertLog = new Map<string, AlertRecord>()
+
+/** Alertes actives à `now`, chaque compte évalué seul (comptes actifs si la liste est vide). */
+function alertsAt(accountIds: number[], now: number, tz: number): Alert[] {
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
+  const all = chosen.flatMap((account) =>
+    mockEvaluateAlerts(
+      {
+        account,
+        trades: [...trades.values()].filter((t) => t.accountId === account.id).map(view),
+        cashFlows: cashFlows.filter((f) => f.accountId === account.id),
+        tags,
+        behavior: behaviorSettings,
+        settings: alertSettings,
+      },
+      now,
+      tz,
+    ),
+  )
+  return sortAlerts(all)
+}
+
+export const mockAlerts = {
+  /** Pour les tests : évaluation pure à un instant donné, sans toucher à l'historique. */
+  evaluateAt: (accountIds: number[], now: number, tz: number): Alert[] => alertsAt(accountIds, now, tz),
+  getActiveAlerts: async (accountIds: number[], tz: number, now = Date.now()): Promise<Alert[]> => {
+    const visible: Alert[] = []
+    for (const alert of alertsAt(accountIds, now, tz)) {
+      if (!alertLog.has(alert.id)) {
+        alertLog.set(alert.id, {
+          alertId: alert.id, accountId: alert.accountId, kind: alert.kind, severity: alert.severity, tradeId: alert.tradeId,
+          firstSeenAt: now, dismissedAt: null, alert: structuredClone(alert),
+        })
+      }
+      if (alertLog.get(alert.id)!.dismissedAt === null) visible.push(alert)
+    }
+    return visible
+  },
+  dismissAlert: async (alertId: string, now = Date.now()): Promise<void> => {
+    const r = alertLog.get(alertId)
+    if (!r) throw new Error(`not found: alert ${alertId}`)
+    r.dismissedAt ??= now
+  },
+  getAlertHistory: async (accountIds: number[], limit = 100): Promise<AlertRecord[]> =>
+    [...alertLog.values()]
+      .filter((r) => !accountIds.length || accountIds.includes(r.accountId))
+      .reverse()
+      .sort((a, b) => b.firstSeenAt - a.firstSeenAt)
+      .slice(0, limit),
+  getAlertSettings: async (): Promise<AlertSettings> => ({ ...alertSettings }),
+  setAlertSettings: async (s: AlertSettings): Promise<AlertSettings> => {
+    checkAlertSettings(s)
+    alertSettings = { ...s, tradingHours: s.tradingHours?.trim() ?? null }
+    return { ...alertSettings }
+  },
+}
