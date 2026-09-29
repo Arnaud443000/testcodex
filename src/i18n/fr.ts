@@ -1543,6 +1543,7 @@ export const fr = {
   coach: frCoach,
   // Lot 22 : verrouillage par mot de passe
   lock: frLock,
+  pdf: frPdf,
 }
 
 export type Messages = typeof fr
@@ -1550,3 +1551,4 @@ export type Messages = typeof fr
 import { frInsights } from './fr.insights'
 import { frCoach } from './fr.coach'
 import { frLock } from './fr.lock'
+import { frPdf } from './fr.pdf'

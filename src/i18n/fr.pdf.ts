@@ -1,0 +1,48 @@
+/** Textes de l'export PDF d'un bilan de période (lot 23). Rattachés à `fr` sous la clé `pdf`. */
+
+export const frPdf = {
+  title: 'Bilan de période (PDF)',
+  help: 'Un document à imprimer ou à donner à votre comptable : résumé, totaux par mois, liste des trades clôturés, et dépôts / retraits à part. Il ne contient ni notes, ni thèse, ni journal, ni captures.',
+  disclaimer: 'Document informatif, pas un document fiscal officiel : à vérifier avec votre comptable.',
+  plainNote: 'Le PDF n’est pas chiffré, même si le verrouillage par mot de passe est activé.',
+  accountLabel: 'Compte',
+  archivedSuffix: ' (archivé)',
+  noAccount: 'Créez d’abord un compte pour exporter un bilan.',
+  periodLabel: 'Période',
+  period: {
+    lastYear: 'Année précédente',
+    thisYear: 'Année en cours',
+    lastMonth: 'Mois précédent',
+    thisMonth: 'Mois en cours',
+    all: 'Toutes les dates',
+    custom: 'Dates au choix…',
+  },
+  fromLabel: 'Du',
+  toLabel: 'Au (inclus)',
+  periodErrors: {
+    missingDate: 'Choisissez une date de début et une date de fin.',
+    badDate: 'Une des dates n’est pas valide.',
+    reversed: 'La date de début doit précéder la date de fin.',
+  },
+  includeName: 'Inclure le nom du compte dans le document',
+  includeNameHelp: 'Décoché (par défaut), le document ne porte que la devise : le nom de votre compte n’y figure pas.',
+  button: 'Exporter en PDF…',
+  working: 'Création du PDF…',
+  dialog: 'Enregistrer le bilan de période',
+  done: (trades: number, pages: number, path: string) =>
+    `Bilan enregistré dans ${path} (${trades} ${trades > 1 ? 'trades' : 'trade'}, ${pages} ${pages > 1 ? 'pages' : 'page'}).`,
+  doneEmpty: (path: string) => `Bilan enregistré dans ${path} : aucun trade clôturé sur la période, le document l’indique.`,
+  simulation: 'Simulation : dans un navigateur, aucun PDF n’est créé et aucun fichier n’est écrit.',
+  replaceTitle: 'Ce fichier existe déjà.',
+  replaceQuestion: 'Le remplacer par le nouveau bilan ? L’ancien fichier sera perdu.',
+  replaceYes: 'Oui, remplacer',
+  replaceNo: 'Annuler',
+  errors: {
+    noAccount: 'Choisissez un compte.',
+    multipleAccounts: 'Un bilan porte sur un seul compte à la fois.',
+    mixedCurrencies: 'Ce bilan ne peut pas mélanger des comptes de devises différentes.',
+    invalidPeriod: 'La période choisie n’est pas valide : la date de début doit précéder la date de fin.',
+    fileExists: 'Ce fichier existe déjà.',
+    unknown: (detail: string) => `Impossible de créer le PDF : ${detail}`,
+  },
+}

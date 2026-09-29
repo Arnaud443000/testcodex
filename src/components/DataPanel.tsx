@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useLock } from '../lib/lock'
 import { lockErrorText, parseLockError } from '../lib/lockView'
 import type { BackupInfo } from '../types/data'
+import { PdfExportBlock } from './PdfExportBlock'
 import { Field } from './ui'
 
 type Notice = { tone: 'ok' | 'bad'; text: string } | null
@@ -111,6 +112,8 @@ export function DataPanel() {
           </div>
           <button className="btn btn-secondary shrink-0" disabled={busy} onClick={exportCsv}>{d.exportButton}</button>
         </div>
+
+        <PdfExportBlock />
 
         <div className="flex items-start justify-between gap-6">
           <div>

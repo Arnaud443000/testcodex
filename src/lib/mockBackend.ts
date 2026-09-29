@@ -912,3 +912,14 @@ export const mockCoach = createCoachMock({
   tools: () => COACH_TOOLS,
   now: () => Date.now(),
 })
+
+// --- Lot 23 : export PDF (SIMULATION, aucun fichier) ---
+import { createPdfMock } from './mockPdf'
+export const mockPdf = createPdfMock({
+  accounts: () => accounts,
+  closedTradeCount: (accountId, from, to) =>
+    [...trades.values()].filter(
+      (t) => t.accountId === accountId && t.exitPrice != null && t.exitTime != null && (from === null || t.exitTime >= from) && (to === null || t.exitTime < to),
+    ).length,
+})
+
