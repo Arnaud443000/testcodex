@@ -4,6 +4,7 @@
 mod util;
 
 pub mod accounts;
+pub mod backup;
 pub mod cash_flows;
 pub mod checklist;
 pub mod db;
