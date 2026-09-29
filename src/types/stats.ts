@@ -219,3 +219,88 @@ export interface RiskReport {
   currentCapital: Decimal
   limitAmount: Decimal | null
 }
+
+// --- Analyses d'étape 3 (lot 14) : par actif, frais, stratégies, système / discrétionnaire ---
+import type { AssetClass } from './trade'
+
+/** Une ligne de la vue « par actif » (3.3.13). `summary.expectancyR` est le R moyen. */
+export interface AssetRow {
+  instrumentId: number
+  symbol: string
+  assetClass: AssetClass
+  summary: Summary
+  /** frais / PnL brut ; null si le brut n'est pas positif. */
+  feesShareOfGross: number | null
+  /** Moins de 5 trades clôturés : à afficher avec un avertissement. */
+  lowSample: boolean
+}
+
+export type FeeGranularity = 'day' | 'week' | 'month'
+
+export interface FeePoint {
+  tradeId: number
+  time: number
+  cumulativeFees: Decimal
+  cumulativeGrossPnl: Decimal
+  cumulativeNetPnl: Decimal
+}
+
+export interface FeePeriod {
+  /** « AAAA-MM-JJ » (jour, ou lundi de la semaine) ou « AAAA-MM » (mois). */
+  key: string
+  tradeCount: number
+  grossPnl: Decimal
+  fees: Decimal
+  netPnl: Decimal
+  feesShareOfGross: number | null
+  cumulativeFees: Decimal
+}
+
+/** Frais et commissions (3.3.15) : positif = coût, négatif = crédit. */
+export interface FeeReport {
+  tradeCount: number
+  tradesWithFees: number
+  grossPnl: Decimal
+  fees: Decimal
+  netPnl: Decimal
+  feesShareOfGross: number | null
+  feesPerTrade: Decimal | null
+  curve: FeePoint[]
+  periods: FeePeriod[]
+}
+
+export interface StrategyPoint {
+  tradeId: number
+  time: number
+  cumulativeNetPnl: Decimal
+}
+
+/** Une stratégie = un tag « setup » (3.3.16). `tagId` est null pour les trades sans setup. */
+export interface StrategyRow {
+  tagId: number | null
+  name: string
+  summary: Summary
+  shareOfTrades: number | null
+  lowSample: boolean
+  curve: StrategyPoint[]
+}
+
+export interface ExecutionBlock {
+  summary: Summary
+  lowSample: boolean
+}
+
+/** Système contre discrétionnaire (3.3.17), d'après le champ `executionType` du trade. */
+export interface ExecutionReport {
+  system: ExecutionBlock
+  discretionary: ExecutionBlock
+  /** Type jamais renseigné : jamais deviné, jamais compté dans les écarts. */
+  unclassified: ExecutionBlock
+  /** Trades clôturés qu'il faut de chaque côté avant de chiffrer un écart. */
+  minSample: number
+  comparable: boolean
+  /** Système − discrétionnaire, en fraction (0,10 = +10 points). */
+  winRateDelta: number | null
+  expectancyRDelta: number | null
+  avgNetPnlDelta: Decimal | null
+}

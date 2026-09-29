@@ -8,6 +8,7 @@ import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
 import { formatDateTime, formatDuration, formatR } from '../lib/format'
+import { INSTRUMENT_PARAM, SETUP_PARAM, parseIdParam } from '../lib/analysesView'
 import { MISTAKE_PARAM, parseMistakeParam } from '../lib/mistakeFilter'
 import { useReferenceData } from '../lib/referenceData'
 import { NO_FILTERS, applyFilters, hasActiveFilters, isIncomplete, sortTrades, tagOfKind, type ListFilters, type SortDir, type SortKey } from '../lib/tradeList'
@@ -20,8 +21,13 @@ export function TradesPage() {
   const ref = useReferenceData()
   const [trades, setTrades] = useState<TradeView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState<ListFilters>(NO_FILTERS)
   const [params, setParams] = useSearchParams()
+  // Depuis la page Analyses : « /trades?instrument=ID » ou « ?setup=ID » ouvre la liste déjà filtrée.
+  const [filters, setFilters] = useState<ListFilters>(() => ({
+    ...NO_FILTERS,
+    instrumentId: parseIdParam(params.get(INSTRUMENT_PARAM)),
+    setupTagId: parseIdParam(params.get(SETUP_PARAM)),
+  }))
   const mistake = useMemo(() => parseMistakeParam(params.get(MISTAKE_PARAM)), [params])
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'date', dir: 'desc' })
 

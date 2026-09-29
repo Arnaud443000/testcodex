@@ -19,6 +19,8 @@ import type { CalendarQuery, DashboardQuery, StatsQuery } from '../types/stats'
 import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
+import * as analyses from './mockAnalyses'
+import type { FeeGranularity } from '../types/stats'
 import { ASSET_CATALOG } from './assetCatalog'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
 import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
@@ -746,4 +748,12 @@ export const mockAlerts = {
     alertSettings = { ...s, tradingHours: s.tradingHours?.trim() ?? null }
     return { ...alertSettings }
   },
+}
+
+// --- Lot 14 : analyses d'étape 3 (par actif, frais, stratégies, système / discrétionnaire) ---
+export const mockAnalyses = {
+  getAssetReport: async (q: StatsQuery) => analyses.mockAssets(behaviorInput(q.accountIds), q),
+  getFeeReport: async (q: StatsQuery, by?: FeeGranularity) => analyses.mockFees(behaviorInput(q.accountIds), q, by),
+  getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
+  getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
 }

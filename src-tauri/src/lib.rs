@@ -615,7 +615,11 @@ pub fn run() {
             dismiss_alert,
             get_alert_history,
             get_alert_settings,
-            set_alert_settings
+            set_alert_settings,
+            get_asset_report,
+            get_fee_report,
+            get_strategy_report,
+            get_execution_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -706,4 +710,34 @@ fn get_alert_settings(state: State<AppState>) -> Result<AlertSettings, String> {
 fn set_alert_settings(state: State<AppState>, settings: AlertSettings) -> Result<AlertSettings, String> {
     let conn = state.db.lock().map_err(err)?;
     alerts::settings::set(&conn, &settings).map_err(err)
+}
+
+// --- Analyses d'étape 3 (lot 14) : par actif, frais, stratégies, système / discrétionnaire ---
+
+#[tauri::command]
+fn get_asset_report(state: State<AppState>, query: StatsQuery) -> Result<Vec<pulse_core::stats::analyses::AssetRow>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::asset_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_fee_report(
+    state: State<AppState>,
+    query: StatsQuery,
+    granularity: Option<pulse_core::stats::analyses::FeeGranularity>,
+) -> Result<pulse_core::stats::analyses::FeeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::fee_report(&conn, &query, granularity.unwrap_or_default()).map_err(err)
+}
+
+#[tauri::command]
+fn get_strategy_report(state: State<AppState>, query: StatsQuery) -> Result<Vec<pulse_core::stats::analyses::StrategyRow>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::strategy_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_execution_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::analyses::ExecutionReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::execution_report(&conn, &query).map_err(err)
 }

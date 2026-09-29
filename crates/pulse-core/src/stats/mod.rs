@@ -12,6 +12,7 @@
 //! flows this equals the plain "balance / starting balance" curve; with flows,
 //! a deposit never shows up as performance.
 
+pub mod analyses;
 pub mod dashboard;
 pub mod distribution;
 mod load;
@@ -286,3 +287,5 @@ pub(crate) fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
 mod tests;
 #[cfg(test)]
 mod extra_tests;
+#[cfg(test)]
+mod analyses_tests;
