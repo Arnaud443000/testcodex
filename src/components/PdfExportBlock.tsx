@@ -129,7 +129,7 @@ export function PdfExportBlock() {
       )}
 
       {replace && (
-        <div className="nt nt-warn" role="alertdialog" aria-label={p.replaceTitle}>
+        <div className="nt nt-warn flex-col" role="alertdialog" aria-label={p.replaceTitle}>
           <div className="font-medium">{p.replaceTitle}</div>
           <p className="mt-1 break-all text-[13px] text-tx3">{replace.path}</p>
           <p className="mt-1 text-[13px]">{p.replaceQuestion}</p>
