@@ -13,6 +13,7 @@
 //! a deposit never shows up as performance.
 
 pub mod analyses;
+pub mod comparisons;
 pub mod dashboard;
 pub mod distribution;
 mod load;
@@ -289,3 +290,5 @@ mod tests;
 mod extra_tests;
 #[cfg(test)]
 mod analyses_tests;
+#[cfg(test)]
+mod comparisons_tests;
