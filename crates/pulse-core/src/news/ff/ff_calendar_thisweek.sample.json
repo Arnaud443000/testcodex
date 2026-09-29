@@ -1,0 +1,14 @@
+[
+{"title":"G20 Meetings","country":"All","date":"2026-09-27T00:00:00-04:00","impact":"Low","forecast":"","previous":""},
+{"title":"French Flash Manufacturing PMI","country":"EUR","date":"2026-09-28T03:15:00-04:00","impact":"Low","forecast":"48.3","previous":"48.2"},
+{"title":"German Prelim CPI m/m","country":"EUR","date":"2026-09-29T00:00:00-04:00","impact":"High","forecast":"0.2%","previous":"0.1%"},
+{"title":"CB Consumer Confidence","country":"USD","date":"2026-09-29T10:00:00-04:00","impact":"High","forecast":"96.0","previous":"97.4"},
+{"title":"JOLTS Job Openings","country":"USD","date":"2026-09-29T10:00:00-04:00","impact":"Medium","forecast":"7.15M","previous":"7.18M"},
+{"title":"ADP Non-Farm Employment Change","country":"USD","date":"2026-09-30T08:15:00-04:00","impact":"High","forecast":"50K","previous":"54K"},
+{"title":"Crude Oil Inventories","country":"USD","date":"2026-09-30T10:30:00-04:00","impact":"Low","forecast":"","previous":"-0.6M"},
+{"title":"Tankan Manufacturing Index","country":"JPY","date":"2026-09-30T19:50:00-04:00","impact":"Medium","forecast":"14","previous":"13"},
+{"title":"Bank Holiday","country":"CNY","date":"2026-10-01T00:00:00-04:00","impact":"Holiday","forecast":"","previous":""},
+{"title":"CPI Flash Estimate y/y","country":"EUR","date":"2026-10-01T05:00:00-04:00","impact":"High","forecast":"2.2%","previous":"2.0%"},
+{"title":"Unemployment Claims","country":"USD","date":"2026-10-01T08:30:00-04:00","impact":"Medium","forecast":"232K","previous":"218K"},
+{"title":"Non-Farm Employment Change","country":"USD","date":"2026-10-02T08:30:00-04:00","impact":"High","forecast":"50K","previous":"22K"}
+]

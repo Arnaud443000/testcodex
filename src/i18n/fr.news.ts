@@ -1,5 +1,5 @@
 /** Textes du calendrier économique (lot 25). Rattachés à `fr` sous la clé `news`. */
-import type { Importance, SkipReason } from '../types/news'
+import type { Importance, NewsSourceKind, SkipReason } from '../types/news'
 
 export const frNews = {
   importance: { low: 'Faible', medium: 'Moyenne', high: 'Forte' } as Record<Importance, string>,
@@ -16,7 +16,7 @@ export const frNews = {
   /** Codes `news:…` renvoyés par pulse-core et pulse-news. */
   errors: {
     disabled: 'Le calendrier économique est désactivé. Activez-le dans Paramètres > Calendrier économique.',
-    noSource: 'Aucune source en ligne : saisissez l’adresse d’un flux ICS, ou importez un fichier.',
+    noSource: 'Aucune source en ligne : choisissez Forex Factory ou l’adresse d’un flux ICS dans les Paramètres, ou importez un fichier.',
     tooSoon: 'Le calendrier vient d’être actualisé : attendez 5 minutes avant de réessayer.',
     urlNotHttps: 'L’adresse doit commencer par https:// (connexion chiffrée).',
     urlWithCredentials: 'L’adresse ne doit contenir ni identifiant ni mot de passe.',
@@ -37,8 +37,15 @@ export const frNews = {
     rejected: 'Le serveur a refusé la demande.',
     serverError: 'Le serveur du calendrier est en erreur. Réessayez plus tard.',
     tooLarge: 'Réponse trop volumineuse (2 Mo au plus) : elle a été ignorée.',
-    empty: 'Le serveur a répondu sans aucun contenu.',
-    unexpectedResponse: 'La réponse n’est pas un calendrier ICS (page d’erreur ou contenu illisible).',
+    empty: 'La source a répondu sans aucun événement. Les événements déjà enregistrés restent affichés.',
+    unexpectedResponse: 'La réponse n’est pas un calendrier lisible (page d’erreur ou contenu inattendu). Les événements déjà enregistrés restent affichés.',
+    requestDenied:
+      'Forex Factory refuse la demande : trop de téléchargements récents (limite du site, environ 2 toutes les 5 minutes). Réessayez plus tard ; les événements déjà enregistrés restent affichés.',
+    invalidJson: 'La réponse est illisible (données coupées ou corrompues). Les événements déjà enregistrés restent affichés.',
+    unexpectedJson:
+      'La réponse n’a pas la forme attendue : le format de la source a peut-être changé. Les événements déjà enregistrés restent affichés.',
+    consentRequired: 'Cochez la case d’acceptation avant de choisir Forex Factory.',
+    previewOutdated: 'Le résultat du test n’est plus valable (réglages modifiés ou test trop ancien) : testez à nouveau la source.',
     unknown: (detail: string) => `Erreur inattendue : ${detail}`,
   },
 
@@ -55,6 +62,10 @@ export const frNews = {
     missingColumns: 'colonnes manquantes',
     tooManyEvents: 'au-delà de 5 000 événements',
     incomplete: 'événement coupé (fichier tronqué)',
+    missingCurrency: 'devise manquante',
+    missingImportance: 'importance manquante',
+    invalidEntry: 'élément qui n’est pas un événement',
+    duplicate: 'événement en double (gardé une fois)',
   } as Record<SkipReason, string>,
 
   page: {
@@ -76,6 +87,10 @@ export const frNews = {
     lastUpdate: (date: string) => `Dernière mise à jour : ${date}`,
     lastImport: (date: string) => `Dernier import de fichier : ${date}`,
     neverUpdated: 'Jamais mis à jour',
+    removed: (n: number) => `${n} ${n > 1 ? 'événements déplacés ou retirés par la source ont été supprimés' : 'événement déplacé ou retiré par la source a été supprimé'}.`,
+    partial: (msg: string) => `Seule la semaine en cours a été lue. Semaine suivante : ${msg}`,
+    source: (name: string) => `Source : ${name}`,
+    sourceNames: { none: 'fichiers importés', icsUrl: 'flux ICS', forexFactory: 'Forex Factory (non officielle)' } as Record<NewsSourceKind, string>,
     lastError: (msg: string) => `Dernière tentative échouée : ${msg}`,
     offlineSource: 'Aucune source en ligne : les événements viennent de vos fichiers importés.',
     settingsLink: 'Réglages du calendrier',
@@ -85,10 +100,10 @@ export const frNews = {
     loadError: (detail: string) => `Impossible de charger le calendrier : ${detail}`,
     emptyDisabledTitle: 'Calendrier économique désactivé',
     emptyDisabledText:
-      'Il est désactivé par défaut : Pulse ne se connecte à rien. Activez-le dans les Paramètres, puis importez un fichier de calendrier (ICS ou CSV) ou saisissez l’adresse d’un flux ICS de votre choix.',
+      'Il est désactivé par défaut : Pulse ne se connecte à rien. Activez-le dans les Paramètres, puis choisissez une source : Forex Factory (gratuite, non officielle), l’adresse d’un flux ICS, ou un fichier (ICS ou CSV).',
     openSettings: 'Ouvrir les réglages',
     emptyNoEventsTitle: 'Aucun événement enregistré',
-    emptyNoEventsText: 'Importez un fichier de calendrier (ICS ou CSV) ou saisissez l’adresse d’un flux ICS dans les Paramètres, puis actualisez.',
+    emptyNoEventsText: 'Choisissez une source dans les Paramètres (Forex Factory, flux ICS ou fichier), puis actualisez.',
     emptyFilteredTitle: 'Aucun événement pour ces filtres',
     emptyFilteredText: 'Choisissez une autre importance, une autre devise, ou affichez toute la semaine.',
   },
@@ -115,8 +130,36 @@ export const frNews = {
     sourceTitle: 'Source',
     sourceNone: 'Fichiers seulement (aucune connexion)',
     sourceIcs: 'Flux ICS en ligne, à l’adresse de votre choix',
-    sourcePending:
-      'Aucune source en ligne n’est intégrée pour l’instant : le choix d’un fournisseur (gratuit non officiel, ou payant) reste à faire. Un flux ICS dont vous connaissez l’adresse fonctionne dès maintenant.',
+    sourceFf: 'Forex Factory : export hebdomadaire gratuit (non officiel)',
+    sourceHint:
+      'Forex Factory donne les annonces de la semaine en cours et de la suivante, en heure de Paris, avec leur importance. Un flux ICS dont vous connaissez l’adresse, ou un fichier, fonctionnent aussi.',
+    ffTitle: 'Ce qu’il faut savoir sur cette source',
+    ffPoints: [
+      'Source non officielle : Pulse lit l’export hebdomadaire public du site Forex Factory (Fair Economy, Inc.). Ce n’est pas une API officielle, et aucune licence écrite n’autorise un usage automatisé.',
+      'Elle peut changer de format ou disparaître à tout moment : Pulse affichera alors une erreur, et les événements déjà enregistrés resteront.',
+      'Vous devez accepter les conditions d’utilisation du site Forex Factory. Pulse n’a aucun lien avec ce site.',
+      'Contenu : la semaine en cours et la suivante (quand elle est publiée), avec l’importance faible, moyenne ou forte, les valeurs prévues et précédentes. Aucune valeur réelle (elle n’est publiée que sur le site).',
+      'Le site limite les téléchargements (environ 2 toutes les 5 minutes) : Pulse fait au plus une récupération automatique par jour, à l’ouverture, et attend au moins 5 minutes entre deux requêtes.',
+    ],
+    ffConsent: 'J’ai lu ces points. J’accepte d’utiliser cette source non officielle et les conditions d’utilisation du site Forex Factory.',
+    ffConsentNeeded: 'Cochez la case ci-dessus pour pouvoir tester ou enregistrer cette source.',
+    whatLeavesFf: (host: string) =>
+      `Deux requêtes vers ${host} : « GET /ff_calendar_thisweek.json » puis « GET /ff_calendar_nextweek.json », avec les en-têtes Host, User-Agent: Pulse et Accept: application/json. Aucune donnée de trading, aucun compte, aucun identifiant, aucune clé, aucun cookie. Redirections refusées.`,
+    testTitle: 'Tester la source',
+    testButton: 'Tester la source',
+    testing: 'Test en cours…',
+    testHint: 'Interroge la source choisie ci-dessus, sans rien enregistrer. Le test compte comme une requête : pas de nouvel essai avant 5 minutes.',
+    testResult: (n: number) => `La source répond : ${n} ${n > 1 ? 'événements lus' : 'événement lu'}.`,
+    testFirst: 'Les prochains :',
+    testNone: 'Aucun événement à afficher.',
+    testKeep: 'Enregistrer la source et ces événements',
+    testKeeping: 'Enregistrement…',
+    testDiscard: 'Ne pas enregistrer',
+    testKept: (added: number, updated: number) =>
+      `Source enregistrée : ${added} ${added > 1 ? 'événements ajoutés' : 'événement ajouté'}, ${updated} mis à jour.`,
+    testFailed: (msg: string) => `Échec du test : ${msg}`,
+    nextAllowed: (time: string) => `Prochaine requête possible à ${time}.`,
+    skippedItem: (n: number, reason: string) => `événement n° ${n} : ${reason}`,
     urlLabel: 'Adresse du flux (https://…)',
     urlPlaceholder: 'https://…/calendrier.ics',
     feedImportance: 'Importance par défaut',

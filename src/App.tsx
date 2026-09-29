@@ -55,7 +55,9 @@ function ScrollArea({ children }: { children: ReactNode }) {
     ref.current?.scrollTo({ top: 0 })
   }, [pathname])
   return (
-    <div ref={ref} className="flex-1 overflow-y-auto px-7 py-6">
+    // `relative` : les éléments en position absolue (textes pour lecteur d'écran…) restent dans la zone qui défile ;
+    // sans lui, ils allongeaient le document et un scrollIntoView ou un focus clavier décalait toute la coque.
+    <div ref={ref} className="relative flex-1 overflow-y-auto px-7 py-6">
       {children}
     </div>
   )

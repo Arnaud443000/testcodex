@@ -2,8 +2,10 @@
  * Faux calendrier économique du navigateur (lot 25) — **SIMULATION** : aucun appel réseau, aucun
  * fichier lu. « Importer » et « Actualiser » ajoutent des événements **simulés** (source
  * `simulation`, affichés avec le badge « Simulation »). Mêmes règles visibles que pulse-core :
- * désactivé par défaut, aucune source en ligne par défaut, adresse HTTPS vérifiée, une fois par
- * jour à l'ouverture, pas deux récupérations en 5 minutes, heure de Paris (règle de l'UE).
+ * désactivé par défaut, aucune source en ligne par défaut, adresse HTTPS vérifiée, consentement
+ * exigé pour Forex Factory (lot 28), une fois par jour à l'ouverture, pas deux requêtes en
+ * 5 minutes (test compris), heure de Paris (règle de l'UE). « Tester la source » renvoie des
+ * événements simulés et n'enregistre rien avant confirmation.
  */
 import type {
   CalendarView,
@@ -15,8 +17,10 @@ import type {
   NewsDefaults,
   NewsFileFormat,
   NewsFilter,
+  NewsPreview,
   NewsRefresh,
   NewsSettings,
+  NewsSourceKind,
   NewsStatus,
 } from '../types/news'
 
@@ -27,8 +31,11 @@ export const MAX_WINDOW_MIN = 240
 export const MIN_FETCH_GAP_MS = 5 * MIN
 const MAX_URL_LEN = 2048
 
-export { CURRENCIES } from './newsView'
-import { CURRENCIES } from './newsView'
+export { CURRENCIES, FOREX_FACTORY_HOST } from './newsView'
+import { CURRENCIES, FOREX_FACTORY_HOST } from './newsView'
+
+const PREVIEW_EVENTS = 3
+const PREVIEW_TTL_MS = 30 * MIN
 
 export const DEFAULT_NEWS_SETTINGS: NewsSettings = {
   enabled: false,
@@ -36,6 +43,7 @@ export const DEFAULT_NEWS_SETTINGS: NewsSettings = {
   icsUrl: null,
   icsImportance: 'medium',
   icsCurrency: null,
+  ffConsent: false,
   windowBeforeMin: 15,
   windowAfterMin: 15,
   alert: true,
@@ -100,6 +108,33 @@ function checkCurrency(c: string | null): string | null {
   const up = t.toUpperCase()
   if (!CURRENCIES.includes(up)) throw fail('invalidCurrency')
   return up
+}
+
+/** Réglages normalisés, ou erreur `news:…` (miroir de `news::settings::validate`). */
+export function validateNewsSettings(s: NewsSettings): NewsSettings {
+  const url = s.icsUrl?.trim() ? s.icsUrl.trim() : null
+  if (url) checkUrl(url)
+  if (s.source === 'icsUrl' && !url) throw fail('noSource')
+  if (s.source === 'forexFactory' && !s.ffConsent) throw fail('consentRequired')
+  if (s.windowBeforeMin < 0 || s.windowAfterMin < 0 || s.windowBeforeMin > MAX_WINDOW_MIN || s.windowAfterMin > MAX_WINDOW_MIN) throw fail('invalidWindow')
+  return { ...s, icsUrl: url, icsCurrency: checkCurrency(s.icsCurrency) }
+}
+
+/** Ce qu'une source en ligne demanderait (`null` sans source prête). */
+function planFor(s: NewsSettings): { source: NewsSourceKind; url: string } | null {
+  if (s.source === 'icsUrl' && s.icsUrl) return { source: 'icsUrl', url: s.icsUrl }
+  if (s.source === 'forexFactory' && s.ffConsent) return { source: 'forexFactory', url: `https://${FOREX_FACTORY_HOST}/ff_calendar_thisweek.json` }
+  return null
+}
+
+function hostOf(s: NewsSettings): string | null {
+  if (s.source === 'forexFactory') return FOREX_FACTORY_HOST
+  if (s.source !== 'icsUrl' || !s.icsUrl) return null
+  try {
+    return checkUrl(s.icsUrl)
+  } catch {
+    return null
+  }
 }
 
 // --- Événements simulés ---
@@ -174,29 +209,33 @@ export function createNewsMock(now: () => number = Date.now) {
   let state: FetchState = { lastAttemptAt: null, lastSuccessAt: null, lastError: null, lastCount: null, lastImportAt: null }
   let lastAttemptDay: string | null = null
   const events = new Map<string, EconomicEvent>()
+  /** D'où vient chaque événement simulé (`file`, `icsUrl`, `forexFactory`) : quitter une source efface les siens. */
+  const origin = new Map<string, string>()
+  let held: { source: NewsSourceKind; url: string; at: number } | null = null
   let nextId = 1
 
   const status = (): NewsStatus => {
-    let onlineHost: string | null = null
-    try {
-      onlineHost = settings.icsUrl ? checkUrl(settings.icsUrl) : null
-    } catch {
-      onlineHost = null
-    }
+    const t = now()
+    const next = state.lastAttemptAt != null ? state.lastAttemptAt + MIN_FETCH_GAP_MS : null
     return {
       settings: { ...settings },
       state: { ...state },
       eventCount: events.size,
-      onlineReady: settings.enabled && settings.source === 'icsUrl' && settings.icsUrl != null,
-      onlineHost,
+      onlineReady: settings.enabled && planFor(settings) != null,
+      onlineHost: hostOf(settings),
+      nextRequestAt: next != null && next > t && next - t <= MIN_FETCH_GAP_MS ? next : null,
     }
   }
 
+  const tooSoon = (t: number) => state.lastAttemptAt != null && t - state.lastAttemptAt < MIN_FETCH_GAP_MS && t >= state.lastAttemptAt
+
   /** Ajoute ou met à jour les événements simulés (la valeur réelle connue n'est jamais effacée). */
-  const store = (at: number): ImportSummary => {
+  const store = (at: number, from: string): ImportSummary => {
     let added = 0
     let updated = 0
-    for (const e of simulatedEvents(at)) {
+    for (const sim of simulatedEvents(at)) {
+      // Forex Factory ne donne aucune valeur réelle : la simulation non plus.
+      const e = from === 'forexFactory' ? { ...sim, actual: null } : sim
       const key = `${e.day}|${e.startsAt ?? '-'}|${e.currency}|${e.title}`
       const old = events.get(key)
       if (old) {
@@ -206,8 +245,22 @@ export function createNewsMock(now: () => number = Date.now) {
         events.set(key, { ...e, id: nextId++, updatedAt: at })
         added++
       }
+      origin.set(key, from)
     }
-    return { added, updated, outsideWindow: 0, skipped: [], skippedCount: 0, purged: 0 }
+    return { added, updated, outsideWindow: 0, skipped: [], skippedCount: 0, purged: 0, removed: 0, partial: null }
+  }
+
+  const clearOrigin = (from: string) => {
+    for (const [key, o] of origin) {
+      if (o === from) {
+        events.delete(key)
+        origin.delete(key)
+      }
+    }
+  }
+
+  const succeed = (t: number, summary: ImportSummary) => {
+    state = { ...state, lastSuccessAt: t, lastError: null, lastCount: summary.added + summary.updated }
   }
 
   return {
@@ -215,15 +268,14 @@ export function createNewsMock(now: () => number = Date.now) {
       return status()
     },
 
-    async setNewsSettings(s: NewsSettings): Promise<NewsStatus> {
-      const url = s.icsUrl?.trim() ? s.icsUrl.trim() : null
-      if (url) checkUrl(url)
-      if (s.source === 'icsUrl' && !url) throw fail('noSource')
-      if (s.windowBeforeMin < 0 || s.windowAfterMin < 0 || s.windowBeforeMin > MAX_WINDOW_MIN || s.windowAfterMin > MAX_WINDOW_MIN) throw fail('invalidWindow')
-      const currency = checkCurrency(s.icsCurrency)
-      const feedChanged = settings.icsUrl !== url || (s.source !== 'icsUrl' && settings.source === 'icsUrl')
-      settings = { ...s, icsUrl: url, icsCurrency: currency }
-      if (feedChanged) {
+    async setNewsSettings(input: NewsSettings): Promise<NewsStatus> {
+      const s = validateNewsSettings(input)
+      const urlChanged = settings.icsUrl !== s.icsUrl
+      const sourceChanged = settings.source !== s.source
+      if (urlChanged || (sourceChanged && settings.source === 'icsUrl')) clearOrigin('icsUrl')
+      if (sourceChanged && settings.source === 'forexFactory') clearOrigin('forexFactory')
+      settings = s
+      if (urlChanged || sourceChanged) {
         lastAttemptDay = null
         state = { ...state, lastSuccessAt: null, lastError: null, lastCount: null }
       }
@@ -234,7 +286,7 @@ export function createNewsMock(now: () => number = Date.now) {
     async importNewsFile(_format: NewsFileFormat, _path: string, defaults: NewsDefaults): Promise<ImportSummary> {
       if (!settings.enabled) throw fail('disabled')
       checkCurrency(defaults.currency)
-      const summary = store(now())
+      const summary = store(now(), 'file')
       state = { ...state, lastImportAt: now() }
       return summary
     },
@@ -246,13 +298,60 @@ export function createNewsMock(now: () => number = Date.now) {
         return { fetched: false, summary: null, status: status() }
       }
       if (!settings.enabled) return refuse('disabled')
-      if (settings.source !== 'icsUrl' || !settings.icsUrl) return refuse('noSource')
+      const plan = planFor(settings)
+      if (!plan) return refuse('noSource')
       if (!manual && lastAttemptDay === parisDay(t)) return { fetched: false, summary: null, status: status() }
-      if (state.lastAttemptAt != null && t - state.lastAttemptAt < MIN_FETCH_GAP_MS && t >= state.lastAttemptAt) return refuse('tooSoon')
+      if (tooSoon(t)) return refuse('tooSoon')
       state = { ...state, lastAttemptAt: t }
       lastAttemptDay = parisDay(t)
-      const summary = store(t)
-      state = { ...state, lastSuccessAt: t, lastError: null, lastCount: summary.added + summary.updated }
+      const summary = store(t, plan.source)
+      succeed(t, summary)
+      return { fetched: true, summary, status: status() }
+    },
+
+    /** Simulation : aucune requête ; mêmes contrôles et même délai de 5 min que pulse-core, rien d'enregistré. */
+    async testNewsSource(input: NewsSettings): Promise<NewsPreview> {
+      const t = now()
+      if (!settings.enabled) throw fail('disabled')
+      const plan = planFor(validateNewsSettings(input))
+      if (!plan) throw fail('noSource')
+      if (tooSoon(t)) throw fail('tooSoon')
+      state = { ...state, lastAttemptAt: t }
+      const today = parisDay(t)
+      const all = simulatedEvents(t).sort(
+        (a, b) => a.day.localeCompare(b.day) || Number(a.startsAt != null) - Number(b.startsAt != null) || (a.startsAt ?? 0) - (b.startsAt ?? 0) || a.title.localeCompare(b.title),
+      )
+      const upcoming = all.filter((e) => (e.startsAt != null ? e.startsAt >= t : e.day >= today))
+      held = { ...plan, at: t }
+      return {
+        count: all.length,
+        events: (upcoming.length ? upcoming : all).slice(0, PREVIEW_EVENTS).map((e) => ({
+          day: e.day,
+          parisTime: e.parisTime,
+          weekday: e.weekday,
+          currency: e.currency,
+          title: e.title,
+          importance: e.importance,
+          forecast: e.forecast,
+          previous: e.previous,
+        })),
+        skipped: [],
+        skippedCount: 0,
+        partial: null,
+      }
+    },
+
+    async keepTestedNews(): Promise<NewsRefresh> {
+      const t = now()
+      const h = held
+      held = null
+      if (!h || t - h.at > PREVIEW_TTL_MS) throw fail('previewOutdated')
+      if (!settings.enabled) throw fail('disabled')
+      const plan = planFor(settings)
+      if (!plan || plan.source !== h.source || plan.url !== h.url) throw fail('previewOutdated')
+      const summary = store(t, plan.source)
+      succeed(t, summary)
+      lastAttemptDay = parisDay(t)
       return { fetched: true, summary, status: status() }
     },
 
@@ -278,6 +377,7 @@ export function createNewsMock(now: () => number = Date.now) {
     async clearNewsEvents(): Promise<number> {
       const n = events.size
       events.clear()
+      origin.clear()
       return n
     },
   }

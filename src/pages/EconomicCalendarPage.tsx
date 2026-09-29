@@ -51,7 +51,9 @@ export function EconomicCalendarPage() {
     setError(null)
     try {
       const r = await api.refreshNews(true)
-      if (r.summary) setMessage(n.page.refreshed(r.summary.added, r.summary.updated))
+      const sum = r.summary
+      if (sum) setMessage([n.page.refreshed(sum.added, sum.updated), sum.removed > 0 ? n.page.removed(sum.removed) : ''].filter(Boolean).join(' '))
+      if (sum?.partial) setError(n.page.partial(newsErrorMessage(sum.partial, n)))
     } catch (e) {
       setError(newsErrorMessage(e, n))
     } finally {
@@ -110,14 +112,15 @@ export function EconomicCalendarPage() {
     <div className="flex flex-col gap-5">
       {header}
       {loadError && <Notice level="bad">{loadError}</Notice>}
-      {error && <Notice level="bad">{error}</Notice>}
       {message && <Notice level="ok">{message}</Notice>}
+      {error && <Notice level={message ? 'warn' : 'bad'}>{error}</Notice>}
       {status && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-tx2" data-testid="news-status">
           <span>{status.state.lastSuccessAt ? n.page.lastUpdate(formatDateTime(status.state.lastSuccessAt)) : status.onlineReady ? n.page.neverUpdated : n.page.offlineSource}</span>
           {status.state.lastImportAt && <span>{n.page.lastImport(formatDateTime(status.state.lastImportAt))}</span>}
+          {status.settings.source !== 'none' && <span data-testid="news-source">{n.page.source(n.page.sourceNames[status.settings.source])}</span>}
           <span className="text-tx3">{n.parisNote}</span>
-          <Link to="/settings#news" className="text-[13px] font-semibold text-[#B7AEF5] hover:underline">
+          <Link to="/settings#news" className="btn-link">
             {n.page.settingsLink}
           </Link>
         </div>

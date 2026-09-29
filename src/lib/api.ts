@@ -494,6 +494,11 @@ export const api = {
   getUpcomingNews: (limit: number, importances: Importance[]): Promise<EconomicEvent[]> =>
     inTauri ? invoke('get_upcoming_news', { limit, importances }) : mockNews.getUpcomingNews(limit, importances),
   clearNewsEvents: (): Promise<number> => (inTauri ? invoke('clear_news_events') : mockNews.clearNewsEvents()),
+  /** Lot 28 : interroge la source saisie (non enregistrée) sans rien stocker ; compte dans le délai de 5 min. */
+  testNewsSource: (settings: NewsSettings): Promise<NewsPreview> =>
+    inTauri ? invoke('test_news_source', { settings }) : mockNews.testNewsSource(settings),
+  /** Enregistre les événements du dernier test, une fois ses réglages enregistrés (`news:previewOutdated` sinon). */
+  keepTestedNews: (): Promise<NewsRefresh> => (inTauri ? invoke('keep_tested_news') : mockNews.keepTestedNews()),
   /** Boîte de dialogue « ouvrir » d'un calendrier (`null` si annulée). */
   pickNewsFile: async (title: string, format: NewsFileFormat): Promise<string | null> => {
     if (!inTauri) return `simulation.${format}`
@@ -549,6 +554,7 @@ import type {
   NewsDefaults,
   NewsFileFormat,
   NewsFilter,
+  NewsPreview,
   NewsRefresh,
   NewsSettings,
   NewsStatus,
