@@ -81,7 +81,8 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étape 4 — Intelligence et approfondissement (à découper en lots)
 Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparaisons, verrouillage…).
-- [ ] Lot 19 — Moteur des insights automatiques (3.5.1 à 3.5.3), déterministe, sans IA ni réseau, sans interface : `crates/pulse-core/src/insights/`, **migration v11** (`insight_log`, à renuméroter à la fusion), commandes `get_insights`, `dismiss_insight`, `get_insight_history`, types `src/types/insights.ts`, faux backend testé, gabarits `insights` de `fr.ts`. Voir « Insights automatiques (lot 19) » (**Opus, élevé**). L'affichage est le lot 19 bis.
+- [x] Lot 19 — Moteur des insights automatiques (3.5.1 à 3.5.3), déterministe, sans IA ni réseau, sans interface : `crates/pulse-core/src/insights/`, **migration v11** (`insight_log`, à renuméroter à la fusion), commandes `get_insights`, `dismiss_insight`, `get_insight_history`, types `src/types/insights.ts`, faux backend testé, gabarits `insights` de `fr.ts`. Voir « Insights automatiques (lot 19) » (**Opus, élevé**). L'affichage est le lot 19 bis (à faire).
+  - **Fait** : moteur pur + historique (19 tests Rust : journaux R, P, F, G, S, V, B, M, E, X calculés à la main, seuils exactement atteints, zéro trade, échantillons trop petits, deux comptes indépendants, insight qui disparaît, masquage / aggravation / nouvel épisode, migration v11) ; faux backend vérifié sur les mêmes journaux (`mockInsights.test.ts`). Seul changement dans un fichier existant du moteur : `alerts::as_of` passe en `pub(crate)`.
 
 
 ### Étapes 4 et 5 (suite)
@@ -499,3 +500,18 @@ Un insight n'apparaît jamais pour un écart insignifiant : seuils ci-dessus (20
 ### Commandes
 
 `get_insights(accountIds, tzOffsetMin, includeDismissed)` (instant lu par la coque), `dismiss_insight(insightId)`, `get_insight_history(accountIds, limit)`. Types : `src/types/insights.ts` ; faux backend : `src/lib/mockInsights.ts` (branché par `mockInsights` à la fin de `mockBackend.ts`), vérifié contre le même journal que Rust.
+
+### Pour le lot 19 bis (interface)
+
+- **Où** : une page « Insights » (ou un panneau du tableau de bord) qui suit le compte de la barre du haut ; **pas** la période (les fenêtres sont fixes : 20 derniers trades, 90 derniers jours). Appeler `get_insights` à l'ouverture et après un enregistrement de trade ; `includeDismissed` pour une vue « insights masqués ».
+- **Chaque carte** : badge de priorité (texte, jamais la couleur seule : `fr.insights.priorities`), catégorie, phrase = `fr.insights.messages[messageKey](…)` avec des valeurs **formatées par l'interface** (pourcentages depuis les fractions, montants depuis les chaînes décimales sans passer par un flottant, R avec signe `+` / `−`), la **piste** `fr.insights.suggestions[messageKey]` quand elle existe, la période (`periodLastTrades` / `periodDays`), la phrase `notCausal` sur les suggestions, bouton « Masquer » (`dismiss_insight`), liens de preuve : `filter` → `/trades?mistake=tag:ID|rule:ID` ou `/trades?setup=ID`, sinon la liste `tradeIds` ; `source` → page du rapport (`risk` → Analyses > Scaling ou Comportement > risque, `discipline` → `/discipline`, `fees` → Analyses > Frais, `ruleAdherence` / `mistakes` / `emotions` / `sizeChange` / `patterns` / `externalFactors` → `/behavior`, `segments` → Analyses > Stratégies).
+- **`factorLower`** : composer avec `fr.insights.factors[factor]` puis `factorDiscipline` et/ou `factorExpectancy` selon les verdicts `lower` du détail.
+- **État vide** : `fr.insights.empty` + `emptyHint`. Un nouveau badge peut se déduire de `firstSeenAt` (première fois vu).
+- **Historique** : `get_insight_history` (même principe que l'historique des alertes).
+
+### Limites connues (lot 19)
+
+- Fenêtres fixes (20 trades, 90 jours), seuils et plafonds codés en constantes, **à confirmer par l'utilisateur** ; aucun réglage dans Paramètres.
+- Mises en avant sur les **tags** setup et session seulement (pas d'actif, de jour ni d'heure ; pas de session déduite de l'heure).
+- La dérive du risque ignore les trades sans stop loss (risque en % indéfini) ; la hausse des frais est en argent par trade (elle suit aussi une hausse de taille).
+- Aucune notification : les insights ne sont calculés qu'à la demande. Aucun lien avec l'IA (lot 20) : si le coach IA les cite un jour, il doit reprendre ces chiffres, jamais les recalculer.
