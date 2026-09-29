@@ -384,6 +384,37 @@ pub const MIGRATIONS: &[&str] = &[
         content    TEXT NOT NULL CHECK (length(content) >= 1)
     );
     CREATE INDEX ai_screenshot_notes_by_trade ON ai_screenshot_notes (trade_id, created_at);",
+    // v13 — AI coach conversations (lot 21, spec 3.5.5; to renumber if another branch also adds a v13).
+    // Text to read only: nothing computes from it, it is never sent back to the AI in another conversation.
+    // `sent` is the JSON log of what left the computer during the turn; `transcript` the technical messages
+    // replayed to the AI in the next turns of the same conversation (NULL for a failed turn, never replayed).
+    "CREATE TABLE coach_conversations (
+        id            INTEGER PRIMARY KEY,
+        title         TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 120),
+        created_at    INTEGER NOT NULL,
+        updated_at    INTEGER NOT NULL,
+        tools_version INTEGER NOT NULL
+    );
+    CREATE TABLE coach_turns (
+        id              INTEGER PRIMARY KEY,
+        conversation_id INTEGER NOT NULL REFERENCES coach_conversations(id) ON DELETE CASCADE,
+        seq             INTEGER NOT NULL CHECK (seq >= 1),
+        created_at      INTEGER NOT NULL,
+        question        TEXT NOT NULL CHECK (length(question) >= 1),
+        status          TEXT NOT NULL CHECK (status IN ('answered', 'failed')),
+        error_code      TEXT,
+        answer          TEXT,
+        provider        TEXT NOT NULL CHECK (length(provider) BETWEEN 1 AND 40),
+        model           TEXT NOT NULL CHECK (length(model) BETWEEN 1 AND 80),
+        sent            TEXT NOT NULL,
+        unverified      TEXT NOT NULL DEFAULT '[]',
+        transcript      TEXT,
+        usage           TEXT,
+        UNIQUE (conversation_id, seq),
+        CHECK ((status = 'answered' AND answer IS NOT NULL AND transcript IS NOT NULL AND error_code IS NULL)
+            OR (status = 'failed' AND answer IS NULL AND transcript IS NULL AND error_code IS NOT NULL))
+    );
+    CREATE INDEX coach_conversations_by_update ON coach_conversations (updated_at);",
 ];
 
 pub fn latest_version() -> u32 {
