@@ -98,7 +98,7 @@ Code : `crates/pulse-core/src/stats/` (`pnl.rs` par trade, `summary.rs` agrégat
 
 ## Analyse comportementale (lot 8) — interprétation
 
-Code : `crates/pulse-core/src/behavior/` (score de discipline, analyses 3.4.x), `stats/distribution.rs` et `stats/risk.rs` (3.3.8, 3.3.10 à 3.3.12), `settings.rs` (réglages). Mêmes principes que le moteur de statistiques : tout est recalculé depuis les données sources, une valeur indéfinie vaut `None`, l'argent reste en `Decimal`, les ratios sont des fractions `f64` (0,25 = 25 %), les dépôts/retraits ne sont jamais de la performance. Sauf mention contraire, un rapport porte sur les **trades clôturés** de la période (sortie dans `[from, to)`) qui passent les filtres de `StatsQuery` ; l'historique (trade précédent, rang dans la journée, solde) utilise toujours tous les trades des comptes choisis, ouverts compris.
+Code : `crates/pulse-core/src/behavior/` (score de discipline, analyses 3.4.x), `stats/distribution.rs` et `stats/risk.rs` (3.3.8, 3.3.10 à 3.3.12), `settings.rs` (réglages). Mêmes principes que le moteur de statistiques : tout est recalculé depuis les données sources, une valeur indéfinie vaut `None`, l'argent reste en `Decimal`, les ratios sont des fractions `f64` (0,25 = 25 %), les dépôts/retraits ne sont jamais de la performance. Sauf mention contraire, un rapport porte sur les **trades clôturés** de la période (sortie dans `[from, to)`) qui passent les filtres de `StatsQuery` ; l'historique (trade précédent, rang dans la journée, solde à l'entrée) se lit **par compte**, sur tous ses trades, ouverts compris : un second compte ne rend pas un trade « de revanche » ni « en surtrading », et le score d'un trade ne dépend pas des comptes affichés.
 
 ### Réglages (table `settings`, aucune migration)
 
@@ -124,8 +124,8 @@ Score d'un trade = `100 × Σ(poids × valeur) / Σ(poids)` sur les **seules com
 | Risque dans la limite (`risk`) | 10 | 1 si risque initial ≤ limite × solde à l'entrée (comparaison exacte en `Decimal`), 0 sinon | pas de limite réglée ; pas de SL (déjà pénalisé par `stopLoss`, pas de double peine) ; solde à l'entrée ≤ 0 |
 | Comportement (`behavior`) | 10 | 0 si le trade est une revanche **ou** du surtrading, 1 sinon | jamais exclue |
 
-- **Revanche (3.4.5)** : `P` = dernier trade sorti au plus tard à l'entrée de `T` (ordre de sortie, égalité : id). `T` est une revanche si `P` est perdant (PnL net < 0), si `T` est entré au plus `revenge_window_min` après la sortie de `P`, et si l'exposition de `T` ≥ `revenge_size_factor` × celle de `P`. Exposition : **risque initial** en argent si les deux trades ont un SL ; sinon, **taille × multiplicateur** si c'est le même instrument ; sinon on ne peut pas comparer → pas de revanche.
-- **Surtrading** : rang du trade parmi les trades **entrés** le même jour local (ordre d'entrée, égalité : id, trades ouverts compris) > `max_trades_per_day`.
+- **Revanche (3.4.5)** : `P` = dernier trade **du même compte** sorti au plus tard à l'entrée de `T` (ordre de sortie, égalité : id). `T` est une revanche si `P` est perdant (PnL net < 0), si `T` est entré au plus `revenge_window_min` après la sortie de `P`, et si l'exposition de `T` ≥ `revenge_size_factor` × celle de `P`. Exposition : **risque initial** en argent si les deux trades ont un SL ; sinon, **taille × multiplicateur** si c'est le même instrument ; sinon on ne peut pas comparer → pas de revanche.
+- **Surtrading** : rang du trade parmi les trades **entrés** le même jour local sur le même compte (ordre d'entrée, égalité : id, trades ouverts compris) > `max_trades_per_day`.
 - **Jour** : moyenne des scores des trades du jour local de **sortie** (comme le calendrier), sans minimum d'échantillon (chaque trade reste explicable).
 - **Période / groupe** : moyenne des scores des trades ; **`None` en dessous de 5 trades** (`sampleTooSmall`). Même règle pour le score moyen d'un groupe (premier trade du jour, etc.).
 - **Composantes sur la période** : moyenne de la valeur sur les trades où elle est présente, avec leur nombre.
@@ -151,7 +151,7 @@ Score d'un trade = `100 × Σ(poids × valeur) / Σ(poids)` sur les **seules com
 | Distribution des R (3.3.8) | classes de 0,5 R, `[a, b)`, de −3 à +5, plus deux classes ouvertes (`< −3`, `≥ 5`) ; toutes les classes sont renvoyées, même vides. Un breakeven (R = 0) tombe dans `[0 ; 0,5)`. R moyen (= expectancy), R médian (moyenne des deux du milieu si nombre pair), trades sans R comptés à part. |
 | Heatmap jour × heure | jour de semaine et heure locaux d'**entrée** (comme les segments) ; seules les cases ayant des trades ; nombre, PnL net, win rate, intensité = PnL net / plus grand |PnL net| d'une case, dans [−1, 1]. La heatmap mensuelle (3.3.11) est le calendrier du lot 5. |
 | Long / short (3.3.10) | `SegmentBy::Direction`, les deux côtés toujours présents, part des longs en nombre. |
-| Risque en % du capital (3.3.12) | `risque initial / solde réel à l'entrée`, solde = capital initial + flux datés au plus tard de l'entrée + PnL net des trades sortis au plus tard à l'entrée. Par trade et en agrégat (moyenne, médiane, max, trades sans SL, dépassements de la limite, limite convertie en argent au capital courant). Solde ≤ 0 → `None`. |
+| Risque en % du capital (3.3.12) | `risque initial / solde réel du compte à l'entrée`, solde = capital initial + flux datés au plus tard de l'entrée + PnL net des autres trades sortis au plus tard à l'entrée. Par trade et en agrégat (moyenne, médiane, max, trades sans SL, dépassements de la limite, limite convertie en argent au capital courant). Solde ≤ 0 → `None`. |
 
 ### Points du cahier tranchés dans ce lot
 

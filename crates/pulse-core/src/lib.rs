@@ -5,6 +5,7 @@ mod util;
 
 pub mod accounts;
 pub mod backup;
+pub mod behavior;
 pub mod cash_flows;
 pub mod checklist;
 pub mod db;
@@ -16,6 +17,7 @@ pub mod missed_trades;
 pub mod money;
 pub mod rules;
 pub mod screenshots;
+pub mod settings;
 pub mod stats;
 pub mod tags;
 pub mod trade_view;

@@ -38,6 +38,7 @@ fn trade(id: i64, direction: Direction, entry: &str, exit: Option<&str>, size: &
         tz_offset_min: 0,
         execution_type: None,
         tags: Vec::new(),
+        journal: Journal::default(),
     }
 }
 
@@ -45,7 +46,8 @@ fn ledger(initial: &str, trades: Vec<TradeFacts>, moves: Vec<(i64, &str)>) -> Le
     Ledger {
         currency: Some("USD".into()),
         initial_capital: dec(initial),
-        capital_moves: moves.into_iter().map(|(at, amount)| CapitalMove { at, amount: dec(amount) }).collect(),
+        accounts: vec![AccountCapital { id: 1, initial_capital: dec(initial) }],
+        capital_moves: moves.into_iter().map(|(at, amount)| CapitalMove { account_id: 1, at, amount: dec(amount) }).collect(),
         trades,
     }
 }

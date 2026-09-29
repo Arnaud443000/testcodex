@@ -4,6 +4,7 @@ use super::summary::{Summary, analyze};
 use super::{Closed, time};
 use crate::error::Result;
 use crate::tags::TagKind;
+use crate::trades::EmotionMoment;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -20,6 +21,17 @@ pub enum SegmentBy {
     Hour,
     ExecutionType,
     Tag(TagKind),
+    /// Declared plan compliance (spec 3.4.4): "yes", "partial", "no", or "none".
+    PlanFollowed,
+    /// Declared emotion (spec 3.4.2) at one moment, or at any moment when `None`
+    /// (a trade then counts once per emotion, even if declared twice).
+    Emotion(Option<EmotionMoment>),
+    /// First trade of the local entry day on its account vs the next ones (spec 3.4.10): "first", "subsequent".
+    FirstOfDay,
+    /// Rank in the local entry day: "1", "2", "3", "4+".
+    DayRank,
+    /// Each personal rule the trade broke (spec 3.4.7); "none" when it broke none.
+    RuleBroken,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -34,18 +46,30 @@ pub struct Segment {
 const NONE: &str = "none";
 
 pub(crate) fn split(set: &[&Closed], by: SegmentBy, risk_free_daily: f64) -> Result<Vec<Segment>> {
-    // Sort key → (key, label, trades). "none" sorts last.
-    let mut groups: BTreeMap<(bool, String), (String, String, Vec<&Closed>)> = BTreeMap::new();
+    groups(set, by)
+        .into_iter()
+        .map(|g| Ok(Segment { key: g.key, label: g.label, summary: analyze(&g.trades, risk_free_daily)?.summary }))
+        .collect()
+}
+
+/// Trades of one segment, still in exit order.
+pub(crate) struct Group<'s, 'a> {
+    pub key: String,
+    pub label: String,
+    pub trades: Vec<&'s Closed<'a>>,
+}
+
+/// The trades of each segment, in display order ("none" last).
+pub(crate) fn groups<'s, 'a>(set: &[&'s Closed<'a>], by: SegmentBy) -> Vec<Group<'s, 'a>> {
+    // Sort key → group. "none" sorts last.
+    let mut groups: BTreeMap<(bool, String), Group<'s, 'a>> = BTreeMap::new();
     for &c in set {
         for (sort, key, label) in keys(c, by) {
             let is_none = key == NONE;
-            groups.entry((is_none, sort)).or_insert_with(|| (key, label, Vec::new())).2.push(c);
+            groups.entry((is_none, sort)).or_insert_with(|| Group { key, label, trades: Vec::new() }).trades.push(c);
         }
     }
-    groups
-        .into_values()
-        .map(|(key, label, trades)| Ok(Segment { key, label, summary: analyze(&trades, risk_free_daily)?.summary }))
-        .collect()
+    groups.into_values().collect()
 }
 
 /// (sort key, key, label) of every segment the trade belongs to.
@@ -83,6 +107,39 @@ fn keys(c: &Closed, by: SegmentBy) -> Vec<(String, String, String)> {
                 .map(|g| (g.name.to_lowercase(), g.id.to_string(), g.name.clone()))
                 .collect();
             if tags.is_empty() { none() } else { tags }
+        }
+        SegmentBy::PlanFollowed => match t.journal.plan_followed {
+            Some(p) => one(p.as_str().into(), p.as_str().into(), capitalize(p.as_str())),
+            None => none(),
+        },
+        SegmentBy::Emotion(moment) => {
+            let mut seen = Vec::new();
+            let mut emotions = Vec::new();
+            for (m, g) in &t.journal.emotions {
+                if moment.is_none_or(|wanted| wanted == *m) && !seen.contains(&g.id) {
+                    seen.push(g.id);
+                    emotions.push((g.name.to_lowercase(), g.id.to_string(), g.name.clone()));
+                }
+            }
+            if emotions.is_empty() { none() } else { emotions }
+        }
+        SegmentBy::FirstOfDay => match c.day_rank {
+            1 => one("0".into(), "first".into(), "First trade of the day".into()),
+            _ => one("1".into(), "subsequent".into(), "Subsequent trades".into()),
+        },
+        SegmentBy::DayRank => {
+            let k = if c.day_rank >= 4 { "4+".to_string() } else { c.day_rank.to_string() };
+            one(k.clone(), k.clone(), k)
+        }
+        SegmentBy::RuleBroken => {
+            let broken: Vec<_> = t
+                .journal
+                .rule_checks
+                .iter()
+                .filter(|r| !r.respected)
+                .map(|r| (r.text.to_lowercase(), r.rule_id.to_string(), r.text.clone()))
+                .collect();
+            if broken.is_empty() { none() } else { broken }
         }
     }
 }
