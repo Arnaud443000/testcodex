@@ -2,7 +2,7 @@ import { Modal } from './Modal'
 import { useT } from '../../i18n'
 import { PERIOD_KEYS } from '../../lib/period'
 import type { Account } from '../../types/account'
-import type { WidgetDefinition, WidgetInstance } from '../../types/dashboardLayout'
+import type { ResolvedScope, WidgetDefinition, WidgetInstance } from '../../types/dashboardLayout'
 import type { PeriodKey } from '../../types/stats'
 import { Field } from '../ui'
 import { Icon } from '../Icon'
@@ -22,18 +22,28 @@ export function WidgetSettings({
   instance,
   def,
   accounts,
+  dashboardScope,
   onChange,
   onClose,
 }: {
   instance: WidgetInstance
   def: WidgetDefinition
   accounts: Account[]
+  /** Portée du dashboard (3.8.9) : ce que le widget lit tant qu'on ne lui fixe pas de compte. */
+  dashboardScope?: ResolvedScope | null
   onChange: (patch: Partial<Pick<WidgetInstance, 'period' | 'accountId' | 'mode'>>) => void
   onClose: () => void
 }) {
   const t = useT().dashboardBuilder
   const name = t.widgets[def.kind]?.title ?? def.kind
   const hasAny = def.period || def.account || def.modes.length > 0
+  const inherit =
+    dashboardScope?.effective === 'account'
+      ? t.scope.inheritAccount(dashboardScope.accounts[0]?.name ?? '')
+      : dashboardScope?.effective === 'all'
+        ? t.scope.inheritAll
+        : t.settings.accountGlobal
+  const dashboardHasScope = dashboardScope !== null && dashboardScope !== undefined && dashboardScope.effective !== 'follow'
   return (
     <Modal title={t.settings.title(name)} onClose={onClose}>
       <div className="flex flex-col gap-4">
@@ -59,7 +69,7 @@ export function WidgetSettings({
               value={instance.accountId ?? ''}
               onChange={(e) => onChange({ accountId: e.target.value === '' ? null : Number(e.target.value) })}
             >
-              <option value="" className="bg-bg">{t.settings.accountGlobal}</option>
+              <option value="" className="bg-bg">{inherit}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id} className="bg-bg">{a.archived ? `${a.name} (archivé)` : a.name}</option>
               ))}
@@ -76,6 +86,7 @@ export function WidgetSettings({
           </Field>
         )}
         {hasAny && <p className="text-xs text-tx3">{t.settings.hint}</p>}
+        {def.account && dashboardHasScope && <p className="text-xs text-tx3">{t.scope.inWidgetSettings}</p>}
         <button type="button" className="btn btn-primary self-end" data-close onClick={onClose}>{t.settings.close}</button>
       </div>
     </Modal>

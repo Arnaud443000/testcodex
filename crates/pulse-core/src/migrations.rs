@@ -345,6 +345,12 @@ pub const MIGRATIONS: &[&str] = &[
         UNIQUE (dashboard_id, uid)
     );
     CREATE INDEX dashboard_widgets_dashboard ON dashboard_widgets (dashboard_id);",
+    // v10 — scope of a dashboard (spec 3.8.9): `follow` = the account chosen in the top bar (what every
+    // dashboard did until now, so existing dashboards and the default one are unchanged), `account` = linked
+    // to one account, `all` = consolidated over every active account. Deleting the linked account empties
+    // `scope_account_id` (the dashboard is kept and reads the top bar again); `dashboards::resolve_scope` tells so.
+    "ALTER TABLE dashboards ADD COLUMN scope TEXT NOT NULL DEFAULT 'follow' CHECK (scope IN ('follow','account','all'));
+    ALTER TABLE dashboards ADD COLUMN scope_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;",
 ];
 
 pub fn latest_version() -> u32 {
@@ -762,5 +768,41 @@ mod tests {
         conn.execute("DELETE FROM dashboards WHERE id = 1", []).unwrap();
         let n: i64 = conn.query_row("SELECT COUNT(*) FROM dashboard_widgets", [], |r| r.get(0)).unwrap();
         assert_eq!(n, 0);
+    }
+
+    #[test]
+    fn v10_adds_dashboard_scope_and_keeps_existing_dashboards_and_default() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 9).unwrap();
+        let account = account_v2(&conn);
+        // A user of v9 with two dashboards, widgets pinned to an account, and one of them as default.
+        conn.execute("INSERT INTO dashboards (name, position) VALUES ('Mon suivi', 1), ('Autre', 2)", []).unwrap();
+        conn.execute(
+            "INSERT INTO dashboard_widgets (dashboard_id, uid, kind, x, y, w, h, account_id) VALUES (1, 'a', 'calendar', 0, 0, 13, 13, ?1)",
+            [account],
+        )
+        .unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('dashboard.default', 'custom:2')", []).unwrap();
+
+        migrate_to(&mut conn, 10).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 10);
+        let all = crate::dashboards::list(&conn).unwrap();
+        let mine: Vec<_> = all.iter().filter(|d| !d.builtin).collect();
+        assert_eq!(mine.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["Mon suivi", "Autre"]);
+        assert!(all.iter().all(|d| d.scope == crate::dashboards::DashboardScope::FOLLOW), "existing dashboards keep following the top bar");
+        assert_eq!(mine[0].widget_count, 1);
+        assert_eq!(crate::dashboards::startup(&conn).unwrap().key, "custom:2", "the default dashboard is unchanged");
+        let pinned = crate::dashboards::get(&conn, "custom:1").unwrap().widgets[0].account_id;
+        assert_eq!(pinned, Some(account), "widget settings are unchanged");
+
+        // Guards written straight to the schema.
+        assert!(conn.execute("UPDATE dashboards SET scope = 'weird' WHERE id = 1", []).is_err());
+        assert!(conn.execute("UPDATE dashboards SET scope = 'account', scope_account_id = ?1 WHERE id = 1", [account]).is_ok());
+        assert!(conn.execute("UPDATE dashboards SET scope_account_id = 999 WHERE id = 1", []).is_err(), "unknown account");
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [account]).unwrap();
+        let (scope, acc): (String, Option<i64>) =
+            conn.query_row("SELECT scope, scope_account_id FROM dashboards WHERE id = 1", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!((scope.as_str(), acc), ("account", None), "the dashboard survives its account");
     }
 }

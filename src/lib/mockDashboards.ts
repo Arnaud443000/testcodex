@@ -1,4 +1,19 @@
-import { GRID_COLUMNS, type DashboardLayout, type DashboardSummary, type WidgetDefinition, type WidgetInstance } from '../types/dashboardLayout'
+import {
+  FOLLOW_SCOPE,
+  GRID_COLUMNS,
+  type DashboardLayout,
+  type DashboardScope,
+  type DashboardSummary,
+  type ImportResult,
+  type ImportWarning,
+  type ResolvedDashboard,
+  type ResolvedScope,
+  type ScopeAccount,
+  type ScopeNotice,
+  type WidgetDefinition,
+  type WidgetInstance,
+  type WidgetScope,
+} from '../types/dashboardLayout'
 import type { PeriodKey } from '../types/stats'
 
 /**
@@ -102,6 +117,7 @@ const PRESETS: Record<string, { name: string; widgets: WidgetInstance[] }> = {
 interface Stored {
   id: number
   name: string
+  scope: DashboardScope
   widgets: WidgetInstance[]
 }
 let customs: Stored[] = []
@@ -160,42 +176,261 @@ const currentDefault = () => (defaultKey !== null && exists(defaultKey) ? defaul
 function layoutOf(key: string): DashboardLayout {
   const isDefault = currentDefault() === key
   const preset = PRESETS[key]
-  if (preset) return { key, name: preset.name, builtin: true, isDefault, widgets: clone(preset.widgets) }
+  if (preset) return { key, name: preset.name, builtin: true, isDefault, scope: { ...FOLLOW_SCOPE }, widgets: clone(preset.widgets) }
   const c = findCustom(key)
   if (!c) throw notFound(`dashboard "${key}"`)
-  return { key: customKey(c.id), name: c.name, builtin: false, isDefault, widgets: clone(c.widgets) }
+  return { key: customKey(c.id), name: c.name, builtin: false, isDefault, scope: { ...c.scope }, widgets: clone(c.widgets) }
 }
 
 const taken = (name: string, exceptId: number | null) =>
   customs.some((c) => c.id !== exceptId && c.name.trim().toLowerCase() === name.trim().toLowerCase())
 
-export function createDashboardsMock(listAccountIds: () => Promise<number[]>) {
+/** Mêmes contrôles que `dashboards::validate_scope`. */
+function validateScope(scope: DashboardScope, accountIds: number[]): void {
+  if (scope.kind === 'account') {
+    if (scope.accountId === null) throw invalid('a dashboard linked to an account needs that account')
+    if (!accountIds.includes(scope.accountId)) throw notFound(`account ${scope.accountId}`)
+  } else if (scope.accountId !== null) throw invalid('only a dashboard linked to an account carries an account')
+}
+
+const scopeAccount = (a: ScopeAccount): ScopeAccount => ({ id: a.id, name: a.name, currency: a.currency, archived: a.archived })
+const currencyOf = (accounts: ScopeAccount[]): [string | null, boolean] => {
+  const first = accounts[0]?.currency ?? null
+  return [first, accounts.some((a) => a.currency !== first)]
+}
+/** Comptes par id, ou tous les comptes actifs quand `ids` est vide (convention du moteur). */
+const loadAccounts = (all: ScopeAccount[], ids: number[]): ScopeAccount[] =>
+  (ids.length === 0 ? all.filter((a) => !a.archived) : ids.map((id) => all.find((a) => a.id === id)).filter((a): a is ScopeAccount => a !== undefined)).map(scopeAccount)
+
+/** Miroir de `dashboards::resolve_scope`. */
+export function resolveScopeOf(all: ScopeAccount[], scope: DashboardScope, selected: number | null): ResolvedScope {
+  const notices: ScopeNotice[] = []
+  let effective = scope.kind
+  let accountIds: number[]
+  if (scope.kind === 'account' && scope.accountId !== null && all.some((a) => a.id === scope.accountId)) accountIds = [scope.accountId]
+  else if (scope.kind === 'account') {
+    notices.push('accountDeleted')
+    effective = 'follow'
+    accountIds = selected === null ? [] : [selected]
+  } else if (scope.kind === 'all') accountIds = []
+  else accountIds = selected === null ? [] : [selected]
+  const accounts = loadAccounts(all, accountIds)
+  if (effective === 'account' && accounts.some((a) => a.archived)) notices.push('accountArchived')
+  const [currency, mixedCurrency] = currencyOf(accounts)
+  return { declared: scope.kind, effective, accountIds, accounts, currency, mixedCurrency, notices }
+}
+
+/** Miroir de `dashboards::resolve` : le compte du widget, puis la portée du dashboard, puis la barre du haut. */
+export function resolveDashboardOf(all: ScopeAccount[], scope: DashboardScope, widgets: WidgetInstance[], selected: number | null): ResolvedDashboard {
+  const dashboard = resolveScopeOf(all, scope, selected)
+  const out: WidgetScope[] = widgets.map((x) => {
+    if (x.accountId !== null) {
+      const accounts = loadAccounts(all, [x.accountId])
+      const [currency, mixedCurrency] = currencyOf(accounts)
+      return { uid: x.uid, source: 'widget', accountIds: [x.accountId], accounts, currency, mixedCurrency, accountMissing: accounts.length === 0 }
+    }
+    return {
+      uid: x.uid,
+      source: dashboard.effective === 'follow' ? 'topBar' : 'dashboard',
+      accountIds: [...dashboard.accountIds],
+      accounts: dashboard.accounts.map(scopeAccount),
+      currency: dashboard.currency,
+      mixedCurrency: dashboard.mixedCurrency,
+      accountMissing: false,
+    }
+  })
+  return { scope: dashboard, widgets: out }
+}
+
+// --- Duplication, export et import (3.8.7) : mêmes règles que `dashboards/transfer.rs` ---------------
+
+const FORMAT = 'pulse-dashboard'
+const FORMAT_VERSION = 1
+const MAX_FILE_BYTES = 1_000_000
+
+const importFail = (code: string, detail?: string): Error => invalid(`dashboard_import:${code}${detail === undefined ? '' : `:${detail}`}`)
+
+type Json = Record<string, unknown>
+const isObject = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v)
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v)
+const isStr = (v: unknown): v is string => typeof v === 'string'
+
+/** Comme `#[serde(deny_unknown_fields)]` : ni champ inconnu, ni champ obligatoire absent. */
+function shape(v: unknown, required: string[], optional: string[]): Json {
+  if (!isObject(v)) throw importFail('corrupt', 'not an object')
+  for (const k of Object.keys(v)) if (!required.includes(k) && !optional.includes(k)) throw importFail('corrupt', `unknown field ${k}`)
+  for (const k of required) if (!(k in v)) throw importFail('corrupt', `missing field ${k}`)
+  return v
+}
+
+interface AccountRef {
+  name: string
+  currency: string
+}
+function accountRefOf(v: unknown): AccountRef | null {
+  if (v === undefined || v === null) return null
+  const o = shape(v, ['name', 'currency'], [])
+  if (!isStr(o.name) || !isStr(o.currency)) throw importFail('corrupt', 'account')
+  return { name: o.name, currency: o.currency }
+}
+
+/** Le compte de ce faux backend portant ce nom et cette devise ; `null` s'il n'y en a pas ou s'il y en a deux. */
+function findAccount(all: ScopeAccount[], r: AccountRef): number | null {
+  const norm = (x: string) => x.trim().toLowerCase()
+  const hits = all.filter((a) => norm(a.name) === norm(r.name) && norm(a.currency) === norm(r.currency))
+  return hits.length === 1 ? hits[0].id : null
+}
+
+/** Un nom libre parmi `base (suffixe)`, `base (suffixe 2)`… en gardant le total dans la limite. */
+function freeName(base: string, suffix: string): string {
+  const b = base.split(/\s+/).filter(Boolean).join(' ')
+  for (let n = 1; ; n++) {
+    const tail = n === 1 ? ` (${suffix})` : ` (${suffix} ${n})`
+    const candidate = `${[...b].slice(0, Math.max(0, MAX_NAME - [...tail].length)).join('').trimEnd()}${tail}`
+    let ok = true
+    try {
+      cleanName(candidate)
+    } catch {
+      ok = false
+    }
+    if (ok && !taken(candidate, null)) return candidate
+  }
+}
+
+const savable = (scope: DashboardScope): DashboardScope => (scope.kind === 'account' && scope.accountId === null ? { ...FOLLOW_SCOPE } : { ...scope })
+
+export function createDashboardsMock(listAccounts: () => Promise<ScopeAccount[]>) {
+  const listAccountIds = async () => (await listAccounts()).map((a) => a.id)
+  const files = new Map<string, string>()
+  /** Les mêmes contrôles que `dashboards::import_config`, dans le même ordre ; rien n'est écrit en cas d'erreur. */
+  const importText = async (input: string): Promise<ImportResult> => {
+    const all = await sync()
+    if (new TextEncoder().encode(input).length > MAX_FILE_BYTES) throw importFail('too_large')
+    const text = input.startsWith('\ufeff') ? input.slice(1) : input
+    if (text.trim() === '') throw importFail('empty')
+    let value: unknown
+    try {
+      value = JSON.parse(text)
+    } catch (e) {
+      throw importFail('corrupt', e instanceof Error ? e.message : String(e))
+    }
+    if (!isObject(value) || value.format !== FORMAT) throw importFail('not_a_dashboard')
+    const version = value.version
+    if (typeof version === 'number' && Number.isInteger(version) && version > FORMAT_VERSION) throw importFail('too_new', String(version))
+    if (!(typeof version === 'number' && Number.isInteger(version) && version >= 1)) throw importFail('corrupt', 'version')
+    const file = shape(value, ['format', 'version', 'name', 'scope', 'widgets'], [])
+    if (!isStr(file.name) || !Array.isArray(file.widgets)) throw importFail('corrupt', 'name or widgets')
+    const fileScope = shape(file.scope, ['kind'], ['account'])
+    if (fileScope.kind !== 'follow' && fileScope.kind !== 'account' && fileScope.kind !== 'all') throw importFail('corrupt', 'scope kind')
+    const scopeAccount = accountRefOf(fileScope.account)
+
+    const warnings: ImportWarning[] = []
+    const base = file.name.split(/\s+/).filter(Boolean).join(' ')
+    if (base === '' || [...base].length > MAX_NAME) throw importFail('invalid', 'name')
+    let nameOk = !taken(base, null)
+    try {
+      cleanName(base)
+    } catch {
+      nameOk = false
+    }
+    let name = base
+    if (!nameOk) {
+      name = freeName(base, 'importé')
+      warnings.push({ code: 'renamed', from: base, to: name })
+    }
+
+    let scope: DashboardScope
+    if (fileScope.kind === 'account') {
+      if (!scopeAccount) throw importFail('corrupt', 'scope')
+      const id = findAccount(all, scopeAccount)
+      if (id === null) {
+        warnings.push({ code: 'unknownScopeAccount', name: scopeAccount.name })
+        scope = { ...FOLLOW_SCOPE }
+      } else scope = { kind: 'account', accountId: id }
+    } else if (scopeAccount) throw importFail('corrupt', 'scope')
+    else scope = { kind: fileScope.kind, accountId: null }
+
+    const widgets: WidgetInstance[] = []
+    for (const raw of file.widgets) {
+      if (!isObject(raw) || !isStr(raw.kind)) throw importFail('corrupt', 'widget')
+      if (!LIBRARY.some((d) => d.kind === raw.kind)) {
+        warnings.push({ code: 'unknownWidget', kind: raw.kind })
+        continue
+      }
+      const o = shape(raw, ['uid', 'kind', 'x', 'y', 'w', 'h'], ['period', 'mode', 'account'])
+      if (!isStr(o.uid) || !isStr(o.kind) || !isInt(o.x) || !isInt(o.y) || !isInt(o.w) || !isInt(o.h)) throw importFail('corrupt', 'widget fields')
+      if ((o.period !== undefined && o.period !== null && !isStr(o.period)) || (o.mode !== undefined && o.mode !== null && !isStr(o.mode))) throw importFail('corrupt', 'widget fields')
+      const ref = accountRefOf(o.account)
+      let accountId: number | null = null
+      if (ref) {
+        accountId = findAccount(all, ref)
+        if (accountId === null) warnings.push({ code: 'unknownAccount', name: ref.name, widgetKind: o.kind })
+      }
+      widgets.push({ uid: o.uid, kind: o.kind, x: o.x, y: o.y, w: o.w, h: o.h, period: (o.period ?? null) as PeriodKey | null, accountId, mode: (o.mode ?? null) as string | null })
+    }
+    try {
+      validateLayout(widgets, all.map((a) => a.id))
+    } catch (e) {
+      throw importFail('invalid', e instanceof Error ? e.message : String(e))
+    }
+    const created: Stored = { id: nextId++, name, scope, widgets: clone(widgets) }
+    customs.push(created)
+    return { layout: layoutOf(customKey(created.id)), warnings }
+  }
+  /** Ce que fait SQLite quand un compte est supprimé (ON DELETE SET NULL) : les widgets et la portée le lâchent. */
+  const sync = async (): Promise<ScopeAccount[]> => {
+    const all = await listAccounts()
+    const ids = new Set(all.map((a) => a.id))
+    for (const c of customs) {
+      if (c.scope.accountId !== null && !ids.has(c.scope.accountId)) c.scope.accountId = null
+      for (const x of c.widgets) if (x.accountId !== null && !ids.has(x.accountId)) x.accountId = null
+    }
+    return all
+  }
+  const save = async (key: string | null, name: string, widgets: WidgetInstance[], scope?: DashboardScope | null): Promise<DashboardLayout> => {
+    await sync()
+    const cleaned = cleanName(name)
+    validateLayout(widgets, await listAccountIds())
+    if (scope) validateScope(scope, await listAccountIds())
+    const existing = key !== null ? findCustom(key) : undefined
+    if (key !== null && !(key in PRESETS) && !existing) throw notFound(`dashboard "${key}"`)
+    if (taken(cleaned, existing?.id ?? null)) throw invalid(`a dashboard named "${cleaned}" already exists`)
+    if (existing) {
+      existing.name = cleaned
+      existing.widgets = clone(widgets)
+      if (scope) existing.scope = { ...scope }
+      return layoutOf(customKey(existing.id))
+    }
+    const created: Stored = { id: nextId++, name: cleaned, scope: scope ? { ...scope } : { ...FOLLOW_SCOPE }, widgets: clone(widgets) }
+    customs.push(created)
+    return layoutOf(customKey(created.id))
+  }
+
   return {
     listWidgetCatalog: async (): Promise<WidgetDefinition[]> => clone(LIBRARY),
     listDashboardLayouts: async (): Promise<DashboardSummary[]> => {
+      await sync()
       const dflt = currentDefault()
       return [...PRESET_KEYS, ...customs.map((c) => customKey(c.id))].map((key) => {
         const l = layoutOf(key)
-        return { key, name: l.name, builtin: l.builtin, isDefault: dflt === key, widgetCount: l.widgets.length }
+        return { key, name: l.name, builtin: l.builtin, isDefault: dflt === key, scope: l.scope, widgetCount: l.widgets.length }
       })
     },
-    getDashboardLayout: async (key: string): Promise<DashboardLayout> => layoutOf(key),
-    getStartupDashboard: async (): Promise<DashboardLayout> => layoutOf(currentDefault()),
-    saveDashboardLayout: async (key: string | null, name: string, widgets: WidgetInstance[]): Promise<DashboardLayout> => {
-      const cleaned = cleanName(name)
-      validateLayout(widgets, await listAccountIds())
-      const existing = key !== null ? findCustom(key) : undefined
-      if (key !== null && !(key in PRESETS) && !existing) throw notFound(`dashboard "${key}"`)
-      if (taken(cleaned, existing?.id ?? null)) throw invalid(`a dashboard named "${cleaned}" already exists`)
-      if (existing) {
-        existing.name = cleaned
-        existing.widgets = clone(widgets)
-        return layoutOf(customKey(existing.id))
-      }
-      const created: Stored = { id: nextId++, name: cleaned, widgets: clone(widgets) }
-      customs.push(created)
-      return layoutOf(customKey(created.id))
+    getDashboardLayout: async (key: string): Promise<DashboardLayout> => (await sync(), layoutOf(key)),
+    getStartupDashboard: async (): Promise<DashboardLayout> => (await sync(), layoutOf(currentDefault())),
+    saveDashboardLayout: save,
+    setDashboardScope: async (key: string, scope: DashboardScope): Promise<DashboardLayout> => {
+      await sync()
+      if (key in PRESETS) throw invalid('a built-in dashboard cannot be linked to an account: save a copy first')
+      const c = findCustom(key)
+      if (!c) throw notFound(`dashboard "${key}"`)
+      validateScope(scope, await listAccountIds())
+      c.scope = { ...scope }
+      return layoutOf(key)
     },
+    /** Les comptes réellement lus par le dashboard et par chaque widget (brouillon compris). */
+    resolveDashboardScope: async (scope: DashboardScope, widgets: WidgetInstance[], selectedAccountId: number | null): Promise<ResolvedDashboard> =>
+      resolveDashboardOf(await sync(), scope, widgets, selectedAccountId),
     renameDashboardLayout: async (key: string, name: string): Promise<DashboardLayout> => {
       if (key in PRESETS) throw invalid('a built-in dashboard cannot be renamed')
       const cleaned = cleanName(name)
@@ -217,11 +452,48 @@ export function createDashboardsMock(listAccountIds: () => Promise<number[]>) {
       defaultKey = key
       return layoutOf(key)
     },
+    duplicateDashboardLayout: async (key: string, name: string | null = null): Promise<DashboardLayout> => {
+      await sync()
+      const source = layoutOf(key)
+      const copy = name ?? freeName(source.name, 'copie')
+      return save(null, copy, source.widgets, savable(source.scope))
+    },
+    /** Écrit le fichier de configuration dans un « disque » en mémoire (le navigateur n'a pas de fichiers). */
+    exportDashboardConfig: async (key: string, path: string): Promise<void> => {
+      const all = await sync()
+      const layout = layoutOf(key)
+      const scope = savable(layout.scope)
+      const ref = (id: number | null): AccountRef | null => {
+        const a = id === null ? undefined : all.find((x) => x.id === id)
+        return a ? { name: a.name, currency: a.currency } : null
+      }
+      const file = {
+        format: FORMAT,
+        version: FORMAT_VERSION,
+        name: layout.name,
+        scope: { kind: scope.kind, account: ref(scope.accountId) },
+        widgets: layout.widgets.map((w) => ({ uid: w.uid, kind: w.kind, x: w.x, y: w.y, w: w.w, h: w.h, period: w.period, mode: w.mode, account: ref(w.accountId) })),
+      }
+      files.set(path, `${JSON.stringify(file, null, 2)}\n`)
+    },
+    importDashboardConfig: async (path: string): Promise<ImportResult> => {
+      const text = files.get(path)
+      if (text === undefined) throw new Error(`io error: no such file: ${path}`)
+      return importText(text)
+    },
+    /** Pour les tests : le contenu d'un fichier exporté. */
+    readExportedFile: (path: string): string | null => files.get(path) ?? null,
+    /** Pour les tests : importe un texte sans passer par un fichier. */
+    importDashboardConfigText: async (text: string): Promise<ImportResult> => importText(text),
+    /** Boîtes de dialogue simulées : « enregistrer sous » propose un chemin ; « ouvrir » rouvre le dernier fichier exporté. */
+    pickExportPath: async (defaultName: string): Promise<string | null> => `(dossier de démonstration)/${defaultName}`,
+    pickImportPath: async (): Promise<string | null> => [...files.keys()].at(-1) ?? '(dossier de démonstration)/aucun-fichier.json',
     /** Pour les tests : repart d'un état neuf. */
     reset: () => {
       customs = []
       nextId = 1
       defaultKey = null
+      files.clear()
     },
   }
 }
