@@ -7,8 +7,20 @@
 //! [`Ledger`] and a thin wrapper that loads it from SQLite with the user's
 //! [`BehaviorSettings`].
 
+mod analysis;
 mod discipline;
+mod mistakes;
+mod patterns;
 
+pub use analysis::{
+    EmotionReport, FirstTradeReport, PlanReport, RankGroup, Streak, StreakReport, emotion_report, emotions, first_trade,
+    first_trade_report, plan, plan_report, streak_report, streaks,
+};
+pub use mistakes::{
+    MIN_CHECKS_FOR_TREND, Mistake, MistakeReport, MistakeSource, MonthAdherence, RuleAdherence, RuleAdherenceReport,
+    mistake_report, mistakes, rule_adherence, rule_adherence_report,
+};
+pub use patterns::{Hesitation, MissedFacts, OvertradingDay, PatternReport, RevengeTrade, load_missed, pattern_report, patterns};
 pub use discipline::{
     Component, ComponentKey, ComponentSummary, DayDiscipline, DisciplineReport, MIN_SCORED_TRADES, Quadrant, Quadrants,
     TradeDiscipline, WELL_EXECUTED_SCORE, WEIGHTS, discipline, discipline_report, score, trade_discipline,
@@ -123,3 +135,6 @@ impl<'a> Context<'a> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod analysis_tests;

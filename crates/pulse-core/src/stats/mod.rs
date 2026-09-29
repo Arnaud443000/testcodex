@@ -16,7 +16,7 @@ pub mod dashboard;
 mod load;
 pub mod pnl;
 pub(crate) mod risk;
-mod segments;
+pub(crate) mod segments;
 pub(crate) mod summary;
 pub mod time;
 
