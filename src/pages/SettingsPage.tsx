@@ -1,13 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { CashFlowsPanel } from '../components/CashFlowsPanel'
+import { DataPanel } from '../components/DataPanel'
+import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
+import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
-import type { AccountKind, AppInfo } from '../types/account'
-
-const KIND_LABEL: Record<AccountKind, string> = { personal: 'Personal', prop: 'Prop firm', demo: 'Demo' }
+import { parseDecimalInput } from '../lib/decimal'
+import { formatDecimal } from '../lib/format'
+import type { Account, AccountKind, AppInfo } from '../types/account'
+import type { ChecklistItem, Rule } from '../types/trade'
 
 function AccountForm() {
   const { create } = useAccounts()
+  const t = useT()
   const [name, setName] = useState('')
   const [kind, setKind] = useState<AccountKind>('personal')
   const [broker, setBroker] = useState('')
@@ -19,14 +25,18 @@ function AccountForm() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    // Le capital voyage sous forme de chaîne décimale exacte (jamais un nombre JS) : "10 000,50" → "10000.50".
+    const capitalValue = parseDecimalInput(capital)
+    if (!name.trim()) return setError(t.settings.errNameRequired)
+    if (capitalValue === null) return setError(t.settings.errCapital)
     setBusy(true)
     try {
-      await create({ name, kind, broker, currency, initialCapital: Number(capital) || 0 })
+      await create({ name, kind, broker, currency, initialCapital: capitalValue })
       setName('')
       setBroker('')
       setCapital('')
     } catch (err) {
-      setError(String(err instanceof Error ? err.message : err))
+      setError(t.settings.errSave(String(err instanceof Error ? err.message : err)))
     } finally {
       setBusy(false)
     }
@@ -37,31 +47,31 @@ function AccountForm() {
     <form onSubmit={submit} className="flex flex-col gap-4">
       <div className="grid grid-cols-3 gap-3.5">
         <label className={field}>
-          <span className="caption">Name</span>
-          <input id="acc-name" className="control h-[42px] px-3.5" value={name} onChange={(e) => setName(e.target.value)} placeholder="Main account" />
+          <span className="caption">{t.settings.name}</span>
+          <input id="acc-name" className="control h-[42px] px-3.5" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.settings.namePlaceholder} />
         </label>
         <label className={field}>
-          <span className="caption">Type</span>
+          <span className="caption">{t.settings.type}</span>
           <select id="acc-kind" className="control h-[42px] px-3.5" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
-            {Object.entries(KIND_LABEL).map(([k, l]) => (
+            {Object.entries(t.settings.kinds).map(([k, l]) => (
               <option key={k} value={k} className="bg-bg">{l}</option>
             ))}
           </select>
         </label>
         <label className={field}>
-          <span className="caption">Broker</span>
+          <span className="caption">{t.settings.broker}</span>
           <input id="acc-broker" className="control h-[42px] px-3.5" value={broker} onChange={(e) => setBroker(e.target.value)} />
         </label>
         <label className={field}>
-          <span className="caption">Currency</span>
+          <span className="caption">{t.settings.currency}</span>
           <input id="acc-currency" className="control h-[42px] px-3.5" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} />
         </label>
         <label className={field}>
-          <span className="caption">Initial capital</span>
-          <input id="acc-capital" className="control h-[42px] px-3.5" inputMode="decimal" value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="10000" />
+          <span className="caption">{t.settings.initialCapital}</span>
+          <input id="acc-capital" className="control h-[42px] px-3.5" inputMode="decimal" value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="10 000" />
         </label>
         <div className="flex items-end">
-          <button className="btn btn-primary" disabled={busy} type="submit">Add account</button>
+          <button className="btn btn-primary" disabled={busy} type="submit">{t.settings.add}</button>
         </div>
       </div>
       {error && <div className="nt nt-bad" role="alert">{error}</div>}
@@ -69,8 +79,114 @@ function AccountForm() {
   )
 }
 
+function AccountRow({ account: a }: { account: Account }) {
+  const { remove } = useAccounts()
+  const t = useT()
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function doDelete() {
+    setBusy(true)
+    setError(null)
+    try {
+      await remove(a.id)
+    } catch (err) {
+      const msg = String(err instanceof Error ? err.message : err)
+      setError(msg.includes('account_in_use') ? t.settings.errInUse : t.settings.errDelete(msg))
+      setConfirming(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <li className="py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-medium">{a.name}</span>
+        <span className="flex items-center gap-4">
+          <span className="text-tx2">
+            {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
+          </span>
+          {confirming ? (
+            <span className="flex items-center gap-2">
+              <span className="text-tx2">{t.settings.deleteConfirm(a.name)}</span>
+              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px] !text-loss" disabled={busy} onClick={doDelete}>
+                {t.settings.deleteYes}
+              </button>
+              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px]" onClick={() => setConfirming(false)}>
+                {t.settings.deleteCancel}
+              </button>
+            </span>
+          ) : (
+            <button className="text-[13px] font-medium text-tx-accent hover:underline" onClick={() => setConfirming(true)}>
+              {t.settings.delete}
+            </button>
+          )}
+        </span>
+      </div>
+      {error && <div className="nt nt-bad mt-2" role="alert">{error}</div>}
+    </li>
+  )
+}
+
+function RulesSection() {
+  const t = useT()
+  const [rules, setRules] = useState<Rule[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const reload = () => api.listRules(true).then(setRules).catch((e) => setError(String(e)))
+  useEffect(() => {
+    void reload()
+  }, [])
+  return (
+    <>
+      {error && <div className="nt nt-bad" role="alert">{t.settings.list.loadError(error)}</div>}
+      <EditableList
+        title={t.settings.rules.title}
+        intro={t.settings.rules.intro}
+        placeholder={t.settings.rules.placeholder}
+        emptyText={t.settings.rules.empty}
+        addLabel={t.settings.rules.add}
+        inputLabel={t.settings.rules.label}
+        items={rules.map((r) => ({ id: r.id, text: r.text, archived: r.archived }))}
+        onCreate={async (text) => { await api.createRule(text); await reload() }}
+        onRename={async (id, text) => { await api.renameRule(id, text); await reload() }}
+        onArchive={async (id, archived) => { await api.setRuleArchived(id, archived); await reload() }}
+      />
+    </>
+  )
+}
+
+function ChecklistSection() {
+  const t = useT()
+  const [items, setItems] = useState<ChecklistItem[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const reload = () => api.listChecklist(true).then(setItems).catch((e) => setError(String(e)))
+  useEffect(() => {
+    void reload()
+  }, [])
+  return (
+    <>
+      {error && <div className="nt nt-bad" role="alert">{t.settings.list.loadError(error)}</div>}
+      <EditableList
+        title={t.settings.checklist.title}
+        intro={t.settings.checklist.intro}
+        placeholder={t.settings.checklist.placeholder}
+        emptyText={t.settings.checklist.empty}
+        addLabel={t.settings.checklist.add}
+        inputLabel={t.settings.checklist.label}
+        items={items.map((c) => ({ id: c.id, text: c.label, archived: c.archived }))}
+        onCreate={async (text) => { await api.createChecklistItem(text); await reload() }}
+        onRename={async (id, text) => { await api.renameChecklistItem(id, text); await reload() }}
+        onArchive={async (id, archived) => { await api.setChecklistItemArchived(id, archived); await reload() }}
+      />
+    </>
+  )
+}
+
 export function SettingsPage() {
   const { accounts } = useAccounts()
+  const t = useT()
   const [info, setInfo] = useState<AppInfo | null>(null)
   useEffect(() => {
     api.appInfo().then(setInfo).catch(() => setInfo(null))
@@ -78,33 +194,33 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Settings" subtitle="Accounts and application information" />
+      <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
 
       <section className="glass-card p-6">
-        <h3 className="mb-4 text-base font-semibold">Trading accounts</h3>
+        <h3 className="mb-4 text-base font-semibold">{t.settings.accountsTitle}</h3>
         {accounts.length > 0 && (
           <ul className="mb-5 divide-y" style={{ borderColor: 'var(--hairline)' }}>
             {accounts.map((a) => (
-              <li key={a.id} className="flex items-center justify-between py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
-                <span className="font-medium">{a.name}</span>
-                <span className="text-tx2">
-                  {KIND_LABEL[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {a.initialCapital.toLocaleString('en-US')} {a.currency}
-                </span>
-              </li>
+              <AccountRow key={a.id} account={a} />
             ))}
           </ul>
         )}
         <AccountForm />
       </section>
 
+      <RulesSection />
+      <ChecklistSection />
+      <CashFlowsPanel />
+      <DataPanel />
+
       <section className="glass-card p-6">
-        <h3 className="mb-3 text-base font-semibold">About</h3>
+        <h3 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h3>
         <dl className="grid grid-cols-[160px_1fr] gap-y-2 text-sm">
-          <dt className="text-tx3">Version</dt>
+          <dt className="text-tx3">{t.settings.version}</dt>
           <dd>{info?.version ?? '…'}</dd>
-          <dt className="text-tx3">Data folder</dt>
-          <dd className="break-all">{info?.dataDir ?? '…'}</dd>
-          <dt className="text-tx3">Database schema</dt>
+          <dt className="text-tx3">{t.settings.dataFolder}</dt>
+          <dd className="break-all">{info ? (info.dataDir === '(browser preview)' ? t.settings.browserPreview : info.dataDir) : '…'}</dd>
+          <dt className="text-tx3">{t.settings.schema}</dt>
           <dd>v{info?.schemaVersion ?? '…'}</dd>
         </dl>
       </section>

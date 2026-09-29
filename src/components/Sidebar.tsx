@@ -1,21 +1,23 @@
 import { NavLink } from 'react-router-dom'
+import { useT, type Messages } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { Icon, type IconName } from './Icon'
 import { Logo } from './Logo'
 
-export const NAV: { to: string; label: string; icon: IconName }[] = [
-  { to: '/', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/trades', label: 'Trades', icon: 'trades' },
-  { to: '/calendar', label: 'Calendar', icon: 'calendar' },
-  { to: '/analytics', label: 'Analytics', icon: 'analytics' },
-  { to: '/behavior', label: 'Behavior', icon: 'behavior' },
-  { to: '/journal', label: 'Journal', icon: 'journal' },
-  { to: '/goals', label: 'Goals', icon: 'goals' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
+export const NAV: { to: string; key: keyof Messages['nav']; icon: IconName }[] = [
+  { to: '/', key: 'dashboard', icon: 'dashboard' },
+  { to: '/trades', key: 'trades', icon: 'trades' },
+  { to: '/calendar', key: 'calendar', icon: 'calendar' },
+  { to: '/analytics', key: 'analytics', icon: 'analytics' },
+  { to: '/behavior', key: 'behavior', icon: 'behavior' },
+  { to: '/journal', key: 'journal', icon: 'journal' },
+  { to: '/goals', key: 'goals', icon: 'goals' },
+  { to: '/settings', key: 'settings', icon: 'settings' },
 ]
 
 export function Sidebar() {
   const { accounts } = useAccounts()
+  const t = useT()
   return (
     <aside className="glass-bar flex w-[248px] shrink-0 flex-col border-r px-4 py-[26px]">
       <div className="flex items-center gap-3 px-2.5 pb-[30px]">
@@ -23,7 +25,7 @@ export function Sidebar() {
         <span className="text-[26px] font-light leading-none tracking-tight">Pulse</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
-        {NAV.map(({ to, label, icon }) => (
+        {NAV.map(({ to, key, icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -37,7 +39,7 @@ export function Sidebar() {
             }
           >
             <Icon name={icon} />
-            <span>{label}</span>
+            <span>{t.nav[key]}</span>
           </NavLink>
         ))}
       </nav>
@@ -46,12 +48,12 @@ export function Sidebar() {
           className="grid h-[38px] w-[38px] place-items-center rounded-full font-semibold text-white"
           style={{ background: 'var(--grad)' }}
         >
-          T
+          {t.sidebar.user.charAt(0)}
         </div>
         <div className="leading-tight">
-          <b className="block text-sm">Trader</b>
+          <b className="block text-sm">{t.sidebar.user}</b>
           <span className="text-xs text-tx3">
-            Local · {accounts.length} {accounts.length === 1 ? 'account' : 'accounts'}
+            {t.sidebar.local} · {t.sidebar.accounts(accounts.length)}
           </span>
         </div>
       </div>

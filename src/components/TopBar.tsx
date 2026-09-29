@@ -1,14 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
+import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
-
-const PERIODS = ['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const
 
 export function TopBar() {
   const { accounts, selectedId, select } = useAccounts()
+  const t = useT()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('3M')
+  const { period, setPeriod } = usePeriod()
 
   return (
     <header
@@ -17,14 +17,14 @@ export function TopBar() {
       <label className="control relative flex items-center gap-3 !rounded-full px-4 py-2 text-tx2">
         <Icon name="wallet" />
         <span className="leading-tight">
-          <small className="block text-[11px] text-tx3">Account</small>
+          <small className="block text-[11px] text-tx3">{t.topbar.account}</small>
           <select
-            aria-label="Account"
+            aria-label={t.topbar.account}
             className="cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-tx outline-none"
             value={selectedId ?? ''}
             onChange={(e) => select(e.target.value === '' ? null : Number(e.target.value))}
           >
-            <option value="" className="bg-bg">All accounts</option>
+            <option value="" className="bg-bg">{t.topbar.allAccounts}</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
             ))}
@@ -33,8 +33,8 @@ export function TopBar() {
         <span className="pointer-events-none absolute right-3"><Icon name="chevron" size={16} /></span>
       </label>
 
-      <div className="control flex gap-0.5 !rounded-full p-1" role="group" aria-label="Period">
-        {PERIODS.map((p) => (
+      <div className="control flex gap-0.5 !rounded-full p-1" role="group" aria-label={t.topbar.period}>
+        {PERIOD_KEYS.map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
@@ -44,17 +44,17 @@ export function TopBar() {
             }`}
             style={period === p ? { background: 'var(--grad)' } : undefined}
           >
-            {p}
+            {t.topbar.periods[p]}
           </button>
         ))}
       </div>
 
       <div className="flex-1" />
-      <button className="control grid h-11 w-11 place-items-center !rounded-full text-tx2" aria-label="Notifications">
+      <button className="control grid h-11 w-11 place-items-center !rounded-full text-tx2" aria-label={t.topbar.notifications}>
         <Icon name="bell" />
       </button>
-      <button className="btn btn-primary" onClick={() => navigate('/trades')}>
-        <Icon name="plus" size={18} /> New trade
+      <button className="btn btn-primary" onClick={() => navigate('/trades/new')}>
+        <Icon name="plus" size={18} /> {t.topbar.newTrade}
       </button>
     </header>
   )

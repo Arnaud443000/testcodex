@@ -2,6 +2,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Classes composées à l'exécution (paliers de la heatmap : cal-g1…cal-l3).
+  safelist: [{ pattern: /^cal-(g|l)[123]$/ }],
   theme: {
     extend: {
       colors: {

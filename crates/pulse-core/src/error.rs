@@ -8,6 +8,8 @@ pub enum CoreError {
     Io(#[from] std::io::Error),
     #[error("invalid input: {0}")]
     Invalid(String),
+    #[error("not found: {0}")]
+    NotFound(String),
     #[error("database is from a newer version of Pulse (schema {found}, supported {supported})")]
     SchemaTooNew { found: u32, supported: u32 },
 }
