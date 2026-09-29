@@ -2988,6 +2988,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pulse-news"
+version = "0.1.0"
+dependencies = [
+ "pulse-core",
+ "ureq",
+]
+
+[[package]]
 name = "pulse-vault"
 version = "0.1.0"
 dependencies = [
