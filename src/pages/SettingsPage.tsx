@@ -1,14 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useLocation } from 'react-router-dom'
+import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
+import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
+import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
 import { DataPanel } from '../components/DataPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
+import { ReminderPanel } from '../components/ReminderPanel'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
 import { parseDecimalInput } from '../lib/decimal'
-import { formatDecimal } from '../lib/format'
-import type { Account, AccountKind, AppInfo } from '../types/account'
+import type { AccountKind, AppInfo } from '../types/account'
 import type { ChecklistItem, Rule } from '../types/trade'
 
 function AccountForm() {
@@ -79,57 +83,6 @@ function AccountForm() {
   )
 }
 
-function AccountRow({ account: a }: { account: Account }) {
-  const { remove } = useAccounts()
-  const t = useT()
-  const [confirming, setConfirming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function doDelete() {
-    setBusy(true)
-    setError(null)
-    try {
-      await remove(a.id)
-    } catch (err) {
-      const msg = String(err instanceof Error ? err.message : err)
-      setError(msg.includes('account_in_use') ? t.settings.errInUse : t.settings.errDelete(msg))
-      setConfirming(false)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <li className="py-3 text-sm" style={{ borderColor: 'var(--hairline)' }}>
-      <div className="flex items-center justify-between gap-4">
-        <span className="font-medium">{a.name}</span>
-        <span className="flex items-center gap-4">
-          <span className="text-tx2">
-            {t.settings.kinds[a.kind]}{a.broker ? ` · ${a.broker}` : ''} · {formatDecimal(a.initialCapital, 2)} {a.currency}
-          </span>
-          {confirming ? (
-            <span className="flex items-center gap-2">
-              <span className="text-tx2">{t.settings.deleteConfirm(a.name)}</span>
-              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px] !text-loss" disabled={busy} onClick={doDelete}>
-                {t.settings.deleteYes}
-              </button>
-              <button className="btn btn-secondary !px-4 !py-1.5 !text-[13px]" onClick={() => setConfirming(false)}>
-                {t.settings.deleteCancel}
-              </button>
-            </span>
-          ) : (
-            <button className="text-[13px] font-medium text-tx-accent hover:underline" onClick={() => setConfirming(true)}>
-              {t.settings.delete}
-            </button>
-          )}
-        </span>
-      </div>
-      {error && <div className="nt nt-bad mt-2" role="alert">{error}</div>}
-    </li>
-  )
-}
-
 function RulesSection() {
   const t = useT()
   const [rules, setRules] = useState<Rule[]>([])
@@ -185,9 +138,17 @@ function ChecklistSection() {
 }
 
 export function SettingsPage() {
-  const { accounts } = useAccounts()
+  const { accounts, allAccounts } = useAccounts()
+  const archived = allAccounts.filter((a) => a.archived)
   const t = useT()
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const { hash } = useLocation()
+  // Lien direct « /settings#alertes » : fait défiler jusqu'à la section une fois la page dessinée.
+  useEffect(() => {
+    if (!hash) return
+    const timer = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView(), 300)
+    return () => clearTimeout(timer)
+  }, [hash])
   useEffect(() => {
     api.appInfo().then(setInfo).catch(() => setInfo(null))
   }, [])
@@ -206,11 +167,27 @@ export function SettingsPage() {
           </ul>
         )}
         <AccountForm />
+        <p className="mt-4 text-[13px] text-tx3">{t.accountAdmin.hint}</p>
       </section>
+
+      {archived.length > 0 && (
+        <section className="glass-card p-6">
+          <h3 className="mb-1 text-base font-semibold">{t.accountAdmin.archivedTitle}</h3>
+          <p className="mb-3 text-[13px] text-tx3">{t.accountAdmin.archivedIntro}</p>
+          <ul className="divide-y" style={{ borderColor: 'var(--hairline)' }}>
+            {archived.map((a) => (
+              <ArchivedAccountRow key={a.id} account={a} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <RulesSection />
       <ChecklistSection />
+      <BehaviorSettingsPanel />
+      <AlertSettingsPanel />
       <CashFlowsPanel />
+      <ReminderPanel />
       <DataPanel />
 
       <section className="glass-card p-6">

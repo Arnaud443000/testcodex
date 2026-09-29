@@ -12,11 +12,14 @@
 //! flows this equals the plain "balance / starting balance" curve; with flows,
 //! a deposit never shows up as performance.
 
+pub mod analyses;
 pub mod dashboard;
+pub mod distribution;
 mod load;
 pub mod pnl;
-mod segments;
-mod summary;
+pub mod risk;
+pub(crate) mod segments;
+pub(crate) mod summary;
 pub mod time;
 
 pub use load::load;
@@ -28,10 +31,11 @@ use crate::error::Result;
 use crate::instruments::AssetClass;
 use crate::money::Decimal;
 use crate::tags::TagKind;
-use crate::trades::{Direction, ExecutionType};
+use crate::trades::{Direction, EmotionMoment, ExecutionType, PlanFollowed};
 use pnl::checked;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,13 +59,39 @@ pub struct TradeFacts {
     pub tz_offset_min: i32,
     pub execution_type: Option<ExecutionType>,
     pub tags: Vec<TagRef>,
+    pub journal: Journal,
+}
+
+/// What the trader declared about a trade (spec 3.2), for the behavioural analysis.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Journal {
+    pub plan_followed: Option<PlanFollowed>,
+    pub emotions: Vec<(EmotionMoment, TagRef)>,
+    pub rule_checks: Vec<RuleCheckFact>,
+    /// Ticked lines and total lines of the trade's checklist copy (0 / 0 when none).
+    pub checklist_checked: usize,
+    pub checklist_total: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RuleCheckFact {
+    pub rule_id: i64,
+    pub text: String,
+    pub respected: bool,
 }
 
 /// A deposit (+) or withdrawal (−) at an instant.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapitalMove {
+    pub account_id: i64,
     pub at: i64,
     pub amount: Decimal,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AccountCapital {
+    pub id: i64,
+    pub initial_capital: Decimal,
 }
 
 /// Source data for one account, or several accounts sharing a currency.
@@ -69,7 +99,10 @@ pub struct CapitalMove {
 pub struct Ledger {
     /// `None` when no account is selected.
     pub currency: Option<String>,
+    /// Sum of the initial capitals of `accounts`.
     pub initial_capital: Decimal,
+    /// Each account on its own, for per-account balances (risk in % of capital).
+    pub accounts: Vec<AccountCapital>,
     pub capital_moves: Vec<CapitalMove>,
     pub trades: Vec<TradeFacts>,
 }
@@ -128,11 +161,13 @@ pub(crate) struct Closed<'a> {
     /// Net PnL / balance just before it (all flows up to its exit included);
     /// `None` when that balance is not positive.
     pub ret: Option<f64>,
+    /// 1 for the first trade entered on its local day on its account, 2 for the next… (see [`day_ranks`]).
+    pub day_rank: u32,
 }
 
 pub fn compute(ledger: &Ledger, query: &StatsQuery) -> Result<Report> {
     let replay = replay(ledger)?;
-    let selected: Vec<&Closed> = replay.closed.iter().filter(|c| in_window(c.exit_time, query) && matches(c.facts, query)).collect();
+    let selected = replay.selected(query);
     let analysis = summary::analyze(&selected, query.risk_free_daily)?;
     let open_trade_count = ledger.trades.iter().filter(|t| t.exit_time.is_none() && matches(t, query)).count();
     Ok(Report {
@@ -151,7 +186,7 @@ pub fn compute(ledger: &Ledger, query: &StatsQuery) -> Result<Report> {
 /// The indicators of `compute`, broken down by segment (spec 3.3.9, 3.3.10).
 pub fn segments(ledger: &Ledger, query: &StatsQuery, by: SegmentBy) -> Result<Vec<Segment>> {
     let replay = replay(ledger)?;
-    let selected: Vec<&Closed> = replay.closed.iter().filter(|c| in_window(c.exit_time, query) && matches(c.facts, query)).collect();
+    let selected = replay.selected(query);
     segments::split(&selected, by, query.risk_free_daily)
 }
 
@@ -164,26 +199,52 @@ pub fn segment_report(conn: &Connection, query: &StatsQuery, by: SegmentBy) -> R
     segments(&load(conn, &query.account_ids)?, query, by)
 }
 
-fn in_window(exit_time: i64, q: &StatsQuery) -> bool {
+pub(crate) fn in_window(exit_time: i64, q: &StatsQuery) -> bool {
     q.from.is_none_or(|f| exit_time >= f) && q.to.is_none_or(|t| exit_time < t)
 }
 
-fn matches(t: &TradeFacts, q: &StatsQuery) -> bool {
+pub(crate) fn matches(t: &TradeFacts, q: &StatsQuery) -> bool {
     q.direction.is_none_or(|d| t.position.direction == d)
         && (q.instrument_ids.is_empty() || q.instrument_ids.contains(&t.instrument_id))
         && q.tag_ids.iter().all(|id| t.tags.iter().any(|tag| tag.id == *id))
 }
 
-struct Replay<'a> {
-    closed: Vec<Closed<'a>>,
-    deposits: Decimal,
-    withdrawals: Decimal,
-    final_balance: Decimal,
+pub(crate) struct Replay<'a> {
+    /// In exit order (ties: trade id).
+    pub closed: Vec<Closed<'a>>,
+    pub deposits: Decimal,
+    pub withdrawals: Decimal,
+    pub final_balance: Decimal,
+    pub day_ranks: HashMap<i64, u32>,
+}
+
+impl Replay<'_> {
+    /// The closed trades matching the query window and filters, in exit order.
+    pub(crate) fn selected(&self, query: &StatsQuery) -> Vec<&Closed<'_>> {
+        self.closed.iter().filter(|c| in_window(c.exit_time, query) && matches(c.facts, query)).collect()
+    }
+}
+
+/// Rank of each trade among the trades entered on the same local day on the
+/// same account (entry order, ties: id), open trades included: 1 = first trade of the day.
+pub(crate) fn day_ranks(ledger: &Ledger) -> HashMap<i64, u32> {
+    let mut order: Vec<&TradeFacts> = ledger.trades.iter().collect();
+    order.sort_by_key(|t| (t.account_id, time::local_day_number(t.entry_time, t.tz_offset_min), t.entry_time, t.id));
+    let mut ranks = HashMap::with_capacity(order.len());
+    let mut previous: Option<(i64, i64)> = None;
+    let mut rank = 0;
+    for t in order {
+        let day = (t.account_id, time::local_day_number(t.entry_time, t.tz_offset_min));
+        rank = if previous == Some(day) { rank + 1 } else { 1 };
+        previous = Some(day);
+        ranks.insert(t.id, rank);
+    }
+    ranks
 }
 
 /// Walks closed trades in exit order (ties: trade id) and applies each
 /// deposit/withdrawal before any trade closing at the same instant or later.
-fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
+pub(crate) fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
     let mut trades: Vec<(&TradeFacts, i64, Figures)> = Vec::new();
     for t in &ledger.trades {
         if let (Some(exit), Some(f)) = (t.exit_time, pnl::figures(&t.position)?) {
@@ -194,6 +255,7 @@ fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
     let mut moves: Vec<&CapitalMove> = ledger.capital_moves.iter().collect();
     moves.sort_by_key(|m| m.at);
 
+    let day_ranks = day_ranks(ledger);
     let mut balance = ledger.initial_capital;
     let mut next_move = 0;
     let mut closed = Vec::with_capacity(trades.len());
@@ -204,7 +266,8 @@ fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
         }
         let ret = if balance > Decimal::ZERO { pnl::ratio(figures.net_pnl, balance) } else { None };
         balance = checked(balance.checked_add(figures.net_pnl))?;
-        closed.push(Closed { facts, exit_time, figures, ret });
+        let day_rank = day_ranks.get(&facts.id).copied().unwrap_or(1);
+        closed.push(Closed { facts, exit_time, figures, ret, day_rank });
     }
     for m in &moves[next_move..] {
         balance = checked(balance.checked_add(m.amount))?;
@@ -217,8 +280,12 @@ fn replay(ledger: &Ledger) -> Result<Replay<'_>> {
             withdrawals = checked(withdrawals.checked_sub(m.amount))?;
         }
     }
-    Ok(Replay { closed, deposits, withdrawals, final_balance: balance })
+    Ok(Replay { closed, deposits, withdrawals, final_balance: balance, day_ranks })
 }
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod extra_tests;
+#[cfg(test)]
+mod analyses_tests;

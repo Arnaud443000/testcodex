@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
+import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { OutcomeBadge, Pnl, QualityBar, StarRating } from '../components/ui'
@@ -184,6 +186,8 @@ export function TradeDetailPage() {
               warn={oc !== null && signOf(oc) > 0}
             />
           </div>
+
+          <TradeDisciplineCard tradeId={trade.id} />
         </div>
 
         <aside className="flex flex-col gap-5">
@@ -272,6 +276,7 @@ export function TradeDetailPage() {
                 </ol>
               )}
             </div>
+            <ExecutionScoreLine tradeId={trade.id} />
             <div className="flex flex-col gap-1 text-sm">
               <span>{checkTotal > 0 ? d.checklist(checkDone, checkTotal) : <span className="text-tx3">{d.noChecklist}</span>}</span>
               <span>{ruleTotal > 0 ? d.rules(ruleOk, ruleTotal) : <span className="text-tx3">{d.noRules}</span>}</span>

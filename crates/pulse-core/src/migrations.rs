@@ -259,6 +259,92 @@ pub const MIGRATIONS: &[&str] = &[
     DROP TABLE tag_renames;",
     // v4 — instrument full names + built-in asset catalog (generated, see catalog/).
     include_str!("../catalog/v4_asset_catalog.sql"),
+    // v5 — archiving an account: it keeps its history but leaves selectors and default totals.
+    "ALTER TABLE accounts ADD COLUMN archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1));",
+    // v6 — daily journal (spec 3.2.6) and monthly goals (spec 3.7.2). Reminder
+    // settings (3.2.8) live in the existing key/value `settings` table.
+    // The journal is keyed by local day ("YYYY-MM-DD"): one entry per day, whatever the account.
+    // A goal target is an exact decimal in plain notation (percent for a win rate).
+    "CREATE TABLE journal_entries (
+        day           TEXT PRIMARY KEY
+                      CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+        mood          INTEGER CHECK (mood BETWEEN 1 AND 5),
+        sleep_quality INTEGER CHECK (sleep_quality BETWEEN 1 AND 5),
+        fatigue       INTEGER CHECK (fatigue BETWEEN 1 AND 5),
+        late_hours    INTEGER NOT NULL DEFAULT 0 CHECK (late_hours IN (0,1)),
+        went_well     TEXT NOT NULL DEFAULT '',
+        to_improve    TEXT NOT NULL DEFAULT '',
+        notes         TEXT NOT NULL DEFAULT '',
+        created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE TABLE goals (
+        id         INTEGER PRIMARY KEY,
+        month      TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'),
+        metric     TEXT NOT NULL
+                   CHECK (metric IN ('net_pnl','win_rate','profit_factor','expectancy_r','execution_quality','max_drawdown')),
+        target     TEXT NOT NULL
+                   CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*' AND target GLOB '*[1-9]*'),
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (month, metric)
+    );",
+    // v7 — the discipline score becomes a goal metric (spec 3.7.2, 3.4.1). SQLite cannot change a CHECK
+    // in place, so `goals` is rebuilt with the wider list; ids, targets and dates are copied as they are.
+    "CREATE TABLE goals_new (
+        id         INTEGER PRIMARY KEY,
+        month      TEXT NOT NULL CHECK (month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'),
+        metric     TEXT NOT NULL
+                   CHECK (metric IN ('net_pnl','win_rate','profit_factor','expectancy_r','execution_quality','max_drawdown','discipline_score')),
+        target     TEXT NOT NULL
+                   CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*' AND target GLOB '*[1-9]*'),
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (month, metric)
+    );
+    INSERT INTO goals_new (id, month, metric, target, created_at) SELECT id, month, metric, target, created_at FROM goals;
+    DROP TABLE goals;
+    ALTER TABLE goals_new RENAME TO goals;",
+    // v8 — guard-rail alerts (spec 3.6): log of every alert shown, and of the ones the trader dismissed,
+    // so a seen alert never loops. It is an event log, not a cache: active alerts are always recomputed.
+    // `payload` is the alert as first shown (JSON); `trade_id` has no foreign key so the history
+    // outlives a deleted trade; deleting an account removes its history.
+    "CREATE TABLE alert_log (
+        alert_id      TEXT PRIMARY KEY CHECK (length(alert_id) > 0),
+        account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        kind          TEXT NOT NULL CHECK (length(kind) > 0),
+        severity      TEXT NOT NULL CHECK (severity IN ('warning','critical')),
+        trade_id      INTEGER,
+        payload       TEXT NOT NULL,
+        first_seen_at INTEGER NOT NULL,
+        dismissed_at  INTEGER
+    );
+    CREATE INDEX alert_log_by_account ON alert_log (account_id, first_seen_at);",
+    // v9 — customisable dashboard (spec 3.8, 2.9, 2.10). Only the user's own dashboards live here; the
+    // built-in presets are code (`dashboards::presets`) so they cannot be altered or lost. `kind` has no
+    // CHECK on purpose: the widget library grows without a migration, `dashboards::save` validates it.
+    // Deleting an account puts its widgets back on "the global account" instead of blocking the deletion.
+    "CREATE TABLE dashboards (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 60),
+        position   INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE UNIQUE INDEX dashboards_name_key ON dashboards (lower(trim(name)));
+    CREATE TABLE dashboard_widgets (
+        id           INTEGER PRIMARY KEY,
+        dashboard_id INTEGER NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+        uid          TEXT NOT NULL CHECK (length(uid) BETWEEN 1 AND 40),
+        kind         TEXT NOT NULL CHECK (length(kind) BETWEEN 1 AND 40),
+        x            INTEGER NOT NULL CHECK (x >= 0),
+        y            INTEGER NOT NULL CHECK (y >= 0),
+        w            INTEGER NOT NULL CHECK (w >= 1),
+        h            INTEGER NOT NULL CHECK (h >= 1),
+        period       TEXT CHECK (period IS NULL OR period IN ('1D','1W','1M','3M','1Y','ALL')),
+        account_id   INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+        mode         TEXT CHECK (mode IS NULL OR length(mode) BETWEEN 1 AND 40),
+        UNIQUE (dashboard_id, uid)
+    );
+    CREATE INDEX dashboard_widgets_dashboard ON dashboard_widgets (dashboard_id);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -479,7 +565,7 @@ mod tests {
         )
         .unwrap();
 
-        migrate(&mut conn).unwrap();
+        migrate_to(&mut conn, 4).unwrap();
         assert_eq!(current_version(&conn).unwrap(), 4);
 
         let row = |key: &str| -> (i64, String, String, String, String) {
@@ -509,5 +595,172 @@ mod tests {
         migrate(&mut fresh).unwrap();
         migrate(&mut fresh).unwrap();
         assert_eq!(fresh.query_row("SELECT COUNT(*) FROM instruments", [], |r| r.get::<_, i64>(0)).unwrap() as usize, catalog_rows);
+    }
+
+    #[test]
+    fn v5_adds_archived_flag_and_keeps_existing_accounts_active() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 4).unwrap();
+        conn.execute_batch(
+            "INSERT INTO accounts (id, name, kind, initial_capital) VALUES (1, 'Main', 'personal', '1234.50');
+             INSERT INTO cash_flows (account_id, kind, amount, occurred_at, tz_offset_min, note)
+                VALUES (1, 'deposit', '100', 0, 0, '');",
+        )
+        .unwrap();
+        let id = 1;
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let a = accounts::get(&conn, id).unwrap();
+        assert!(!a.archived && a.has_history);
+        assert_eq!(a.initial_capital.to_string(), "1234.50");
+        assert_eq!(crate::cash_flows::list(&conn, &[id]).unwrap().len(), 1);
+        assert!(conn.execute("UPDATE accounts SET archived = 2", []).is_err(), "CHECK refuses other values");
+    }
+
+    #[test]
+    fn v6_adds_journal_and_goals_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 5).unwrap();
+        let account = account_v2(&conn);
+        conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
+
+        migrate_to(&mut conn, 6).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 6);
+        let account_still_there: i64 =
+            conn.query_row("SELECT COUNT(*) FROM accounts WHERE id = ?1", [account], |r| r.get(0)).unwrap();
+        assert_eq!(account_still_there, 1);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'keep'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "me");
+        for table in ["journal_entries", "goals"] {
+            let n: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(n, 0, "{table} starts empty");
+        }
+        // Guards written straight to the schema.
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('2026-09-29')", []).is_ok());
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('2026-09-29')", []).is_err(), "one entry per day");
+        assert!(conn.execute("INSERT INTO journal_entries (day) VALUES ('29/09/2026')", []).is_err());
+        assert!(conn.execute("INSERT INTO journal_entries (day, mood) VALUES ('2026-09-30', 6)", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500')", []).is_ok());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '600')", []).is_err(), "one goal per month and metric");
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '0')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'sharpe', '1')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '1e2')", []).is_err());
+    }
+
+    #[test]
+    fn v7_adds_discipline_score_goals_and_keeps_existing_goals() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 6).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500.50')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'win_rate', '55')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-08', 'max_drawdown', '120')", []).unwrap();
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).is_err(), "not allowed before v7");
+        let before: Vec<(i64, String, String, String, String)> = conn
+            .prepare("SELECT id, month, metric, target, created_at FROM goals ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+            .unwrap()
+            .collect::<std::result::Result<_, _>>()
+            .unwrap();
+
+        migrate_to(&mut conn, 7).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 7);
+        let after: Vec<(i64, String, String, String, String)> = conn
+            .prepare("SELECT id, month, metric, target, created_at FROM goals ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+            .unwrap()
+            .collect::<std::result::Result<_, _>>()
+            .unwrap();
+        assert_eq!(before, after, "existing goals are kept exactly, ids and dates included");
+        // The new metric is accepted; the old guards still hold.
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).is_ok());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '85')", []).is_err(), "one goal per month and metric");
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '0')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'sharpe', '1')", []).is_err());
+        assert!(conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-10', 'net_pnl', '1e2')", []).is_err());
+    }
+
+    #[test]
+    fn v8_adds_the_alert_log_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 7).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let trade = trades::create(&conn, &trades::TradeData::new(a, eu, trades::Direction::Long, 1.into(), 1.into(), 0)).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).unwrap();
+
+        migrate(&mut conn).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        // Existing data untouched.
+        assert_eq!(accounts::list(&conn).unwrap().len(), 1);
+        assert_eq!(trades::get(&conn, trade.id).unwrap().data.account_id, a);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'behavior.max_trades_per_day'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "3");
+        let goals: i64 = conn.query_row("SELECT COUNT(*) FROM goals", [], |r| r.get(0)).unwrap();
+        assert_eq!(goals, 1);
+        let log: i64 = conn.query_row("SELECT COUNT(*) FROM alert_log", [], |r| r.get(0)).unwrap();
+        assert_eq!(log, 0, "the history starts empty");
+        // Guards written straight to the schema.
+        let insert = |id: &str, account: i64, severity: &str| {
+            conn.execute(
+                "INSERT INTO alert_log (alert_id, account_id, kind, severity, payload, first_seen_at) VALUES (?1, ?2, 'x', ?3, '{}', 0)",
+                rusqlite::params![id, account, severity],
+            )
+        };
+        assert!(insert("x:1:1", a, "warning").is_ok());
+        assert!(insert("x:1:1", a, "critical").is_err(), "one line per alert identity");
+        assert!(insert("x:1:2", a, "info").is_err());
+        assert!(insert("", a, "warning").is_err());
+        assert!(insert("x:9:1", 999, "warning").is_err(), "unknown account");
+    }
+
+    #[test]
+    fn v9_adds_dashboards_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 8).unwrap();
+        let account = account_v2(&conn);
+        conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500')", []).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+
+        migrate_to(&mut conn, 9).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 9);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'keep'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "me");
+        let goals: i64 = conn.query_row("SELECT COUNT(*) FROM goals", [], |r| r.get(0)).unwrap();
+        assert_eq!(goals, 1);
+        for table in ["dashboards", "dashboard_widgets"] {
+            let n: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(n, 0, "{table} starts empty: the default dashboard is a built-in preset");
+        }
+        // The existing user lands on the dashboard they always had.
+        assert_eq!(crate::dashboards::startup(&conn).unwrap().key, "preset:essential");
+
+        // Guards written straight to the schema.
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES ('Mon dashboard')", []).is_ok());
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES (' mon DASHBOARD ')", []).is_err(), "names are unique, case and spaces aside");
+        assert!(conn.execute("INSERT INTO dashboards (name) VALUES ('   ')", []).is_err());
+        let widget = |extra: &str| format!("INSERT INTO dashboard_widgets (dashboard_id, uid, kind, x, y, w, h{extra}) ");
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'a', 'kpi', 0, 0, 6, 6)"), []).is_ok());
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'a', 'kpi', 6, 0, 6, 6)"), []).is_err(), "uid unique in a dashboard");
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'b', 'kpi', -1, 0, 6, 6)"), []).is_err());
+        assert!(conn.execute(&(widget("") + "VALUES (1, 'b', 'kpi', 0, 0, 0, 6)"), []).is_err());
+        assert!(conn.execute(&(widget("") + "VALUES (2, 'b', 'kpi', 0, 0, 6, 6)"), []).is_err(), "dashboard must exist");
+        assert!(conn.execute(&(widget(", period") + "VALUES (1, 'b', 'kpi', 6, 0, 6, 6, '2W')"), []).is_err());
+        assert!(conn.execute(&(widget(", period, account_id") + &format!("VALUES (1, 'b', 'kpi', 6, 0, 6, 6, '1M', {account})")), []).is_ok());
+        // Deleting an account keeps the widget; deleting the dashboard removes its widgets.
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [account]).unwrap();
+        let acc: Option<i64> = conn.query_row("SELECT account_id FROM dashboard_widgets WHERE uid = 'b'", [], |r| r.get(0)).unwrap();
+        assert_eq!(acc, None);
+        conn.execute("DELETE FROM dashboards WHERE id = 1", []).unwrap();
+        let n: i64 = conn.query_row("SELECT COUNT(*) FROM dashboard_widgets", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 0);
     }
 }

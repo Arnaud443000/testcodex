@@ -1,5 +1,5 @@
 import type { BackupInfo, RestoreResult } from '../types/data'
-import type { Account, CashFlow, NewAccount, NewCashFlow } from '../types/account'
+import type { Account, AccountUpdate, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
   ChecklistItem,
@@ -15,9 +15,18 @@ import type {
   TradeFilter,
   TradeView,
 } from '../types/trade'
-import type { CalendarQuery, DashboardQuery } from '../types/stats'
+import type { CalendarQuery, DashboardQuery, StatsQuery } from '../types/stats'
+import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
+import * as behavior from './mockBehavior'
+import * as analyses from './mockAnalyses'
+import type { FeeGranularity } from '../types/stats'
 import { ASSET_CATALOG } from './assetCatalog'
+import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
+import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
+import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
+import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
+import type { DayOverview, JournalEntry, MissedTrade, MissedTradeData, PeriodQuery, ReminderDue, ReminderSettings } from '../types/journal'
 
 /**
  * MOCK EN MÉMOIRE — uniquement pour `npm run dev` dans un navigateur, sans Rust.
@@ -89,6 +98,7 @@ const rules: Rule[] = []
 const checklist: ChecklistItem[] = []
 const cashFlows: CashFlow[] = []
 const trades = new Map<number, TradeData & { id: number; createdAt: string; updatedAt: string }>()
+let behaviorSettings: BehaviorSettings = { ...behavior.DEFAULT_BEHAVIOR_SETTINGS }
 const screenshots = new Map<string, string>()
 
 const key = (s: string) => s.split(/\s+/).filter(Boolean).join(' ').toLowerCase()
@@ -187,9 +197,13 @@ function view(t: TradeData & { id: number; createdAt: string; updatedAt: string 
   }
 }
 
-/** Comptes sélectionnés (tous si vide), clôturés uniquement ; refuse de mélanger les devises comme pulse-core. */
+const accountHasHistory = (accountId: number) =>
+  [...trades.values()].some((t) => t.accountId === accountId) || cashFlows.some((f) => f.accountId === accountId)
+const withHistory = (a: Account): Account => ({ ...a, hasHistory: accountHasHistory(a.id) })
+
+/** Comptes sélectionnés (tous les comptes actifs si vide), clôturés uniquement ; refuse de mélanger les devises comme pulse-core. */
 function ledgerOf(accountIds: number[]): MockLedger {
-  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
   if (chosen.length === 0) return { currency: null, initialCapital: '0', capitalMoves: [], closed: [], openCount: 0 }
   const other = chosen.find((a) => a.currency !== chosen[0].currency)
   if (other) throw invalid(`accounts in different currencies (${chosen[0].currency} and ${other.currency}) cannot be combined`)
@@ -210,6 +224,23 @@ function ledgerOf(accountIds: number[]): MockLedger {
   }
 }
 
+/** Comptes choisis pour l'analyse comportementale ; mêmes refus que pulse-core. */
+function behaviorInput(accountIds: number[] = []): behavior.BehaviorInput {
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts
+  const other = chosen.find((a) => a.currency !== chosen[0].currency)
+  if (other) throw invalid(`accounts in different currencies (${chosen[0].currency} and ${other.currency}) cannot be combined`)
+  const ids = new Set(chosen.map((a) => a.id))
+  return {
+    accounts: chosen,
+    cashFlows: cashFlows.filter((f) => ids.has(f.accountId)),
+    trades: [...trades.values()].filter((t) => ids.has(t.accountId)).map(view),
+    tags,
+    rules,
+    settings: behaviorSettings,
+    missed: missedTrades.filter((m) => ids.has(m.accountId)),
+  }
+}
+
 // Sauvegardes du faux backend : instantanés en mémoire, indexés par « dossier ».
 type Snapshot = ReturnType<typeof snapshot>
 const backups = new Map<string, Snapshot>()
@@ -220,7 +251,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 4, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 9, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
 })
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
@@ -256,7 +287,7 @@ export const mock = {
     return { info: infoOf(folder, s), safetyCopy }
   },
   appInfo: async () => ({ version: '0.1.0', dataDir: '(browser preview)', schemaVersion: 2 }),
-  listAccounts: async (): Promise<Account[]> => [...accounts],
+  listAccounts: async (): Promise<Account[]> => accounts.map(withHistory),
   deleteAccount: async (accountId: number): Promise<void> => {
     if ([...trades.values()].some((t) => t.accountId === accountId)) throw invalid('account_in_use')
     if (cashFlows.some((f) => f.accountId === accountId)) throw invalid('account_in_use')
@@ -268,9 +299,25 @@ export const mock = {
     if (!/^\d+(\.\d+)?$/.test(a.initialCapital.trim())) {
       throw new Error(`invalid input: initial capital is not a valid number: "${a.initialCapital}"`)
     }
-    const acc = { ...a, name: a.name.trim(), initialCapital: a.initialCapital.trim(), id: id() }
+    const acc = { ...a, name: a.name.trim(), initialCapital: a.initialCapital.trim(), id: id(), archived: false, hasHistory: false }
     accounts.push(acc)
     return acc
+  },
+  updateAccount: async (accountId: number, u: AccountUpdate): Promise<Account> => {
+    const acc = accounts.find((a) => a.id === accountId)
+    if (!acc) throw new Error(`not found: account ${accountId}`)
+    if (!u.name.trim()) throw invalid('account name is required')
+    if (!u.currency.trim()) throw invalid('currency is required')
+    if (!/^\d+(\.\d+)?$/.test(u.initialCapital.trim())) throw invalid(`initial capital is not a valid number: "${u.initialCapital}"`)
+    if (accountHasHistory(accountId) && u.currency.trim() !== acc.currency) throw invalid('currency_locked')
+    Object.assign(acc, { name: u.name.trim(), kind: u.kind, broker: u.broker.trim(), currency: u.currency.trim(), initialCapital: u.initialCapital.trim() })
+    return withHistory(acc)
+  },
+  setAccountArchived: async (accountId: number, archived: boolean): Promise<Account> => {
+    const acc = accounts.find((a) => a.id === accountId)
+    if (!acc) throw new Error(`not found: account ${accountId}`)
+    acc.archived = archived
+    return withHistory(acc)
   },
   listInstruments: async (): Promise<Instrument[]> => [...instruments].sort((a, b) => a.symbol.localeCompare(b.symbol)),
   createInstrument: async (n: NewInstrument): Promise<Instrument> => {
@@ -331,7 +378,9 @@ export const mock = {
   listCashFlows: async (accountId: number): Promise<CashFlow[]> =>
     cashFlows.filter((f) => f.accountId === accountId).sort((a, b) => a.occurredAt - b.occurredAt || a.id - b.id),
   createCashFlow: async (n: NewCashFlow): Promise<CashFlow> => {
-    if (!accounts.some((a) => a.id === n.accountId)) throw new Error(`not found: account ${n.accountId}`)
+    const target = accounts.find((a) => a.id === n.accountId)
+    if (!target) throw new Error(`not found: account ${n.accountId}`)
+    if (target.archived) throw invalid('account_archived')
     if (!/^\d+(\.\d+)?$/.test(n.amount) || sign(parse(n.amount)) <= 0) throw invalid('amount must be greater than zero')
     const f = { ...n, note: n.note.trim(), id: id() }
     cashFlows.push(f)
@@ -344,9 +393,14 @@ export const mock = {
   },
   listTrades: async (filter?: TradeFilter | null): Promise<TradeView[]> =>
     [...trades.values()]
-      .filter((t) => !filter?.accountIds?.length || filter.accountIds.includes(t.accountId))
+      .filter((t) => (filter?.accountIds?.length ? filter.accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
       .filter((t) => filter?.from == null || t.entryTime >= filter.from)
       .filter((t) => filter?.to == null || t.entryTime < filter.to)
+      .filter((t) => {
+        const m = filter?.mistake
+        if (!m) return true
+        return m.source === 'tag' ? t.tagIds.includes(m.id) : t.ruleChecks.some((c) => c.ruleId === m.id && !c.respected)
+      })
       .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
       .map(view),
   getTrade: async (tid: number): Promise<TradeView> => {
@@ -356,6 +410,7 @@ export const mock = {
   },
   createTrade: async (d: TradeData): Promise<TradeView> => {
     const multiplier = validate(d)
+    if (accounts.find((a) => a.id === d.accountId)?.archived) throw invalid('account_archived')
     const now = new Date().toISOString()
     const t = { ...d, multiplier, id: nextTradeId++, createdAt: now, updatedAt: now }
     trades.set(t.id, t)
@@ -396,6 +451,33 @@ export const mock = {
   getDashboard: async (q: DashboardQuery) => mockDashboard(ledgerOf(q.accountIds), q),
   getCalendar: async (q: CalendarQuery) => mockCalendar(ledgerOf(q.accountIds), q),
   getDayTrades: async (accountIds: number[], day: string) => mockDayTrades(ledgerOf(accountIds), day),
+  getBehaviorSettings: async (): Promise<BehaviorSettings> => ({ ...behaviorSettings }),
+  setBehaviorSettings: async (s: BehaviorSettings): Promise<BehaviorSettings> => {
+    const percent = s.maxRiskPercent === null ? null : parse(s.maxRiskPercent)
+    if (percent && (sign(percent) <= 0 || sign(sub(percent, parse('100'))) > 0)) throw invalid('the maximum risk per trade must be between 0 and 100 %')
+    if (s.maxTradesPerDay !== null && s.maxTradesPerDay < 1) throw invalid('the maximum number of trades per day must be at least 1')
+    if (s.revengeWindowMin < 1 || s.revengeWindowMin > 1440) throw invalid('the revenge window must be between 1 minute and 24 hours')
+    if (sign(sub(parse(s.revengeSizeFactor), parse('1'))) < 0) throw invalid('the revenge size factor must be at least 1')
+    behaviorSettings = { ...s }
+    return { ...behaviorSettings }
+  },
+  getDiscipline: async (q: StatsQuery) => behavior.mockDiscipline(behaviorInput(q.accountIds), q),
+  getTradeDiscipline: async (tid: number) => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    return behavior.mockTradeDiscipline(behaviorInput([t.accountId]), tid)
+  },
+  getEmotions: async (q: StatsQuery) => behavior.mockEmotions(behaviorInput(q.accountIds), q),
+  getStreaks: async (q: StatsQuery) => behavior.mockStreaks(behaviorInput(q.accountIds), q),
+  getPlanComparison: async (q: StatsQuery) => behavior.mockPlan(behaviorInput(q.accountIds), q),
+  getFirstTrade: async (q: StatsQuery) => behavior.mockFirstTrade(behaviorInput(q.accountIds), q),
+  getMistakes: async (q: StatsQuery) => behavior.mockMistakes(behaviorInput(q.accountIds), q),
+  getRuleAdherence: async (q: StatsQuery) => behavior.mockRuleAdherence(behaviorInput(q.accountIds), q),
+  getPatterns: async (q: StatsQuery) => behavior.mockPatterns(behaviorInput(q.accountIds), q),
+  getRDistribution: async (q: StatsQuery) => behavior.mockRDistribution(behaviorInput(q.accountIds), q),
+  getHeatmap: async (q: StatsQuery) => behavior.mockHeatmap(behaviorInput(q.accountIds), q),
+  getLongShort: async (q: StatsQuery) => behavior.mockLongShort(behaviorInput(q.accountIds), q),
+  getRisk: async (q: StatsQuery) => behavior.mockRisk(behaviorInput(q.accountIds), q),
   saveScreenshot: async (image: string): Promise<string> => {
     if (!image.startsWith('data:image/')) throw invalid('unsupported image format (use PNG, JPEG, WebP or GIF)')
     const path = `screenshots/mock-${id()}.png`
@@ -407,4 +489,271 @@ export const mock = {
     if (!s) throw new Error(`not found: screenshot ${path}`)
     return s
   },
+}
+
+// --- Lot 10 : journal quotidien, trades manqués, qualité d'exécution, confiance, rappel ---
+const missedTrades: MissedTrade[] = []
+const journalEntries = new Map<string, JournalEntry>()
+let reminderSettings: ReminderSettings = { enabled: true, time: '20:00' }
+let reminderLastSent: string | null = null
+let nextMissedId = 1
+
+const scoped = (accountIds?: number[]) => (accountIds?.length ? accountIds : accounts.map((a) => a.id))
+const viewsOf = (accountIds?: number[]) => [...trades.values()].filter((t) => scoped(accountIds).includes(t.accountId)).map(view)
+const checkDay = (day: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`)) || new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day)
+    throw invalid(`invalid day "${day}"`)
+}
+const checkScale = (what: string, v: number | null | undefined, max: number) => {
+  if (v != null && (!Number.isInteger(v) || v < 1 || v > max)) throw invalid(`${what} must be between 1 and ${max}`)
+}
+function validateMissed(d: MissedTradeData) {
+  if (!accounts.some((a) => a.id === d.accountId)) throw invalid('unknown account')
+  if (!instruments.some((i) => i.id === d.instrumentId)) throw invalid('unknown instrument')
+  checkScale('conviction', d.conviction, 10)
+  for (const tid of new Set(d.tagIds)) {
+    const tag = tags.find((g) => g.id === tid)
+    if (!tag) throw invalid('unknown tag')
+    if (tag.kind === 'emotion' || tag.kind === 'mistake') throw invalid(`${tag.name} cannot qualify a missed trade`)
+  }
+}
+const cleanMissed = (d: MissedTradeData): MissedTradeData => ({
+  ...d,
+  direction: d.direction ?? null,
+  conviction: d.conviction ?? null,
+  reason: d.reason.trim(),
+  notes: d.notes.trim(),
+  tagIds: [...new Set(d.tagIds)].sort((a, b) => a - b),
+})
+/** Heure locale « maintenant » du faux backend, comme le fait le rappel de pulse-core. */
+function pendingWork(tz: number): ReminderDue | null {
+  const now = Date.now()
+  const day = dayOf(now, tz)
+  const todays = viewsOf().filter((v) => dayOf(v.entryTime, v.tzOffsetMin) === day)
+  if (todays.length === 0) return null
+  const journalMissing = !journalEntries.has(day)
+  const incompleteCount = todays.filter(isIncompleteData).length
+  return journalMissing || incompleteCount > 0 ? { day, tradeCount: todays.length, incompleteCount, journalMissing } : null
+}
+
+export const mockJournal = {
+  listMissedTrades: async (accountIds: number[]): Promise<MissedTrade[]> =>
+    missedTrades
+      .filter((m) => !accountIds.length || accountIds.includes(m.accountId))
+      .sort((a, b) => b.occurredAt - a.occurredAt || b.id - a.id),
+  createMissedTrade: async (d: MissedTradeData): Promise<MissedTrade> => {
+    validateMissed(d)
+    const m = { ...cleanMissed(d), id: nextMissedId++ }
+    missedTrades.push(m)
+    return m
+  },
+  updateMissedTrade: async (mid: number, d: MissedTradeData): Promise<MissedTrade> => {
+    const i = missedTrades.findIndex((m) => m.id === mid)
+    if (i < 0) throw new Error(`not found: missed trade ${mid}`)
+    validateMissed(d)
+    missedTrades[i] = { ...cleanMissed(d), id: mid }
+    return missedTrades[i]
+  },
+  deleteMissedTrade: async (mid: number): Promise<void> => {
+    const i = missedTrades.findIndex((m) => m.id === mid)
+    if (i < 0) throw new Error(`not found: missed trade ${mid}`)
+    missedTrades.splice(i, 1)
+  },
+  saveJournalEntry: async (e: JournalEntry): Promise<JournalEntry | null> => {
+    checkDay(e.day)
+    checkScale('mood', e.mood, 5)
+    checkScale('sleep quality', e.sleepQuality, 5)
+    checkScale('fatigue', e.fatigue, 5)
+    if (isBlankEntry(e)) {
+      journalEntries.delete(e.day)
+      return null
+    }
+    const saved = { ...e, mood: e.mood ?? null, sleepQuality: e.sleepQuality ?? null, fatigue: e.fatigue ?? null, wentWell: e.wentWell.trim(), toImprove: e.toImprove.trim(), notes: e.notes.trim() }
+    journalEntries.set(e.day, saved)
+    return saved
+  },
+  getJournalDay: async (accountIds: number[], day: string): Promise<DayOverview> => {
+    checkDay(day)
+    const lines = viewsOf(accountIds)
+      .filter((v) => dayOf(v.entryTime, v.tzOffsetMin) === day)
+      .sort((a, b) => a.entryTime - b.entryTime || a.id - b.id)
+      .map((v) => ({
+        tradeId: v.id,
+        symbol: v.symbol,
+        direction: v.direction,
+        currency: v.currency,
+        entryTime: v.entryTime,
+        netPnl: v.figures?.netPnl ?? null,
+        outcome: v.figures?.outcome ?? null,
+        incomplete: isIncompleteData(v),
+      }))
+    return { day, entry: journalEntries.get(day) ?? null, trades: lines, incompleteCount: lines.filter((l) => l.incomplete).length }
+  },
+  listJournalEntries: async (from?: string | null, to?: string | null): Promise<JournalEntry[]> =>
+    [...journalEntries.values()].filter((e) => (!from || e.day >= from) && (!to || e.day <= to)).sort((a, b) => b.day.localeCompare(a.day)),
+  deleteJournalEntry: async (day: string): Promise<void> => {
+    journalEntries.delete(day)
+  },
+  getExecutionScore: async (tid: number) => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    return mockExecutionScore(t)
+  },
+  getQualityReport: async (q: PeriodQuery) => mockQualityReport(viewsOf(q.accountIds), q),
+  getConfidenceReport: async (q: PeriodQuery) =>
+    mockConfidenceReport(viewsOf(q.accountIds), missedTrades.filter((m) => scoped(q.accountIds).includes(m.accountId)), q),
+  getReminderSettings: async (): Promise<ReminderSettings> => ({ ...reminderSettings }),
+  setReminderSettings: async (s: ReminderSettings): Promise<ReminderSettings> => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.time)) throw invalid(`reminder time must look like 20:00, got "${s.time}"`)
+    reminderSettings = { ...s }
+    return { ...reminderSettings }
+  },
+  /** Dans le navigateur, aucune notification native : la bannière suit l'heure du rappel. */
+  getReminderPending: async (tz: number): Promise<ReminderDue | null> => {
+    const now = new Date(Date.now() + tz * 60_000)
+    const minutes = now.getUTCHours() * 60 + now.getUTCMinutes()
+    const [h, m] = reminderSettings.time.split(':').map(Number)
+    if (!reminderSettings.enabled || minutes < h * 60 + m) return null
+    reminderLastSent = dayOf(Date.now(), tz)
+    return reminderLastSent ? pendingWork(tz) : null
+  },
+}
+
+// --- Lot 11 : objectifs mensuels et replay ---
+const goals: Goal[] = []
+let nextGoalId = 1
+
+export const mockGoalsReplay = {
+  listGoals: async (month: string): Promise<Goal[]> => {
+    if (!isMonth(month)) throw invalid(`invalid month "${month}" (expected YYYY-MM)`)
+    return goals.filter((g) => g.month === month)
+  },
+  setGoal: async (n: NewGoal): Promise<Goal> => {
+    checkGoal(n.month, n.metric, n.target)
+    const existing = goals.find((g) => g.month === n.month && g.metric === n.metric)
+    if (existing) {
+      existing.target = n.target
+      return { ...existing }
+    }
+    const g = { id: nextGoalId++, month: n.month, metric: n.metric, target: n.target }
+    goals.push(g)
+    return { ...g }
+  },
+  deleteGoal: async (gid: number): Promise<void> => {
+    const i = goals.findIndex((g) => g.id === gid)
+    if (i < 0) throw new Error(`not found: goal ${gid}`)
+    goals.splice(i, 1)
+  },
+  copyGoals: async (from: string, to: string): Promise<Goal[]> => {
+    if (!isMonth(from) || !isMonth(to)) throw invalid('invalid month (expected YYYY-MM)')
+    for (const g of goals.filter((x) => x.month === from)) {
+      if (!goals.some((x) => x.month === to && x.metric === g.metric)) goals.push({ id: nextGoalId++, month: to, metric: g.metric, target: g.target })
+    }
+    return goals.filter((g) => g.month === to)
+  },
+  getGoalProgress: async (q: ProgressQuery): Promise<GoalProgress[]> => {
+    if (!isMonth(q.month)) throw invalid(`invalid month "${q.month}" (expected YYYY-MM)`)
+    const list = goals.filter((g) => g.month === q.month).sort((a, b) => a.id - b.id)
+    if (list.length === 0) return []
+    const [year, month] = q.month.split('-').map(Number)
+    const cal = mockCalendar(ledgerOf(q.accountIds), { accountIds: q.accountIds, year, month, tzOffsetMin: q.tzOffsetMin })
+    const from = Date.UTC(year, month - 1, 1) - q.tzOffsetMin * 60_000
+    const to = Date.UTC(year, month, 1) - q.tzOffsetMin * 60_000
+    const quality = mockQualityReport(viewsOf(q.accountIds), { accountIds: q.accountIds, from, to })
+    const disciplineScore = list.some((g) => g.metric === 'discipline_score')
+      ? behavior.mockDiscipline(behaviorInput(q.accountIds), { accountIds: q.accountIds, from, to }).score
+      : null
+    return mockProgress(list, cal.summary, cal.currency, quality.averageStars, disciplineScore, q.month, q.today)
+  },
+  listReplay: async (filter?: ReplayFilter | null): Promise<ReplayItem[]> =>
+    viewsOf(filter?.accountIds)
+      .filter((v) => replayPasses(v, filter ?? {}))
+      .sort((a, b) => b.entryTime - a.entryTime || b.id - a.id)
+      .map(replayItem),
+  getReplayCard: async (tid: number): Promise<ReplayCard> => {
+    const t = trades.get(tid)
+    if (!t) throw new Error(`not found: trade ${tid}`)
+    const v = view(t)
+    return { trade: v, levels: mockLadder(v) }
+  },
+}
+
+// --- Lot 8 bis : compléments de l'analyse comportementale ---
+export const mockBehaviorExtra = {
+  getExternalFactors: async (q: StatsQuery) => behavior.mockExternalFactors(behaviorInput(q.accountIds), q, [...journalEntries.values()]),
+  getAfterLosses: async (q: StatsQuery) => behavior.mockAfterLosses(behaviorInput(q.accountIds), q),
+  getSizeChange: async (q: StatsQuery) => behavior.mockSizeChange(behaviorInput(q.accountIds), q),
+  getPlanSimulation: async (q: StatsQuery) => behavior.mockPlanSimulation(behaviorInput(q.accountIds), q),
+}
+
+// --- Lot 12 : alertes à seuils (garde-fous) ---
+// (imports regroupés ici pour que le lot reste en fin de fichier ; ils sont remontés par le module ES)
+import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
+import { DEFAULT_ALERT_SETTINGS, checkAlertSettings, mockEvaluateAlerts, sortAlerts } from './mockAlerts'
+
+let alertSettings: AlertSettings = { ...DEFAULT_ALERT_SETTINGS }
+/** Historique : chaque alerte vue une fois, et l'instant où elle a été masquée. */
+const alertLog = new Map<string, AlertRecord>()
+
+/** Alertes actives à `now`, chaque compte évalué seul (comptes actifs si la liste est vide). */
+function alertsAt(accountIds: number[], now: number, tz: number): Alert[] {
+  const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
+  const all = chosen.flatMap((account) =>
+    mockEvaluateAlerts(
+      {
+        account,
+        trades: [...trades.values()].filter((t) => t.accountId === account.id).map(view),
+        cashFlows: cashFlows.filter((f) => f.accountId === account.id),
+        tags,
+        behavior: behaviorSettings,
+        settings: alertSettings,
+      },
+      now,
+      tz,
+    ),
+  )
+  return sortAlerts(all)
+}
+
+export const mockAlerts = {
+  /** Pour les tests : évaluation pure à un instant donné, sans toucher à l'historique. */
+  evaluateAt: (accountIds: number[], now: number, tz: number): Alert[] => alertsAt(accountIds, now, tz),
+  getActiveAlerts: async (accountIds: number[], tz: number, now = Date.now()): Promise<Alert[]> => {
+    const visible: Alert[] = []
+    for (const alert of alertsAt(accountIds, now, tz)) {
+      if (!alertLog.has(alert.id)) {
+        alertLog.set(alert.id, {
+          alertId: alert.id, accountId: alert.accountId, kind: alert.kind, severity: alert.severity, tradeId: alert.tradeId,
+          firstSeenAt: now, dismissedAt: null, alert: structuredClone(alert),
+        })
+      }
+      if (alertLog.get(alert.id)!.dismissedAt === null) visible.push(alert)
+    }
+    return visible
+  },
+  dismissAlert: async (alertId: string, now = Date.now()): Promise<void> => {
+    const r = alertLog.get(alertId)
+    if (!r) throw new Error(`not found: alert ${alertId}`)
+    r.dismissedAt ??= now
+  },
+  getAlertHistory: async (accountIds: number[], limit = 100): Promise<AlertRecord[]> =>
+    [...alertLog.values()]
+      .filter((r) => !accountIds.length || accountIds.includes(r.accountId))
+      .reverse()
+      .sort((a, b) => b.firstSeenAt - a.firstSeenAt)
+      .slice(0, limit),
+  getAlertSettings: async (): Promise<AlertSettings> => ({ ...alertSettings }),
+  setAlertSettings: async (s: AlertSettings): Promise<AlertSettings> => {
+    checkAlertSettings(s)
+    alertSettings = { ...s, tradingHours: s.tradingHours?.trim() ?? null }
+    return { ...alertSettings }
+  },
+}
+
+// --- Lot 14 : analyses d'étape 3 (par actif, frais, stratégies, système / discrétionnaire) ---
+export const mockAnalyses = {
+  getAssetReport: async (q: StatsQuery) => analyses.mockAssets(behaviorInput(q.accountIds), q),
+  getFeeReport: async (q: StatsQuery, by?: FeeGranularity) => analyses.mockFees(behaviorInput(q.accountIds), q, by),
+  getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
+  getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
 }

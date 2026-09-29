@@ -7,16 +7,16 @@ use crate::tags::TagKind;
 use crate::test_support::dec;
 use crate::trades::{Direction, ExecutionType};
 
-const DAY: i64 = 86_400_000;
-const HOUR: i64 = 3_600_000;
+pub(super) const DAY: i64 = 86_400_000;
+pub(super) const HOUR: i64 = 3_600_000;
 /// 2026-09-01 00:00 UTC (day 20697), a Tuesday.
-const SEP_1: i64 = 20_697 * DAY;
+pub(super) const SEP_1: i64 = 20_697 * DAY;
 
 use Direction::{Long, Short};
 
 /// A trade entered at 10:00 and closed at 11:00 UTC, `day` days after 1 Sept 2026.
 #[allow(clippy::too_many_arguments)] // one argument per column of the journal tables below
-fn trade(id: i64, direction: Direction, entry: &str, exit: Option<&str>, size: &str, sl: Option<&str>, fees: &str, day: i64) -> TradeFacts {
+pub(super) fn trade(id: i64, direction: Direction, entry: &str, exit: Option<&str>, size: &str, sl: Option<&str>, fees: &str, day: i64) -> TradeFacts {
     TradeFacts {
         id,
         account_id: 1,
@@ -38,24 +38,26 @@ fn trade(id: i64, direction: Direction, entry: &str, exit: Option<&str>, size: &
         tz_offset_min: 0,
         execution_type: None,
         tags: Vec::new(),
+        journal: Journal::default(),
     }
 }
 
-fn ledger(initial: &str, trades: Vec<TradeFacts>, moves: Vec<(i64, &str)>) -> Ledger {
+pub(super) fn ledger(initial: &str, trades: Vec<TradeFacts>, moves: Vec<(i64, &str)>) -> Ledger {
     Ledger {
         currency: Some("USD".into()),
         initial_capital: dec(initial),
-        capital_moves: moves.into_iter().map(|(at, amount)| CapitalMove { at, amount: dec(amount) }).collect(),
+        accounts: vec![AccountCapital { id: 1, initial_capital: dec(initial) }],
+        capital_moves: moves.into_iter().map(|(at, amount)| CapitalMove { account_id: 1, at, amount: dec(amount) }).collect(),
         trades,
     }
 }
 
-fn all() -> StatsQuery {
+pub(super) fn all() -> StatsQuery {
     StatsQuery::default()
 }
 
 #[track_caller]
-fn approx(actual: Option<f64>, expected: f64) {
+pub(super) fn approx(actual: Option<f64>, expected: f64) {
     let a = actual.unwrap_or_else(|| panic!("expected {expected}, got None"));
     assert!((a - expected).abs() < 1e-12, "expected {expected}, got {a}");
 }
@@ -71,7 +73,7 @@ fn approx(actual: Option<f64>, expected: f64) {
 /// | 5 | short | 80 → 90      | 10   | 85   | 0    | −100  | −100 | 50   | −2   |
 /// | 6 | long  | 10 → 9       | 36   | 9.5  | 0    | −36   | −36  | 18   | −2   |
 /// | 7 | long  | 30 → (open)  | 1    | —    | 0    |       |      |      |      |
-fn journal_a() -> Vec<TradeFacts> {
+pub(super) fn journal_a() -> Vec<TradeFacts> {
     vec![
         trade(1, Long, "100", Some("110"), "10", Some("95"), "0", 0),
         trade(2, Short, "50", Some("53"), "20", Some("52"), "4", 1),

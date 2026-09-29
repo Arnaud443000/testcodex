@@ -138,8 +138,17 @@ export interface Preview {
   opportunityCost: Decimal | null
 }
 
+/** Erreur récurrente : une étiquette d'erreur, ou une règle cochée « non respectée » (mêmes sources que `MistakeReport`). */
+export interface MistakeFilter {
+  source: 'tag' | 'rule'
+  id: number
+}
+
 export interface TradeFilter {
   accountIds?: number[]
+  /** Fenêtre sur l'heure d'entrée, `[from, to)`. */
   from?: number | null
   to?: number | null
+  /** Seulement les trades portant cette erreur (filtré par pulse-core). */
+  mistake?: MistakeFilter | null
 }

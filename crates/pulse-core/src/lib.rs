@@ -5,6 +5,7 @@ mod util;
 
 pub mod accounts;
 pub mod backup;
+pub mod behavior;
 pub mod cash_flows;
 pub mod checklist;
 pub mod db;
@@ -16,10 +17,25 @@ pub mod missed_trades;
 pub mod money;
 pub mod rules;
 pub mod screenshots;
+pub mod settings;
 pub mod stats;
 pub mod tags;
 pub mod trade_view;
 pub mod trades;
+// Lot 10 (journal side, step 2).
+pub mod confidence;
+pub mod execution_quality;
+pub mod journal;
+pub mod period;
+pub mod reminder;
+// Lot 11.
+pub mod goals;
+pub mod replay;
+// Lot 12.
+pub mod alerts;
+
+// Lot 13.
+pub mod dashboards;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

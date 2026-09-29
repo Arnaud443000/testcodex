@@ -1,11 +1,29 @@
-use pulse_core::accounts::{self, Account, NewAccount};
+use pulse_core::accounts::{self, Account, AccountUpdate, NewAccount};
+use pulse_core::alerts::{self, Alert, AlertRecord, AlertSettings};
+use pulse_core::behavior::{
+    self, DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, RuleAdherenceReport,
+    StreakReport, TradeDiscipline,
+};
 use pulse_core::cash_flows::{self, CashFlow, NewCashFlow};
+use pulse_core::dashboards::{self, DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance};
+use pulse_core::confidence::{self, ConfidenceReport};
+use pulse_core::execution_quality::{self, ExecutionScore, QualityReport};
+use pulse_core::journal::{self, DayOverview, JournalEntry};
+use pulse_core::missed_trades::{self, MissedTrade, MissedTradeData};
+use pulse_core::period::PeriodQuery;
+use pulse_core::reminder::{self, ReminderSettings};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::export;
+use pulse_core::goals::{self, Goal, GoalProgress, NewGoal, ProgressQuery};
+use pulse_core::replay::{self, ReplayCard, ReplayFilter, ReplayItem};
 use pulse_core::instruments::{self, Instrument, NewInstrument};
 use pulse_core::rules::{self, Rule};
+use pulse_core::settings::{self, BehaviorSettings};
+use pulse_core::stats::StatsQuery;
 use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
+use pulse_core::stats::distribution::{self, Heatmap, LongShort, RDistribution};
+use pulse_core::stats::risk::{self, RiskReport};
 use pulse_core::tags::{self, Tag, TagKind};
 use pulse_core::trade_view::{self, Preview, TradeView};
 use pulse_core::trades::{self, TradeData, TradeFilter};
@@ -170,6 +188,7 @@ fn get_trade(state: State<AppState>, id: i64) -> Result<TradeView, String> {
 fn create_trade(state: State<AppState>, trade: TradeData) -> Result<TradeView, String> {
     let conn = state.db.lock().map_err(err)?;
     let saved = trades::create(&conn, &trade).map_err(err)?;
+    record_alerts_after_save(&conn, saved.data.account_id);
     trade_view::get(&conn, saved.id).map_err(err)
 }
 
@@ -177,6 +196,7 @@ fn create_trade(state: State<AppState>, trade: TradeData) -> Result<TradeView, S
 fn update_trade(state: State<AppState>, id: i64, trade: TradeData) -> Result<TradeView, String> {
     let conn = state.db.lock().map_err(err)?;
     trades::update(&conn, id, &trade).map_err(err)?;
+    record_alerts_after_save(&conn, trade.account_id);
     trade_view::get(&conn, id).map_err(err)
 }
 
@@ -210,6 +230,98 @@ fn get_calendar(state: State<AppState>, query: CalendarQuery) -> Result<Calendar
 fn get_day_trades(state: State<AppState>, account_ids: Vec<i64>, day: String) -> Result<Vec<DayTrade>, String> {
     let conn = state.db.lock().map_err(err)?;
     dashboard::day_trades(&conn, &account_ids, &day).map_err(err)
+}
+
+// Behavioural analysis (lot 8): one command per report, all computed by pulse-core.
+
+#[tauri::command]
+fn get_behavior_settings(state: State<AppState>) -> Result<BehaviorSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    settings::behavior(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_behavior_settings(state: State<AppState>, settings: BehaviorSettings) -> Result<BehaviorSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    settings::set_behavior(&conn, &settings).map_err(err)
+}
+
+#[tauri::command]
+fn get_discipline(state: State<AppState>, query: StatsQuery) -> Result<DisciplineReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::discipline_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_trade_discipline(state: State<AppState>, id: i64) -> Result<TradeDiscipline, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::trade_discipline(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn get_emotions(state: State<AppState>, query: StatsQuery) -> Result<EmotionReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::emotion_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_streaks(state: State<AppState>, query: StatsQuery) -> Result<StreakReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::streak_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_plan_comparison(state: State<AppState>, query: StatsQuery) -> Result<PlanReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::plan_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_first_trade(state: State<AppState>, query: StatsQuery) -> Result<FirstTradeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::first_trade_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_mistakes(state: State<AppState>, query: StatsQuery) -> Result<MistakeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::mistake_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_rule_adherence(state: State<AppState>, query: StatsQuery) -> Result<RuleAdherenceReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::rule_adherence_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_patterns(state: State<AppState>, query: StatsQuery) -> Result<PatternReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::pattern_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_r_distribution(state: State<AppState>, query: StatsQuery) -> Result<RDistribution, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::r_distribution_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_heatmap(state: State<AppState>, query: StatsQuery) -> Result<Heatmap, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::heatmap_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_long_short(state: State<AppState>, query: StatsQuery) -> Result<LongShort, String> {
+    let conn = state.db.lock().map_err(err)?;
+    distribution::long_short_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_risk(state: State<AppState>, query: StatsQuery) -> Result<RiskReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    risk::risk_report(&conn, &query).map_err(err)
 }
 
 /// `image` is the file as base64 (a `data:` URL is accepted); returns the relative path to store on the trade.
@@ -252,13 +364,175 @@ fn restore_backup(state: State<AppState>, folder: String, confirmed: bool) -> Re
     backup::restore(&mut conn, &state.data_dir, std::path::Path::new(&folder), confirmed, now_ms()).map_err(err)
 }
 
+// --- Lot 10: journal side (missed trades, daily journal, execution quality, confidence, reminder) ---
+
+#[tauri::command]
+fn list_missed_trades(state: State<AppState>, account_ids: Vec<i64>) -> Result<Vec<MissedTrade>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::list(&conn, &account_ids).map_err(err)
+}
+
+#[tauri::command]
+fn create_missed_trade(state: State<AppState>, missed: MissedTradeData) -> Result<MissedTrade, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::create(&conn, &missed).map_err(err)
+}
+
+#[tauri::command]
+fn update_missed_trade(state: State<AppState>, id: i64, missed: MissedTradeData) -> Result<MissedTrade, String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::update(&conn, id, &missed).map_err(err)
+}
+
+#[tauri::command]
+fn delete_missed_trade(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    missed_trades::delete(&conn, id).map_err(err)
+}
+
+/// A blank entry deletes the day's entry and returns `null`.
+#[tauri::command]
+fn save_journal_entry(state: State<AppState>, entry: JournalEntry) -> Result<Option<JournalEntry>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::save(&conn, &entry).map_err(err)
+}
+
+#[tauri::command]
+fn get_journal_day(state: State<AppState>, account_ids: Vec<i64>, day: String) -> Result<DayOverview, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::day_overview(&conn, &account_ids, &day).map_err(err)
+}
+
+#[tauri::command]
+fn list_journal_entries(state: State<AppState>, from: Option<String>, to: Option<String>) -> Result<Vec<JournalEntry>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::list(&conn, from.as_deref(), to.as_deref()).map_err(err)
+}
+
+#[tauri::command]
+fn delete_journal_entry(state: State<AppState>, day: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    journal::delete(&conn, &day).map_err(err)
+}
+
+/// Execution-quality score of a stored trade (spec 3.2.9).
+#[tauri::command]
+fn get_execution_score(state: State<AppState>, trade_id: i64) -> Result<ExecutionScore, String> {
+    let conn = state.db.lock().map_err(err)?;
+    let trade = trades::get(&conn, trade_id).map_err(err)?;
+    Ok(execution_quality::score(&trade.data))
+}
+
+#[tauri::command]
+fn get_quality_report(state: State<AppState>, query: PeriodQuery) -> Result<QualityReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    execution_quality::report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_confidence_report(state: State<AppState>, query: PeriodQuery) -> Result<ConfidenceReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    confidence::report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_reminder_settings(state: State<AppState>) -> Result<ReminderSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::get_settings(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_reminder_settings(state: State<AppState>, settings: ReminderSettings) -> Result<ReminderSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::set_settings(&conn, &settings).map_err(err)
+}
+
+/// For the in-app banner: the reminder was sent today and there is still work (click on the toast is not relied upon).
+#[tauri::command]
+fn get_reminder_pending(state: State<AppState>, tz_offset_min: i32) -> Result<Option<reminder::Due>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    reminder::pending(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+/// Every minute, asks pulse-core whether the daily reminder is due and shows the native notification.
+fn spawn_reminder_loop(app: tauri::AppHandle) {
+    use chrono::{Local, Offset};
+    use tauri_plugin_notification::NotificationExt;
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        let tz = Local::now().offset().fix().local_minus_utc() / 60;
+        let state = app.state::<AppState>();
+        let due = match state.db.lock() {
+            Ok(conn) => reminder::check(&conn, now_ms(), tz),
+            Err(_) => continue,
+        };
+        let Ok(Some(due)) = due else { continue };
+        let (title, body) = reminder::message(&due);
+        // Marked as sent even when the system refuses the notification: the in-app banner takes over.
+        let shown = app.notification().builder().title(title).body(body).show();
+        if let Err(e) = &shown {
+            eprintln!("Pulse: could not show the reminder notification: {e}");
+        }
+        if let Ok(conn) = state.db.lock() {
+            let _ = reminder::mark_sent(&conn, &due.day);
+        };
+    });
+}
+
+// --- Lot 11: monthly goals and trade replay ---
+
+#[tauri::command]
+fn list_goals(state: State<AppState>, month: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::list(&conn, &month).map_err(err)
+}
+
+/// Creates the goal of a month and metric, or changes its target.
+#[tauri::command]
+fn set_goal(state: State<AppState>, goal: NewGoal) -> Result<Goal, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::set(&conn, &goal).map_err(err)
+}
+
+#[tauri::command]
+fn delete_goal(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::delete(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn copy_goals(state: State<AppState>, from: String, to: String) -> Result<Vec<Goal>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::copy_month(&conn, &from, &to).map_err(err)
+}
+
+#[tauri::command]
+fn get_goal_progress(state: State<AppState>, query: ProgressQuery) -> Result<Vec<GoalProgress>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    goals::progress(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn list_replay(state: State<AppState>, filter: Option<ReplayFilter>) -> Result<Vec<ReplayItem>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::list(&conn, &filter.unwrap_or_default()).map_err(err)
+}
+
+#[tauri::command]
+fn get_replay_card(state: State<AppState>, id: i64) -> Result<ReplayCard, String> {
+    let conn = state.db.lock().map_err(err)?;
+    replay::card(&conn, id).map_err(err)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let conn = db::open(&data_dir).map_err(err)?;
             app.manage(AppState { db: Mutex::new(conn), data_dir });
+            spawn_reminder_loop(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -290,13 +564,245 @@ pub fn run() {
             get_dashboard,
             get_calendar,
             get_day_trades,
+            get_behavior_settings,
+            set_behavior_settings,
+            get_discipline,
+            get_trade_discipline,
+            get_emotions,
+            get_streaks,
+            get_plan_comparison,
+            get_first_trade,
+            get_mistakes,
+            get_rule_adherence,
+            get_patterns,
+            get_r_distribution,
+            get_heatmap,
+            get_long_short,
+            get_risk,
             export_trades_csv,
             create_backup,
             inspect_backup,
             restore_backup,
             save_screenshot,
-            read_screenshot
+            read_screenshot,
+            update_account,
+            set_account_archived,
+            list_missed_trades,
+            create_missed_trade,
+            update_missed_trade,
+            delete_missed_trade,
+            save_journal_entry,
+            get_journal_day,
+            list_journal_entries,
+            delete_journal_entry,
+            get_execution_score,
+            get_quality_report,
+            get_confidence_report,
+            get_reminder_settings,
+            set_reminder_settings,
+            get_reminder_pending,
+            list_goals,
+            set_goal,
+            delete_goal,
+            copy_goals,
+            get_goal_progress,
+            list_replay,
+            get_replay_card,
+            get_external_factors,
+            get_after_losses,
+            get_size_change,
+            get_plan_simulation,
+            get_active_alerts,
+            dismiss_alert,
+            get_alert_history,
+            get_alert_settings,
+            set_alert_settings,
+            get_asset_report,
+            get_fee_report,
+            get_strategy_report,
+            get_execution_report,
+            list_widget_catalog,
+            list_dashboard_layouts,
+            get_dashboard_layout,
+            get_startup_dashboard,
+            save_dashboard_layout,
+            rename_dashboard_layout,
+            delete_dashboard_layout,
+            set_default_dashboard_layout
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
+}
+
+/// Edits an account (currency locked once it has history).
+#[tauri::command]
+fn update_account(state: State<AppState>, id: i64, account: AccountUpdate) -> Result<Account, String> {
+    let conn = state.db.lock().map_err(err)?;
+    accounts::update(&conn, id, &account).map_err(err)
+}
+
+/// Archives or restores an account; its history is kept.
+#[tauri::command]
+fn set_account_archived(state: State<AppState>, id: i64, archived: bool) -> Result<Account, String> {
+    let conn = state.db.lock().map_err(err)?;
+    accounts::set_archived(&conn, id, archived).map_err(err)
+}
+
+// --- Lot 8 bis : compléments de l'analyse comportementale ---
+
+#[tauri::command]
+fn get_external_factors(state: State<AppState>, query: StatsQuery) -> Result<behavior::ExternalFactorReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::external_factor_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_after_losses(state: State<AppState>, query: StatsQuery) -> Result<behavior::AfterLossesReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::after_losses_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_size_change(state: State<AppState>, query: StatsQuery) -> Result<behavior::SizeChangeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::size_change_report(&conn, &query).map_err(err)
+}
+
+/// A simulation (off-plan trades removed), never advice: the UI labels it as such.
+#[tauri::command]
+fn get_plan_simulation(state: State<AppState>, query: StatsQuery) -> Result<behavior::PlanSimulation, String> {
+    let conn = state.db.lock().map_err(err)?;
+    behavior::plan_simulation_report(&conn, &query).map_err(err)
+}
+
+// --- Lot 12 : alertes à seuils (garde-fous, 3.6) ---
+
+fn local_tz_offset_min() -> i32 {
+    use chrono::{Local, Offset};
+    Local::now().offset().fix().local_minus_utc() / 60
+}
+
+/// Right after a trade is saved: evaluates its account so the alert history records the alert at the
+/// time of entry. An evaluation error never fails the save.
+fn record_alerts_after_save(conn: &Connection, account_id: i64) {
+    if let Err(e) = alerts::active_alerts(conn, &[account_id], now_ms(), local_tz_offset_min()) {
+        eprintln!("Pulse: could not evaluate the alerts after saving a trade: {e}");
+    }
+}
+
+/// Alerts active now on the given accounts (active accounts when empty), dismissed ones left out.
+#[tauri::command]
+fn get_active_alerts(state: State<AppState>, account_ids: Vec<i64>, tz_offset_min: i32) -> Result<Vec<Alert>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::active_alerts(&conn, &account_ids, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn dismiss_alert(state: State<AppState>, alert_id: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::dismiss(&conn, &alert_id, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn get_alert_history(state: State<AppState>, account_ids: Vec<i64>, limit: Option<u32>) -> Result<Vec<AlertRecord>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::history(&conn, &account_ids, limit.unwrap_or(100)).map_err(err)
+}
+
+#[tauri::command]
+fn get_alert_settings(state: State<AppState>) -> Result<AlertSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::settings::get(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_alert_settings(state: State<AppState>, settings: AlertSettings) -> Result<AlertSettings, String> {
+    let conn = state.db.lock().map_err(err)?;
+    alerts::settings::set(&conn, &settings).map_err(err)
+}
+
+// --- Analyses d'étape 3 (lot 14) : par actif, frais, stratégies, système / discrétionnaire ---
+
+#[tauri::command]
+fn get_asset_report(state: State<AppState>, query: StatsQuery) -> Result<Vec<pulse_core::stats::analyses::AssetRow>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::asset_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_fee_report(
+    state: State<AppState>,
+    query: StatsQuery,
+    granularity: Option<pulse_core::stats::analyses::FeeGranularity>,
+) -> Result<pulse_core::stats::analyses::FeeReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::fee_report(&conn, &query, granularity.unwrap_or_default()).map_err(err)
+}
+
+#[tauri::command]
+fn get_strategy_report(state: State<AppState>, query: StatsQuery) -> Result<Vec<pulse_core::stats::analyses::StrategyRow>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::strategy_report(&conn, &query).map_err(err)
+}
+
+#[tauri::command]
+fn get_execution_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::stats::analyses::ExecutionReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    pulse_core::stats::analyses::execution_report(&conn, &query).map_err(err)
+}
+
+// --- Lot 13 : dashboard personnalisable (les widgets réutilisent les commandes de statistiques existantes) ---
+
+#[tauri::command]
+fn list_widget_catalog() -> Vec<WidgetDefinition> {
+    dashboards::catalog()
+}
+
+#[tauri::command]
+fn list_dashboard_layouts(state: State<AppState>) -> Result<Vec<DashboardSummary>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::list(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn get_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::get(&conn, &key).map_err(err)
+}
+
+/// Le dashboard affiché au démarrage (« Essentiel » tant que l'utilisateur n'en a pas choisi un autre).
+#[tauri::command]
+fn get_startup_dashboard(state: State<AppState>) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::startup(&conn).map_err(err)
+}
+
+/// `key` absent ou d'un preset : crée un dashboard de l'utilisateur ; sinon remplace le sien.
+#[tauri::command]
+fn save_dashboard_layout(
+    state: State<AppState>,
+    key: Option<String>,
+    name: String,
+    widgets: Vec<WidgetInstance>,
+) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::save(&conn, key.as_deref(), &name, &widgets).map_err(err)
+}
+
+#[tauri::command]
+fn rename_dashboard_layout(state: State<AppState>, key: String, name: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::rename(&conn, &key, &name).map_err(err)
+}
+
+#[tauri::command]
+fn delete_dashboard_layout(state: State<AppState>, key: String) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::delete(&conn, &key).map_err(err)
+}
+
+#[tauri::command]
+fn set_default_dashboard_layout(state: State<AppState>, key: String) -> Result<DashboardLayout, String> {
+    let conn = state.db.lock().map_err(err)?;
+    dashboards::set_default(&conn, &key).map_err(err)
 }

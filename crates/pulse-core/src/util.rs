@@ -63,11 +63,13 @@ pub(crate) fn check_range(field: &str, v: Option<u8>, lo: u8, hi: u8) -> Result<
     }
 }
 
-/// SQL condition restricting `column` to the given ids (no restriction when empty).
+/// SQL condition restricting `column` to the given ids. When empty (the default
+/// "all accounts" view) it keeps the active accounts only: archived accounts keep
+/// their history but are reached by naming them explicitly.
 /// Ids are integers, so formatting them inline is injection-safe.
 pub(crate) fn ids_condition(column: &str, ids: &[i64]) -> String {
     if ids.is_empty() {
-        return "1".into();
+        return format!("{column} IN (SELECT id FROM accounts WHERE archived = 0)");
     }
     let list: Vec<String> = ids.iter().map(i64::to_string).collect();
     format!("{column} IN ({})", list.join(","))
