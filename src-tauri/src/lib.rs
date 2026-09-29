@@ -614,6 +614,7 @@ pub fn run() {
                 lock: Mutex::new(lock_cmds::LockRuntime { warning: startup.warning, last_activity_ms: now_ms() }),
             });
             app.manage(AiState::new());
+            app.manage(NewsPreviewState::default());
             spawn_reminder_loop(app.handle().clone());
             lock_cmds::spawn_idle_loop(app.handle().clone());
             Ok(())
@@ -777,7 +778,9 @@ pub fn run() {
             refresh_news,
             get_news_calendar,
             get_upcoming_news,
-            clear_news_events
+            clear_news_events,
+            test_news_source,
+            keep_tested_news
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1476,13 +1479,7 @@ async fn refresh_news(state: State<'_, AppState>, manual: bool) -> Result<NewsRe
         let conn = state.conn()?;
         return Ok(NewsRefresh { fetched: false, summary: None, status: pulse_core::news::settings::status(&conn).map_err(err)? });
     };
-    let request = plan.clone();
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        use pulse_news::CalendarProvider;
-        pulse_news::IcsUrl::new().fetch(&request)
-    })
-    .await
-    .map_err(err)?;
+    let result = fetch_news(plan.clone()).await?;
     let conn = state.conn()?;
     match result {
         Ok(parsed) => {
@@ -1530,4 +1527,53 @@ fn get_upcoming_news(
 fn clear_news_events(state: State<AppState>) -> Result<usize, String> {
     let conn = state.conn()?;
     pulse_core::news::store::clear(&conn).map_err(err)
+}
+
+// --- Lot 28 : source Forex Factory, « Tester la source » sans rien enregistrer avant confirmation ---
+
+/// Runs the provider of the plan's source off the async runtime, without holding the database.
+async fn fetch_news(plan: pulse_core::news::FetchPlan) -> Result<Result<pulse_core::news::Parsed, pulse_news::NewsError>, String> {
+    tauri::async_runtime::spawn_blocking(move || match pulse_news::provider(plan.source) {
+        Some(provider) => provider.fetch(&plan),
+        None => Err(pulse_news::NewsError::UnexpectedResponse),
+    })
+    .await
+    .map_err(err)
+}
+
+/// The last successful test, kept in memory only until the trader confirms it (30 minutes at most).
+#[derive(Default)]
+struct NewsPreviewState(Mutex<Option<(pulse_core::news::FetchPlan, pulse_core::news::Parsed, i64)>>);
+
+const NEWS_PREVIEW_TTL_MS: i64 = 30 * 60_000;
+
+/// Fetches the source typed in the form (not saved) and shows what it answered; nothing is
+/// stored. Same 5-minute gap as a refresh (the request counts); an error is returned, not stored.
+#[tauri::command]
+async fn test_news_source(
+    state: State<'_, AppState>,
+    preview: State<'_, NewsPreviewState>,
+    settings: pulse_core::news::NewsSettings,
+) -> Result<pulse_core::news::NewsPreview, String> {
+    let plan = {
+        let conn = state.conn()?;
+        pulse_core::news::settings::prepare_test(&conn, now_ms(), &settings).map_err(err)?
+    };
+    let parsed = fetch_news(plan.clone()).await?.map_err(|e| e.to_string())?;
+    let now = now_ms();
+    let shown = pulse_core::news::settings::preview(&parsed, now);
+    *preview.0.lock().map_err(err)? = Some((plan, parsed, now));
+    Ok(shown)
+}
+
+/// Stores the events of the last test once its settings are saved (`news:previewOutdated` otherwise).
+#[tauri::command]
+fn keep_tested_news(state: State<AppState>, preview: State<NewsPreviewState>) -> Result<NewsRefresh, String> {
+    let held = preview.0.lock().map_err(err)?.take();
+    let Some((plan, parsed, _)) = held.filter(|(_, _, at)| now_ms() - at <= NEWS_PREVIEW_TTL_MS) else {
+        return Err("news:previewOutdated".into());
+    };
+    let conn = state.conn()?;
+    let summary = pulse_core::news::settings::keep_tested(&conn, now_ms(), &plan, parsed).map_err(err)?;
+    Ok(NewsRefresh { fetched: true, summary: Some(summary), status: pulse_core::news::settings::status(&conn).map_err(err)? })
 }
