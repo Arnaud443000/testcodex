@@ -79,11 +79,11 @@ pub fn set_behavior(conn: &Connection, s: &BehaviorSettings) -> Result<BehaviorS
     behavior(conn)
 }
 
-fn read(conn: &Connection, key: &str) -> Result<Option<String>> {
+pub(crate) fn read(conn: &Connection, key: &str) -> Result<Option<String>> {
     Ok(conn.query_row("SELECT value FROM settings WHERE key = ?1", [key], |r| r.get(0)).optional()?)
 }
 
-fn write(conn: &Connection, key: &str, value: Option<String>) -> Result<()> {
+pub(crate) fn write(conn: &Connection, key: &str, value: Option<String>) -> Result<()> {
     match value {
         Some(v) => conn.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

@@ -31,6 +31,8 @@ pub mod reminder;
 // Lot 11.
 pub mod goals;
 pub mod replay;
+// Lot 12.
+pub mod alerts;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
