@@ -27,6 +27,7 @@ Le cahier des charges est la source de vérité fonctionnelle. Toute formule (R-
 npm ci
 npm run typecheck && npm test && npm run build     # interface
 cargo test -p pulse-core                           # cœur Rust
+cargo test -p pulse-ai -p pulse-vault              # IA : réseau (faux serveur local) et coffre (lot 20)
 cargo check -p pulse-app                           # coque Tauri (libs WebKit requises sous Linux)
 npm run dev                                        # interface seule dans un navigateur
 ```
@@ -81,7 +82,7 @@ Sous Linux, `cargo check -p pulse-app` demande : `libwebkit2gtk-4.1-dev libgtk-3
 
 ### Étape 4 — Intelligence et approfondissement (à découper en lots)
 Voir `docs/cahier-des-charges.md` section 5 (insights automatiques, IA, comparaisons, verrouillage…).
-- [ ] Lot 20 — Infrastructure IA optionnelle (réglages, clé dans le coffre Windows, client HTTPS isolé, consentement) et analyse de screenshot d'un trade (3.5.4) ; voir « IA optionnelle (lot 20) » (**Opus, élevé**)
+- [x] Lot 20 — Infrastructure IA optionnelle (réglages, clé dans le coffre Windows, client HTTPS isolé, consentement) et analyse de screenshot d'un trade (3.5.4) : `pulse-core/src/ai/`, crates `pulse-ai` et `pulse-vault`, **migration v11** (à renuméroter à la fusion si besoin), Paramètres > IA, carte d'analyse dans le détail d'un trade ; voir « IA optionnelle (lot 20) » (**Opus, élevé**)
 
 
 ### Étapes 4 et 5 (suite)
@@ -434,7 +435,7 @@ Décisions prises **avant** d'écrire le code ; elles valent aussi pour le futur
 | Crate | Rôle | Réseau |
 |---|---|---|
 | `pulse-core` (`ai/`) | réglages (`ai.*` de la table `settings`), **liste exacte** de ce qui est envoyé pour un trade, texte de la demande (prompt), stockage des commentaires | **aucun** (reste testable partout, sans dépendance UI ni réseau) |
-| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles | **le seul code réseau de l'application** |
+| `crates/pulse-ai` | abstraction `Provider` (un fournisseur = une implémentation ; seul Claude aujourd'hui) + client HTTPS (`ureq`, TLS `rustls` + racines Mozilla embarquées, **pas d'OpenSSL**), délais d'attente, erreurs traduisibles ; `service.rs` = l'enchaînement en trois temps (préparer depuis la base → envoyer sans verrou sur la base → enregistrer), testé avec un faux fournisseur et un coffre en mémoire | **le seul code réseau de l'application** |
 | `crates/pulse-vault` | clé API dans le **Gestionnaire d'identifiants Windows** (`keyring-core` + `windows-native-keyring-store`, compilés **seulement sous Windows**) ; ailleurs, le coffre répond « indisponible » | aucun |
 | `src-tauri` | commandes fines qui assemblent les trois (ajoutées en fin de `lib.rs`) | via `pulse-ai` |
 
@@ -477,3 +478,15 @@ Pourquoi un crate à part pour le réseau : `pulse-core` garde zéro dépendance
 
 ### Faux backend (navigateur)
 Réponse simulée, fournisseur `simulation`, texte commençant par « [Simulation] », **aucun appel réseau** ; badge « Simulation » dans l'interface.
+
+### Interface et code (lot 20)
+- **Commandes** (fin de `src-tauri/src/lib.rs`, état `AiState` = coffre + fournisseur) : `get_ai_status`, `set_ai_settings`, `record_ai_consent`, `save_ai_key`, `delete_ai_key`, `test_ai_connection` et `analyze_screenshot` (**asynchrones**, appel réseau hors du fil principal, base non verrouillée pendant l'appel), `preview_screenshot_analysis` (ce qui partirait), `list_screenshot_notes`, `delete_screenshot_note`. Aucune ne renvoie la clé.
+- **TypeScript** : types `src/types/ai.ts` ; `api.ts` (bloc « Lot 20 » en fin d'objet) ; faux backend `src/lib/mockAi.ts` (+ `mockAi` en fin de `mockBackend.ts`, testé par `mockAi.test.ts`, miroir des règles de Rust) ; affichage pur `src/lib/aiView.ts` (découpage du texte de l'IA en titres / puces / paragraphes affichés comme du texte, codes d'erreur, tailles) ; textes `src/i18n/fr.ai.ts` (clé `ai` de `fr`).
+- **Composants** : `AiSettingsPanel` (Paramètres > IA, ancre `/settings#ia`) ; `ScreenshotAiCard` (détail d'un trade, sous le screenshot : une ligne discrète si l'IA est éteinte et sans commentaire ; sinon bouton « Analyser le screenshot » / « Relancer l'analyse », dernier commentaire, anciens repliés, suppression confirmée) ; `AiSendDialog` (confirmation à chaque envoi, rendue dans `<body>` par un portail — une carte en verre à `backdrop-filter` enfermerait une boîte `fixed` —, pied collant : rappel + boutons toujours visibles, « Envoyer » grisé tant que la case de première utilisation n'est pas cochée).
+- **Captures** : `docs/captures/lot20-*.png` (1440×900 et 1920×1080), faux backend ; le script vérifie aussi qu'aucune requête ne sort de `localhost` et que la clé ne reste pas dans le champ.
+
+### Non testé (lot 20)
+- **Aucun appel réel à l'API d'Anthropic** : le client est testé contre un faux serveur local (requête, en-têtes, corps, codes d'erreur, délais) ; la forme de la requête suit la documentation du skill `claude-api`, mais la réponse réelle, le repli `fallbacks: "default"` et la qualité du commentaire n'ont pas été essayés.
+- **Coffre Windows** : le code propre à Windows compile et passe clippy pour `x86_64-pc-windows-msvc` (aussi vérifié en CI), mais n'a jamais tourné sur un vrai Windows (écriture, relecture, suppression, entrée visible dans le Gestionnaire d'identifiants).
+- `pulse-ai` (ring / rustls) n'a pas pu être compilé pour Windows depuis Linux (partie C de `ring`) : il le sera par `build-windows.yml`.
+- Proxy d'entreprise, pare-feu, certificats d'inspection TLS : non essayés (racines Mozilla embarquées, pas le magasin de certificats Windows).

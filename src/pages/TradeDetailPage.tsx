@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
+import { ScreenshotAiCard } from '../components/ScreenshotAiCard'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -162,6 +163,8 @@ export function TradeDetailPage() {
               </EmptyState>
             )}
           </section>
+
+          <ScreenshotAiCard tradeId={trade.id} hasScreenshot={!!trade.screenshotPath} />
 
           <div className="grid gap-5 md:grid-cols-2">
             <TextCard title={d.thesis} text={trade.thesis} empty={d.thesisEmpty} action={<Link to={`/trades/${trade.id}/edit`} className="btn-link">{d.writeIt}</Link>} />

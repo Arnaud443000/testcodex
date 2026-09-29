@@ -1,6 +1,7 @@
 import { frDashboardBuilder } from './fr.dashboard'
 import { frAnalysesMore } from './fr.analyses16'
 import { frComparisons } from './fr.comparisons'
+import { frAi } from './fr.ai'
 /**
  * Textes de l'interface. Le français est la langue par défaut.
  * Pour ajouter une langue : créer un objet du même type `Messages` et le
@@ -1532,6 +1533,8 @@ export const fr = {
   analysesMore: frAnalysesMore,
   // Lot 17 : comparaisons et exposition
   comparisons: frComparisons,
+  // Lot 20 : IA optionnelle
+  ai: frAi,
 }
 
 export type Messages = typeof fr
