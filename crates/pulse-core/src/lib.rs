@@ -50,6 +50,8 @@ pub mod lock;
 pub mod sizing;
 // Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
 pub mod news;
+// Lot 37 (accès MCP local : pont sur 127.0.0.1 vers les outils du coach ; aucune connexion sortante).
+pub mod mcp;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
