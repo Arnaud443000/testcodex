@@ -960,3 +960,12 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+
+// --- Lot 37 : accès MCP local (SIMULATION : aucune écoute, aucun port, aucun fichier ; voir mockMcp.ts) ---
+import { createMcpMock } from './mockMcp'
+export const mockMcp = createMcpMock({
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+  runTool: (accountIds, name, input) => coachTool({ accountIds, nowMs: Date.now(), tzOffsetMin: -new Date().getTimezoneOffset() }, name, input),
+  now: () => Date.now(),
+  tzOffsetMin: () => -new Date().getTimezoneOffset(),
+})

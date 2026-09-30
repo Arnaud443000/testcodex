@@ -165,6 +165,42 @@ export const SCENARIOS = [
     await page.evaluate(() => document.getElementById('emotions')?.scrollIntoView())
     await page.waitForTimeout(400)
   }],
+  // Lot 37 : accès MCP (simulation du navigateur : aucune écoute), dans l'ordre d'un premier usage.
+  ['mcp-desactive', async (page) => {
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('mcp')?.scrollIntoView())
+    await page.waitForTimeout(300)
+  }],
+  ['mcp-consentement', async (page) => {
+    await page.getByTestId('mcp-consent').locator('input[type=checkbox]').check().catch(() => {})
+    await page.getByTestId('mcp-accounts').locator('input[type=checkbox]').first().check().catch(() => {})
+    await page.evaluate(() => document.querySelector('[data-testid="mcp-consent"]')?.scrollIntoView({ block: 'center' }))
+    await page.waitForTimeout(300)
+  }],
+  ['mcp-actif', async (page) => {
+    await page.getByRole('button', { name: 'Activer l’accès' }).click().catch(() => {})
+    await page.waitForTimeout(500)
+    await page.evaluate(() => document.querySelector('[data-testid="mcp-state"]')?.scrollIntoView({ block: 'center' }))
+    await page.waitForTimeout(300)
+  }],
+  ['mcp-puce-barre-du-haut', async (page) => {
+    await go(page, '/')
+    await page.getByTestId('mcp-chip').hover().catch(() => {})
+    await page.waitForTimeout(600)
+  }],
+  ['mcp-journal', async (page) => {
+    await go(page, '/settings')
+    await page.waitForTimeout(300)
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Simuler un appel' }).click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByRole('button', { name: 'Voir le résultat exact' }).first().click().catch(() => {})
+    await page.evaluate(() => document.querySelector('[data-testid="mcp-log"]')?.scrollIntoView({ block: 'start' }))
+    await page.waitForTimeout(300)
+  }],
+  ['mcp-installation', async (page) => {
+    await page.evaluate(() => document.querySelector('[data-testid="mcp-install"]')?.scrollIntoView({ block: 'start' }))
+    await page.waitForTimeout(300)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')

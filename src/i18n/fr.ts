@@ -458,6 +458,7 @@ export const fr = {
       security: 'Sécurité',
       ai: 'IA',
       news: 'Actualités',
+      mcp: 'Accès MCP',
       about: 'À propos',
     },
     display: {
@@ -1592,6 +1593,8 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  // Lot 37 : accès MCP local (Claude Code)
+  mcp: frMcp,
 }
 
 export type Messages = typeof fr
@@ -1604,3 +1607,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frMcp } from './fr.mcp'

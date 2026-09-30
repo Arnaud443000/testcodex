@@ -5,6 +5,7 @@ import { useAccounts } from '../lib/accounts'
 import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
 import { Select } from './ui/Select'
+import { McpChip } from './McpChip'
 
 export function TopBar() {
   const { accounts, allAccounts, selectedId, select } = useAccounts()
@@ -53,6 +54,7 @@ export function TopBar() {
       </div>
 
       <div className="flex-1" />
+      <McpChip />
       {/* La cloche ouvre l'historique des alertes (avant le lot 26 : bouton sans action). */}
       <Tooltip content={t.topbar.notifications}>
         <Link to="/alerts" className="btn-icon !h-11 !w-11" aria-label={t.topbar.notifications}>
