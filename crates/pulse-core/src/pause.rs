@@ -10,6 +10,7 @@
 //!   discipline and statistics come from `behavior` and `stats`.
 //! - [`Settings`]: `pause.suggest_after_losses` and `pause.default_minutes` (table `settings`).
 
+use crate::accounts;
 use crate::alerts::as_of;
 use crate::behavior::{Comparison, Context, DISCIPLINE_GAP, EXPECTANCY_GAP_R, comparable_r, compare, mean_score, of_closed};
 use crate::error::{CoreError, Result};
@@ -353,7 +354,18 @@ pub fn suggestion_report(conn: &Connection, account_ids: &[i64], now: i64, tz_of
     if threshold.is_none() || running(conn, now)?.is_some() {
         return Ok(None);
     }
-    suggestion(&load(conn, account_ids)?, now, tz_offset_min, threshold)
+    // Every account on its own (like the alerts): two currencies never block it, and one account's
+    // losses never count for another.
+    let ids: Vec<i64> = if account_ids.is_empty() { accounts::list_active(conn)?.iter().map(|a| a.id).collect() } else { account_ids.to_vec() };
+    let mut best: Option<Suggestion> = None;
+    for id in ids {
+        if let Some(s) = suggestion(&load(conn, &[id])?, now, tz_offset_min, threshold)? {
+            if best.as_ref().is_none_or(|b| s.losses > b.losses) {
+                best = Some(s);
+            }
+        }
+    }
+    Ok(best)
 }
 
 // --- Report: trades entered during a pause ---------------------------------------------

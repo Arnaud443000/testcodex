@@ -960,3 +960,15 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+
+// --- Lot 35 : pause volontaire (un rappel, jamais un blocage) ---
+import { createPauseMock } from './mockPause'
+
+export const mockPause = createPauseMock({
+  input: behaviorInput,
+  entryTimes: (accountIds) =>
+    [...trades.values()]
+      .filter((t) => (accountIds.length ? accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
+      .map((t) => t.entryTime),
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+})

@@ -391,6 +391,9 @@ fn report_and_list_read_the_database() {
     assert!(list(&conn, &[], 10, T0).is_ok());
     // Suggestion through SQLite: off by default, never while a pause runs.
     assert_eq!(suggestion_report(&conn, &[acc], T0, 0).unwrap(), None);
+    // On, with two currencies: each account is read on its own, so nothing fails and nothing is proposed.
+    set_settings(&conn, &Settings { suggest_after_losses: Some(2), default_minutes: 30 }).unwrap();
+    assert_eq!(suggestion_report(&conn, &[], T0 + 2 * DAY, 0).unwrap(), None);
 }
 
 #[test]
