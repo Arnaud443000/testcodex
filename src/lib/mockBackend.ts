@@ -960,3 +960,16 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+// --- Lot 32 : sauvegarde automatique planifiée (simulation, aucun fichier ; voir mockBackupAuto.ts) ---
+import { createBackupAutoMock } from './mockBackupAuto'
+export const mockBackupAuto = createBackupAutoMock({
+  hasTrades: () => trades.size > 0,
+  encrypted: () => mockLock.currentSeal() !== null,
+  snapshot: (path) => {
+    const s = snapshot()
+    backups.set(path, s)
+    const seal = mockLock.currentSeal()
+    if (seal) backupSeals.set(path, seal)
+    return infoOf(path, s)
+  },
+})

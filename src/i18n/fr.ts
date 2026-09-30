@@ -454,6 +454,7 @@ export const fr = {
       cashflows: 'Dépôts et retraits',
       reminder: 'Rappel',
       display: 'Affichage',
+      autoBackup: 'Sauvegarde auto',
       data: 'Données',
       security: 'Sécurité',
       ai: 'IA',
@@ -1592,6 +1593,7 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  backupAuto: frBackupAuto,
 }
 
 export type Messages = typeof fr
@@ -1604,3 +1606,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frBackupAuto } from './fr.backupAuto'

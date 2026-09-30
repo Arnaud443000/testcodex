@@ -7,6 +7,7 @@ import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
 import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
+import { AutoBackupPanel } from '../components/AutoBackupPanel'
 import { DataPanel } from '../components/DataPanel'
 import { DisplayPanel } from '../components/DisplayPanel'
 import { EmotionListPanel } from '../components/EmotionListPanel'
@@ -162,7 +163,7 @@ function EmotionsSection() {
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
   ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
-  ['reminder', 'rappel'], ['display', 'affichage'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
+  ['reminder', 'rappel'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
   const t = useT()
@@ -238,6 +239,7 @@ export function SettingsPage() {
       <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>
       <div id="rappel" className="scroll-mt-4"><ReminderPanel /></div>
       <DisplayPanel />
+      <div id="sauvegarde" className="scroll-mt-4"><AutoBackupPanel /></div>
       <div id="donnees" className="scroll-mt-4"><DataPanel /></div>
       <SecurityPanel />
       <div className="scroll-mt-4"><AiSettingsPanel /></div>
