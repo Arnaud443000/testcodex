@@ -107,7 +107,7 @@ fn a_worse_level_is_a_new_alert_a_dismissed_one_stays_hidden() {
     rules::set(&conn, acc, &p1(), 1).unwrap();
     closed(&conn, acc, at(2026, 9, 15, 8), -3600);
     let warning = format!("propDailyLoss:{acc}:2026-09-01:2026-09-15:warning");
-    assert_eq!(ids(&conn, now()), [warning.clone()]);
+    assert_eq!(ids(&conn, now()), [warning.as_str()]);
     dismiss(&conn, &warning, now()).unwrap();
     // Same level, a bit worse (3 800 = 76 %): same identity, still hidden.
     closed(&conn, acc, at(2026, 9, 15, 9), -200);

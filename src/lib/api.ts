@@ -510,6 +510,19 @@ export const api = {
     inTauri ? invoke('test_news_source', { settings }) : mockNews.testNewsSource(settings),
   /** Enregistre les événements du dernier test, une fois ses réglages enregistrés (`news:previewOutdated` sinon). */
   keepTestedNews: (): Promise<NewsRefresh> => (inTauri ? invoke('keep_tested_news') : mockNews.keepTestedNews()),
+  // --- Lot 33 : suivi d'un compte prop firm (trades clôturés seulement ; refus codés `prop:<code>[:<champ>]`) ---
+  /** Règles d'un compte prop (`null` = aucune) ; refusé pour un compte qui n'est pas de type prop. */
+  getPropRules: (accountId: number): Promise<PropRules | null> =>
+    inTauri ? invoke('get_prop_rules', { accountId }) : mockProp.getPropRules(accountId),
+  setPropRules: (accountId: number, rules: PropRulesInput): Promise<PropRules> =>
+    inTauri ? invoke('set_prop_rules', { accountId, rules }) : mockProp.setPropRules(accountId, rules),
+  deletePropRules: (accountId: number): Promise<void> =>
+    inTauri ? invoke('delete_prop_rules', { accountId }) : mockProp.deletePropRules(accountId),
+  /** État à l'instant lu par la coque (`null` = aucune règle). Le jour de trading vient des règles de la firme, pas du PC. */
+  getPropStatus: (accountId: number): Promise<PropStatus | null> =>
+    inTauri ? invoke('get_prop_status', { accountId, tzOffsetMin: -new Date().getTimezoneOffset() }) : mockProp.getPropStatus(accountId),
+  /** Réglage `alerts.prop` (activé par défaut). */
+  setPropAlerts: (enabled: boolean): Promise<boolean> => (inTauri ? invoke('set_prop_alerts', { enabled }) : mockProp.setPropAlerts(enabled)),
   /** Boîte de dialogue « ouvrir » d'un calendrier (`null` si annulée). */
   pickNewsFile: async (title: string, format: NewsFileFormat): Promise<string | null> => {
     if (!inTauri) return `simulation.${format}`
@@ -571,3 +584,5 @@ import type {
   NewsStatus,
 } from '../types/news'
 import { mockNews } from './mockBackend'
+import type { PropRules, PropRulesInput, PropStatus } from '../types/prop'
+import { mockProp } from './mockBackend'

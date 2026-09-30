@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 14, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 16, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -311,6 +311,7 @@ export const mock = {
     if (cashFlows.some((f) => f.accountId === accountId)) throw invalid('account_in_use')
     const i = accounts.findIndex((a) => a.id === accountId)
     if (i >= 0) accounts.splice(i, 1)
+    mockProp.forget(accountId)
   },
   createAccount: async (a: NewAccount): Promise<Account> => {
     if (!a.name.trim()) throw new Error('invalid input: account name is required')
@@ -735,6 +736,11 @@ function alertsAt(accountIds: number[], now: number, tz: number): Alert[] {
       tz,
     ),
   )
+  // Lot 33 : alertes prop firm, après les autres (comme `alerts::active_alerts`).
+  for (const account of chosen) {
+    const logged = [...alertLog.keys()].filter((id) => alertLog.get(id)!.accountId === account.id && /^prop[A-Z]/.test(id))
+    all.push(...mockProp.alertsFor(account, now, logged))
+  }
   return sortAlerts(all)
 }
 
@@ -960,3 +966,19 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+
+// --- Lot 33 : suivi d'un compte prop firm (miroir de pulse-core/src/prop/, voir mockProp.ts) ---
+import { createPropMock } from './mockProp'
+/** Trades du compte tels qu'à `now` : entrés après `now` = inexistants, sortis après `now` = encore ouverts. */
+const propTradesAt = (accountId: number, now: number) =>
+  [...trades.values()].filter((t) => t.accountId === accountId && t.entryTime <= now).map(view)
+export const mockProp = createPropMock({
+  accounts: () => accounts,
+  closed: (accountId, now) =>
+    propTradesAt(accountId, now).flatMap((v) =>
+      v.figures && v.exitTime != null && v.exitTime <= now ? [{ id: v.id, exitTime: v.exitTime, netPnl: v.figures.netPnl }] : [],
+    ),
+  openCount: (accountId, now) => propTradesAt(accountId, now).filter((v) => v.exitTime == null || v.exitTime > now).length,
+  cashFlowCount: (accountId, now) => cashFlows.filter((f) => f.accountId === accountId && f.occurredAt <= now).length,
+  now: () => Date.now(),
+})

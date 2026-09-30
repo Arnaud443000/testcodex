@@ -12,6 +12,10 @@ export const ALERT_KINDS: AlertKind[] = [
   'unusualSession',
   'noStopLoss',
   'newsTrade',
+  // Lot 33
+  'propDailyLoss',
+  'propMaxLoss',
+  'propConsistency',
 ]
 
 export interface HistoryFilter {
