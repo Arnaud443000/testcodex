@@ -263,6 +263,9 @@ pub struct PropStatus {
     pub open_trade_count: usize,
     /// Deposits / withdrawals on the account: ignored by these limits.
     pub cash_flow_count: usize,
+    /// Last counted closed trade (exit order): the event behind an alert.
+    pub last_trade_id: Option<i64>,
+    pub last_exit_at: Option<i64>,
     pub trading_day: TradingDay,
     pub next_reset: NextReset,
     pub daily_loss: Option<DailyLossStatus>,
@@ -458,6 +461,8 @@ pub fn compute(input: &PropInput, now: i64) -> Result<PropStatus> {
         before_start_count,
         open_trade_count: input.open_trade_count,
         cash_flow_count: input.cash_flow_count,
+        last_trade_id: trades.last().map(|t| t.id),
+        last_exit_at: trades.last().map(|t| t.exit_time),
         trading_day: describe_day(zone, reset_minute, today),
         next_reset: NextReset { at: next, in_ms: next - now, paris_day: paris_day(next), paris_time: paris_hhmm(next) },
         daily_loss,
@@ -486,7 +491,9 @@ pub fn status(conn: &Connection, account_id: i64, now: i64) -> Result<Option<Pro
         open_trade_count: ledger.trades.iter().filter(|t| t.exit_time.is_none()).count(),
         cash_flow_count: ledger.capital_moves.len(),
     };
-    compute(&input, now).map(Some)
+    let mut s = compute(&input, now)?;
+    s.alerts_enabled = crate::alerts::prop::enabled(conn)?;
+    Ok(Some(s))
 }
 
 #[cfg(test)]

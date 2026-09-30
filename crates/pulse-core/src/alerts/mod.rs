@@ -8,6 +8,8 @@
 pub mod log;
 // Lot 25: 3.6.8, trade taken during a major economic news.
 pub mod news;
+// Lot 33: prop firm rules (daily loss, maximum loss, consistency).
+pub mod prop;
 pub mod settings;
 
 pub use log::{AlertRecord, active_alerts, dismiss, history};
@@ -96,6 +98,10 @@ pub enum AlertDetail {
         window_after_min: u32,
         comparison: news::NewsComparison,
     },
+    /// Lot 33: a prop firm rule nearing or reaching its limit (closed trades only).
+    PropDailyLoss(prop::PropAlertDetail),
+    PropMaxLoss(prop::PropAlertDetail),
+    PropConsistency(prop::PropAlertDetail),
 }
 
 impl AlertDetail {
@@ -111,6 +117,9 @@ impl AlertDetail {
             AlertDetail::UnusualSession { .. } => 7,
             AlertDetail::NoStopLoss { .. } => 8,
             AlertDetail::NewsTrade { .. } => 9,
+            AlertDetail::PropDailyLoss(_) => 10,
+            AlertDetail::PropMaxLoss(_) => 11,
+            AlertDetail::PropConsistency(_) => 12,
         }
     }
 }
