@@ -12,7 +12,7 @@ pub mod tools;
 
 pub use consent::{coach_consent_at, record_coach_consent, COACH_CONSENT_AT};
 pub use numbers::{unverified, AllowedNumbers};
-pub use prompt::{context_line, user_message, SYSTEM_PROMPT};
+pub use prompt::{context_line, user_message, RULES, SYSTEM_PROMPT};
 pub use store::{
     add_turn, delete_all_conversations, delete_conversation, get_conversation, history, list_conversations, rename_conversation,
     title_from, CoachTurn, Conversation, ConversationHistory, ConversationSummary, NewTurn, NewTurnOutcome, TurnStatus,

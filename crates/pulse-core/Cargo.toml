@@ -7,6 +7,8 @@ edition = "2024"
 rusqlite = { version = "0.40.2", features = ["bundled", "backup", "serialize"] }
 # Lot 22: optional password lock (pure Rust cryptography, no network).
 pulse-lock = { path = "../pulse-lock" }
+# Lot 37: wire protocol of the local MCP bridge (pure Rust, no network client; defined once, shared with the proxy).
+pulse-mcp = { path = "../pulse-mcp" }
 rust_decimal = { version = "1", features = ["serde-str"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1"

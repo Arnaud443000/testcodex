@@ -398,3 +398,37 @@ fn v13_adds_the_coach_tables_and_keeps_existing_data() {
     let left: i64 = conn.query_row("SELECT COUNT(*) FROM coach_turns", [], |r| r.get(0)).unwrap();
     assert_eq!(left, 0, "turns go with their conversation");
 }
+
+
+/// Lot 37: the rules moved to `rules.txt` (shared with the MCP server's instructions); the prompt sent
+/// to the AI must stay byte for byte what it was (same length, same start and end, rules at the end).
+#[test]
+fn the_system_prompt_is_unchanged_by_the_shared_rules_file() {
+    assert_eq!(SYSTEM_PROMPT.len(), 1_876, "length of the lot 21 prompt, in bytes");
+    assert!(SYSTEM_PROMPT.starts_with("Tu es le coach de Pulse, un journal de trading qui fonctionne sur l'ordinateur de l'utilisateur. Tu aides"));
+    assert!(SYSTEM_PROMPT.ends_with("si aucun outil ne permet d'y répondre, dis-le simplement."));
+    assert!(SYSTEM_PROMPT.ends_with(RULES) && RULES.starts_with("Règles sur les chiffres (impératives) :\n"));
+    assert_eq!(SYSTEM_PROMPT.matches('\n').count(), 13);
+}
+
+/// Lot 37: the MCP server shows exactly the coach's tools. `crates/pulse-mcp/src/tools.json` is
+/// `definitions()` with `input_schema` renamed `inputSchema` (MCP); rewrite it with
+/// `PULSE_WRITE_MCP_TOOLS=1 cargo test -p pulse-core mcp_tool_file` after changing a tool.
+#[test]
+fn mcp_tool_file_matches_the_coach_definitions() {
+    let expected: Vec<Value> = definitions()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| json!({ "name": d["name"], "description": d["description"], "inputSchema": d["input_schema"] }))
+        .collect();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../pulse-mcp/src/tools.json");
+    if std::env::var_os("PULSE_WRITE_MCP_TOOLS").is_some() {
+        std::fs::write(&path, serde_json::to_string_pretty(&expected).unwrap() + "\n").unwrap();
+    }
+    let file: Vec<Value> = serde_json::from_str(pulse_mcp::tools::TOOLS_JSON).unwrap();
+    assert_eq!(file, expected, "tools.json is outdated: PULSE_WRITE_MCP_TOOLS=1 cargo test -p pulse-core mcp_tool_file");
+    assert_eq!(pulse_mcp::tools::names(), TOOL_NAMES);
+    assert_eq!(TOOLS_VERSION, 1, "the MCP server shows version 1 of the tools");
+    assert!(pulse_mcp::tools::INSTRUCTIONS.ends_with(RULES), "the MCP instructions reuse the coach's rules file");
+}

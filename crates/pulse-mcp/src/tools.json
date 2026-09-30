@@ -1,0 +1,540 @@
+[
+  {
+    "description": "Comptes de la portée de la question (identifiant, devise, type, archivé, nombre de trades clôturés) et date locale du jour. À appeler en premier si la question dépend du compte ou de la date. Ne renvoie ni nom ni capital.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_accounts"
+  },
+  {
+    "description": "Indicateurs de performance d'une fenêtre (trades clôturés) : PnL brut / frais / net, win rate, gain et perte moyens, R:R réel, profit factor, expectancy en R, drawdown, etc. Avec comparePrevious, ajoute la fenêtre précédente de même durée et les écarts déjà calculés. À appeler pour « résume ma semaine », « comment va mon mois ».",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "comparePrevious": {
+          "description": "Ajoute la fenêtre précédente de même durée et les écarts (période − précédente).",
+          "type": "boolean"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "period_summary"
+  },
+  {
+    "description": "Indicateurs découpés par segment (win rate, PnL net, expectancy R…). À appeler pour « quel jour / quelle heure / quel setup / quelle émotion me réussit ou me coûte ».",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "by": {
+          "description": "Découpage : weekday (1 = lundi … 7 = dimanche, jour d'entrée), hour (heure locale d'entrée), tags (session, setup, timeframe, marketCondition, mistake), émotion déclarée avant l'entrée ou à tout moment, actif, classe d'actif, sens, système / discrétionnaire, plan suivi, rang dans la journée, règle non respectée.",
+          "enum": [
+            "weekday",
+            "hour",
+            "session",
+            "setup",
+            "timeframe",
+            "marketCondition",
+            "mistake",
+            "emotionBefore",
+            "emotionAny",
+            "instrument",
+            "assetClass",
+            "direction",
+            "executionType",
+            "plan",
+            "dayRank",
+            "ruleBroken"
+          ],
+          "type": "string"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "segments"
+  },
+  {
+    "description": "Erreurs récurrentes (tags d'erreur et règles non respectées) : nombre de trades, part, PnL net, coût (somme des pertes), expectancy R ; classées par coût et par fréquence (10 au plus).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "recurring_mistakes"
+  },
+  {
+    "description": "Score de discipline (0 à 100) de la fenêtre, ses composantes (plan, règles, checklist, stop loss, risque, comportement) et les quatre cases gagnant / perdant × bien / mal exécuté.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "discipline"
+  },
+  {
+    "description": "Séries de gains / pertes, trades de revanche, jours de surtrading, résultats après 2 pertes d'affilée, variation de taille après une perte ou un gain.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "streaks_and_sequences"
+  },
+  {
+    "description": "Résultats dans le plan / hors plan, simulation « si les trades hors plan n'avaient pas été pris » (simulation, pas un conseil), respect de chaque règle personnelle.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "plan_and_rules"
+  },
+  {
+    "description": "Risque par trade en % du solde à l'entrée : moyenne, médiane, maximum, trades sans stop loss, dépassements de la limite réglée.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "risk"
+  },
+  {
+    "description": "Résultats selon les facteurs notés dans le journal quotidien (mauvais sommeil, fatigue, heures tardives, humeur basse) : présent / absent, expectancy, discipline, verdicts prudents. Jamais le texte du journal.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "external_factors"
+  },
+  {
+    "description": "Frais et commissions (total, part dans le PnL brut, frais par trade) et temps en position des gagnants / perdants (minutes et heures).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "fees_and_holding_time"
+  },
+  {
+    "description": "Insights automatiques de Pulse en ce moment (tendances sur les derniers trades, meilleur / plus faible setup, suggestions), déjà calculés avec leurs valeurs. Fenêtres fixes : 20 derniers trades, 90 derniers jours.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée. Par défaut : chaque compte de la portée, évalué seul.",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "name": "insights"
+  },
+  {
+    "description": "Alertes garde-fous d'aujourd'hui (pertes consécutives, limite de trades, perte du jour / de la semaine, revanche, hors horaires, sans stop loss).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée. Par défaut : chaque compte de la portée, évalué seul.",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "name": "alerts_today"
+  },
+  {
+    "description": "Liste courte de trades clôturés (20 au plus) avec leurs chiffres : identifiant, actif, sens, jour et heure locaux, PnL net, R, score de discipline, plan, erreurs. Préférer les agrégats ; utile pour « mes pires trades de la semaine ».",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "description": "Un compte de la portée (voir list_accounts). Par défaut : tous les comptes de la portée.",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "Seulement les achats ou les ventes.",
+          "enum": [
+            "long",
+            "short"
+          ],
+          "type": "string"
+        },
+        "from": {
+          "description": "Premier jour local inclus, AAAA-MM-JJ (fenêtre sur mesure, 10 ans au plus).",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Nombre de trades (défaut 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "order": {
+          "description": "worst = PnL net le plus bas d'abord (défaut), best = le plus haut, recent = le plus récent.",
+          "enum": [
+            "worst",
+            "best",
+            "recent"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "Fenêtre se terminant aujourd'hui : 1J = aujourd'hui, 1S = 7 jours, 1M = 30 jours, 3M = 90 jours, 1A = 365 jours, Tout = tout l'historique. Par défaut 1M. Ne pas combiner avec from/to.",
+          "enum": [
+            "1J",
+            "1S",
+            "1M",
+            "3M",
+            "1A",
+            "Tout"
+          ],
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Seulement cet actif (symbole, ex. EURUSD).",
+          "type": "string"
+        },
+        "to": {
+          "description": "Dernier jour local inclus, AAAA-MM-JJ (par défaut aujourd'hui).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "trade_list"
+  }
+]
