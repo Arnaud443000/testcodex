@@ -50,6 +50,8 @@ pub mod lock;
 pub mod sizing;
 // Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
 pub mod news;
+// Lot 33 (suivi d'un compte prop firm : règles, calculs sur les trades clôturés).
+pub mod prop;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
