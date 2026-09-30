@@ -112,6 +112,8 @@ Voir `docs/cahier-des-charges.md` section 5. Points nécessitant **Opus, élevé
 
 - [x] Lot 30 — « Ma liste » d'émotions et catalogue élargi : les émotions proposées dans le formulaire de trade sont les tags `emotion` non archivés ; catalogue de ~44 suggestions en code (`catalog/emotions.txt`), ajout en un clic ou par saisie libre, **retirer = archiver** (jamais supprimer l'historique), suppression définitive seulement d'une émotion jamais utilisée. `pulse-core/src/emotions.rs`, 5 commandes, panneau partagé formulaire + Paramètres ; **aucune migration** ; voir « Ma liste d'émotions (lot 30) » (**Sonnet, moyen**)
 
+- [x] Lot 32 — Sauvegarde automatique planifiée dans un dossier choisi (autre lecteur, dossier synchronisé OneDrive / Google Drive), **sans second moteur** : `pulse-core/src/backup_auto.rs` réutilise les trois étapes de `backup.rs` (copie de la base, captures, relecture), écriture atomique (dossier temporaire relu puis renommé), conservation des N plus récentes (ne supprime que des dossiers au motif exact relus comme sauvegardes Pulse), chiffrée si le verrou du lot 22 est actif ; boucle de la coque toutes les 30 min ; Paramètres > Sauvegarde automatique, bannières d'invitation et de « dernière sauvegarde ancienne » ; **aucune migration** (table `settings`). Voir « Sauvegarde automatique (lot 32) » (**Opus, élevé**)
+
 
 ## Argent, prix et temps (décision du lot 2)
 
@@ -1087,3 +1089,68 @@ Code : `crates/pulse-core/src/emotions.rs` (tests : `emotions/tests.rs`), catalo
 - **Menus déroulants** : aucun utilisé (chips et boutons) ; le lot 29 (Select / Tooltip / Checkbox) n'est pas touché.
 - Faux backend : `lib/mockEmotions.ts` (miroir des règles Rust, mêmes messages), testé par `mockEmotions.test.ts` sur les mêmes cas que `emotions/tests.rs`. `useReferenceData` expose `addEmotion`, `removeEmotion`, `deleteEmotion`.
 - Captures : `docs/captures/lot30-*.png` (1440×900 et 1920×1080), scénarios `emotions-*` de `scripts/visual-audit.mjs`.
+
+## Sauvegarde automatique (lot 32)
+
+Demande de l'utilisateur : Pulse est 100 % local, une panne du PC emporterait tout l'historique, et la sauvegarde manuelle s'oublie. Code : `crates/pulse-core/src/backup_auto.rs` (tests : `backup_auto/tests.rs`, 23 tests, vraies écritures dans des dossiers temporaires), coque : fin de `src-tauri/src/lib.rs`, interface : `components/AutoBackupPanel.tsx` (Paramètres, ancre `/settings#sauvegarde`, juste au-dessus de « Données »), `components/AutoBackupBanner.tsx` (coque), `lib/backupAutoView.ts` (affichage pur), textes `src/i18n/fr.backupAuto.ts` (clé `backupAuto`), types `src/types/backupAuto.ts`, `api.ts` (bloc « Lot 32 »). **Aucune migration.**
+
+### Un seul moteur de sauvegarde
+- `backup::create` (lot 6 / 22) est découpé en trois étapes `pub(crate)` réutilisées telles quelles : `write_database` (`VACUUM INTO pulse.db`, ou image chiffrée `pulse.db.enc` si des clés sont enregistrées pour le dossier de données), `copy_screenshot_files` (octet pour octet, ou déchiffrée puis rescellée avec la même clé : jamais de capture en clair dans une sauvegarde chiffrée), `verify_copy` (relecture : intégrité, version de schéma connue, tables). Une sauvegarde automatique contient **exactement** ce que contient une manuelle, sous le nom `pulse-auto-AAAAMMJJ-HHMM` (heure locale du PC) ; elle se restaure avec la restauration existante (testé : en clair, chiffrée avec son mot de passe, et chiffrée dans un autre Pulse en clair).
+- Chiffrement : même en-tête que le lot 22, donc **le mot de passe en vigueur au moment de la sauvegarde** ; en clair si le verrou n'est pas actif (l'interface le dit).
+
+### Réglages (table `settings`, absent = désactivé)
+| Clé | Sens |
+|---|---|
+| `backup.auto.enabled` | `on` / `off` ; toute autre valeur = désactivé |
+| `backup.auto.folder` | chemin absolu choisi par la boîte de dialogue native |
+| `backup.auto.frequency` | `daily` (défaut) / `weekly` |
+| `backup.auto.keep` | 1 à 60, défaut 10 (valeur illisible → défaut) |
+| `backup.auto.last_success_at`, `backup.auto.last_attempt_at` | instants en ms UTC ; la tentative est inscrite **avant** le travail, la réussite avec le même instant après : `last_attempt > last_success` = dernier essai en échec |
+| `backup.auto.last_error` | code du dernier échec (effacé par une réussite), ou `pruneFailed` après une réussite dont le ménage a échoué |
+| `backup.auto.invited` | absent → invitation possible ; `later:<ms>` → cachée jusque-là ; `done` → plus jamais |
+
+`set_settings` : activer exige un dossier (`backup:noFolder`) valide ; un nouveau dossier est toujours vérifié ; **désactiver ne vérifie rien** (le dossier a pu disparaître) ; 1 ≤ keep ≤ 60 (`backup:invalidKeep`). Un refus n'écrit rien.
+
+### Quand
+- `is_due` (pure) : jamais réussie → oui ; `daily` = jour local différent de celui de la dernière réussite (décalage **actuel** du PC pour les deux) **et** au moins 12 h ; `weekly` = au moins 7 jours ; jamais deux essais à moins de 10 min (valeur absolue : une horloge qui recule ne bloque pas) ; après un échec, 30 min avant le suivant ; une dernière réussite « dans le futur » (horloge reculée) → due. `next_due_at` donne le premier instant où c'est vrai (affiché « Prochaine prévue » ; la sauvegarde part au contrôle suivant).
+- Coque : premier contrôle 10 s après l'ouverture, puis toutes les 30 min (`CHECK_INTERVAL_MS`). **Verrouillée** : le tour est sauté, rien n'est lu ni inscrit, et la boucle regarde de nouveau chaque minute (donc peu après le déverrouillage) ; un enregistrement des réglages ou un déverrouillage la réveille tout de suite. « Sauvegarder maintenant » (`manual`) : même chemin, sans fréquence ni délai, mais exige un dossier.
+- **Une seule à la fois** : `backup_auto::exclusive(data_dir)` (registre en mémoire du processus). La sauvegarde manuelle (`Store::create_backup`), la restauration (`Store::restore_backup`) et l'activation / désactivation du verrou (qui réécrivent les captures) le prennent aussi et répondent `backup:busy` ; un contrôle automatique qui le trouve pris saute son tour sans rien inscrire.
+- **Pas de sauvegarde à la fermeture** (décision : risque de bloquer la fermeture) — piste pour plus tard.
+
+### Les cinq phases, et quand la base est tenue
+1. `plan` (**base tenue**) : réglages, décision, `last_attempt_at` inscrit. `plan(None, …)` = verrouillé → `Decision::Locked`, rien d'autre.
+2. `Plan::stage` (base libre) : contrôle du dossier, ménage de nos dossiers temporaires abandonnés, création de `<dest>/.pulse-auto-tmp-<ms>-<pid>-<n>`.
+3. `Staged::copy_database` (**base tenue pour la seule copie**) : `write_database` dans le temporaire, puis **liste** des captures à cet instant et version du schéma.
+4. `Copied::finish` (base libre) : captures copiées, relecture (`verify_copy` + même version de schéma + autant de captures que listées + rien d'autre dans le dossier), renommage en `pulse-auto-…`, puis conservation.
+5. `record` (**base tenue**) : réussite → `last_success_at` = instant de l'essai ; échec → son code ; `locked` et `busy` n'inscrivent rien.
+- **Pourquoi les captures peuvent être copiées sans la base** : une capture n'est écrite que par `save_screenshot`, qui tient la base pendant l'écriture ; les noms sont uniques et une capture n'est jamais modifiée ni supprimée ensuite ; les seules réécritures (activation / désactivation du verrou, restauration) prennent `exclusive`. La liste prise en phase 3 ne contient donc que des fichiers complets ; une capture ajoutée après n'est pas copiée (la base copiée ne la connaît pas).
+- **État du verrou** : les clés enregistrées en phase 3 doivent être **les mêmes** (même `Arc`) avant la copie des captures et avant le renommage ; verrouillé entre-temps → `backup:locked`, verrou activé / désactivé / mot de passe changé → `backup:interrupted` ; dans les deux cas rien ne reste.
+
+### Atomicité
+- Le temporaire est un `TmpDir` supprimé à sa destruction tant qu'il n'a pas été renommé : **tout échec, à n'importe quelle étape, le supprime**. Une sauvegarde qui ne se relit pas n'est jamais renommée ni comptée comme réussie. Le nom final déjà pris → `backup:alreadyExists` (deux « Sauvegarder maintenant » dans la même minute). Après le renommage, `fsync` du dossier (Unix ; NTFS journalise les renommages).
+- Un plantage du processus peut laisser un `.pulse-auto-tmp-…` (dossier caché) : il est supprimé à une exécution suivante s'il a plus de 6 h (instant lu dans son nom) **et** ne contient que ce qu'une sauvegarde écrit ; sinon il reste.
+- Test : échec simulé (`FAIL_AT`, actif seulement en test) à chaque étape (`stage`, `database`, `screenshots`, `verify`, `rename`) → code attendu, dossier de destination identique, sauvegarde précédente intacte octet pour octet, `last_success_at` inchangé.
+
+### Sécurité de la suppression (conservation)
+Après une réussite seulement, on garde les `keep` plus récentes sauvegardes automatiques, **la nouvelle comptant pour une et n'étant jamais supprimée** (même avec `keep = 1` et une sauvegarde datée dans le futur). Un dossier n'est supprimé que si **toutes** ces conditions sont vraies : nom **exactement** `pulse-auto-AAAAMMJJ-HHMM` (chiffres ASCII, vraie date et heure, aucun suffixe : `…-copie`, `…-231`, majuscule, `pulse-backup-…` exclus) ; vrai dossier (**jamais un lien symbolique**, jamais un fichier) ; ne contient que `pulse.db` ou `pulse.db.enc` et un dossier `screenshots` de fichiers ; **relu comme sauvegarde Pulse** (en clair : `inspect` ; chiffrée : ouverte avec la clé de données actuelle). Tout ce qui ne se prouve pas est gardé : une sauvegarde chiffrée faite avec une autre clé (après une désactivation puis réactivation du verrou), ou verrou désactivé depuis, n'est **jamais** supprimée automatiquement. Classement : par l'instant du nom (décroissant) ; un dossier au contenu inattendu ne prend pas de place. Échec d'une suppression → `pruneFailed` noté, la sauvegarde reste réussie, pas de nouvel essai en boucle. Testé : fichier étranger, sauvegarde manuelle, noms voisins, dossier au bon nom contenant un fichier en plus, « sauvegarde » illisible, fichier au bon nom, lien symbolique.
+
+### Dossier de destination (`check_folder`)
+Refus (codes) : chemin non absolu (`notAbsolute`), inexistant (`folderNotFound`), fichier (`notAFolder`), **dans le dossier de données de Pulse** ou égal à lui (`insideDataFolder`, comparaison des chemins canoniques), non inscriptible (`notWritable` : petit fichier `.pulse-write-test-…` créé, écrit, `fsync`, supprimé). **Avertissement sans refus** : même lecteur que les données (Unix : même périphérique ; Windows : même volume `C:` ou même partage `\\serveur\partage`, lu dans le chemin canonique) — heuristique : deux partitions d'un même disque comptent comme deux lecteurs.
+
+### Erreurs (`backup:<code>`, traduites par `fr.backupAuto.errors`)
+`noFolder`, `notAbsolute`, `folderNotFound` (aussi USB retirée : Windows 21 `ERROR_NOT_READY`, réseau 53 / 55), `notAFolder`, `insideDataFolder`, `notWritable`, `diskFull` (Windows 39 / 112 / 1295, Unix `ENOSPC` / `EDQUOT`, SQLite `SQLITE_FULL`), `fileInUse` (Windows 32 / 33 / 1224 : antivirus, OneDrive ; `EBUSY`), `verifyFailed`, `alreadyExists`, `busy`, `locked`, `interrupted`, `invalidKeep`, `pruneFailed`, `io`. Jamais de plantage, jamais de donnée de Pulse modifiée (seul le dossier de destination est écrit), jamais de chemin ni de donnée dans le message.
+
+### Interface
+- Panneau : interrupteur (`Switch` ; l'activer sans dossier ouvre d'abord la boîte de dialogue), dossier coupé au milieu par « … » avec `Tooltip`, fréquence (`Select`), nombre gardé (appliqué à la sortie du champ ou par « Appliquer »), « Sauvegarder maintenant », « Ouvrir le dossier » (la coque n'ouvre **que** le dossier réglé : `explorer` sous Windows), dernière réussite, prochaine prévue, dernière erreur en clair, avertissement « même lecteur », rappels (contrôle toutes les 30 min tant que Pulse est ouvert, captures incluses donc volumineuses, chiffrées seulement si le verrou est actif, restauration par « Restaurer… »), liste des sauvegardes présentes (date du nom, taille, chiffrée, « contenu inattendu »).
+- Bannière (coque, dans le flux, jamais fixe ; absente de la page Paramètres) : `stale` (décidé par pulse-core : activée et dernière réussite plus vieille que 2 × la période — 2 jours / 14 jours —, ou jamais réussie avec un échec) → « Votre dernière sauvegarde réussie date de N jours » + cause + « Voir les réglages » / « Masquer » (pour la session) ; sinon invitation (désactivée, au moins un trade, pas refusée) « Protégez votre historique » + « Activer » (ouvre les réglages, **n'active rien**) / « Plus tard » (14 jours, **une seule fois** : un second « Plus tard » la clôt).
+- Faux backend : `src/lib/mockBackupAuto.ts`, **SIMULATION (navigateur)** (badge et bandeau dans le panneau), aucun fichier ; miroir de `is_due`, `next_due_at`, noms, conservation, invitation, bannière, codes ; `mockBackupAuto.test.ts` reprend les cas Rust. Les instantanés sont restaurables par la restauration simulée. `simulate()` sert aux captures et aux scénarios de l'audit visuel.
+- Captures : `docs/captures/lot32-*.png` (script `scripts/capture-lot32.mjs`, 1440×900 et 1920×1080 : désactivée, activée, erreur, bannière d'invitation, bannière « ancienne » ; vérifie aussi : aucune requête hors de localhost, aucun défilement horizontal, aucune bannière fixe). Scénarios `sauvegarde-auto-*` de `scripts/visual-audit.mjs`.
+
+### Limites et non testé (lot 32)
+- **Aucune exécution sur un vrai Windows** : ni NTFS (renommage d'un dossier, `fsync`), ni les codes d'erreur Windows en vrai (ils ne sont testés que par table), ni un antivirus ou l'indexeur qui bloque un fichier, ni `explorer` pour « Ouvrir le dossier ». Les tests Rust tourneront sur le Windows de GitHub au prochain build **manuel** (`build-windows.yml` lance `cargo test -p pulse-core`).
+- **OneDrive / Google Drive jamais essayés** : un dossier synchronisé est un dossier local pour Pulse ; la synchronisation elle-même, les fichiers « à la demande », un fichier verrouillé pendant l'envoi ne sont pas testés. Deux PC qui écrivent dans le **même** dossier synchronisé : la conservation de l'un peut supprimer les sauvegardes de l'autre (elles passent la relecture) — utiliser un sous-dossier par PC.
+- **Chemin réseau (`\\serveur\partage`) et chemins longs (> 260 caractères) non testés.** La copie de la base se fait **base tenue** : sur une destination très lente (réseau), l'interface peut attendre pendant cette copie (pas pendant celle des captures).
+- Disque plein, clé USB débranchée, fichier bloqué : **simulés** (points d'échec), jamais réels ; aucune vraie coupure de courant (un plantage entre deux phases est couvert par le temporaire et son ménage).
+- Jamais essayé sur la vraie base de l'utilisateur ni avec des centaines de Mo de captures (durée, taille).
+- Pulse fermé = aucune sauvegarde (pas de service Windows, pas de tâche planifiée) ; la bannière « ancienne » le rappelle à la réouverture.
+- Heure d'été : le nom suit l'heure locale ; deux sauvegardes manuelles à 02:30 le jour du passage à l'heure d'hiver peuvent se trier dans le mauvais ordre (sans effet à la fréquence quotidienne ou hebdomadaire).
