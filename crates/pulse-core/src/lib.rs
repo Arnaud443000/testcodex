@@ -50,6 +50,8 @@ pub mod lock;
 pub mod sizing;
 // Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
 pub mod news;
+// Lot 34 (objectifs de comportement, par semaine et par mois).
+pub mod process_goals;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
