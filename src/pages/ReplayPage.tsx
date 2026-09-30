@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Select } from '../components/ui/Select'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
@@ -200,21 +201,21 @@ export function ReplayPage() {
         </div>
         <label className="flex flex-col gap-1.5">
           <span className="caption">{r.filters.result}</span>
-          <select className="input !w-auto" value={filters.outcome ?? ''} onChange={(e) => set('outcome', (e.target.value || null) as ReplayOutcome | null)}>
-            <option value="" className="bg-bg">{r.filters.all}</option>
-            {Object.entries(r.outcomes).map(([k, l]) => (
-              <option key={k} value={k} className="bg-bg">{l}</option>
-            ))}
-          </select>
+          <Select
+            className="min-w-[150px] !w-auto"
+            value={filters.outcome ?? ''}
+            onChange={(v) => set('outcome', (v || null) as ReplayOutcome | null)}
+            options={[{ value: '', label: r.filters.all }, ...Object.entries(r.outcomes).map(([k, l]) => ({ value: k, label: l }))]}
+          />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="caption">{r.filters.asset}</span>
-          <select className="input !w-auto" value={filters.instrumentId ?? ''} onChange={(e) => set('instrumentId', e.target.value ? Number(e.target.value) : null)}>
-            <option value="" className="bg-bg">{r.filters.all}</option>
-            {ref.instruments.map((i) => (
-              <option key={i.id} value={i.id} className="bg-bg">{i.symbol}</option>
-            ))}
-          </select>
+          <Select
+            className="min-w-[150px] !w-auto"
+            value={filters.instrumentId === null ? '' : String(filters.instrumentId)}
+            onChange={(v) => set('instrumentId', v ? Number(v) : null)}
+            options={[{ value: '', label: r.filters.all }, ...ref.instruments.map((i) => ({ value: String(i.id), label: i.symbol }))]}
+          />
         </label>
         <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
           <input type="checkbox" className="h-4 w-4 accent-violet" checked={filters.withScreenshot} onChange={(e) => set('withScreenshot', e.target.checked)} />

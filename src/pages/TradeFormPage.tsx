@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { AssetPicker } from '../components/AssetPicker'
-import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { PreviewPanel } from '../components/PreviewPanel'
 import { RulesPanel } from '../components/RulesPanel'
@@ -207,43 +207,39 @@ export function TradeFormPage() {
           />
         </Field>
         <Field label={t.form.fields.account} htmlFor="f-account" error={errorText('account')}>
-          <SelectBox id="f-account" value={form.accountId ?? ''} onChange={(v) => set('accountId', v === '' ? null : Number(v))}>
-            {(account?.archived ? [...accounts, account] : accounts).map((a) => (
-              <option key={a.id} value={a.id} className="bg-bg">{a.archived ? t.accountAdmin.archivedOption(a.name) : a.name}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="f-account"
+            value={form.accountId === null ? '' : String(form.accountId)}
+            onChange={(v) => set('accountId', v === '' ? null : Number(v))}
+            options={(account?.archived ? [...accounts, account] : accounts).map((a) => ({ value: String(a.id), label: a.archived ? t.accountAdmin.archivedOption(a.name) : a.name }))}
+          />
         </Field>
         <Field label={t.form.fields.entryTime} htmlFor="f-entry-time" error={errorText('entryTime')}>
           <input id="f-entry-time" type="datetime-local" className={`input !px-2 text-[12.5px] ${errorText('entryTime') ? 'input-error' : ''}`} value={form.entryTime} onChange={(e) => set('entryTime', e.target.value)} />
         </Field>
         <Field label={t.form.fields.session} htmlFor="f-session">
           <div className="relative" title={t.form.autoHint}>
-            <select
+            <Select
               id="f-session"
-              className={`input ${autoSession ? 'input-auto' : ''}`}
-              value={form.sessionTagId ?? ''}
-              onChange={(e) => setForm({ ...form, sessionTagId: e.target.value === '' ? null : Number(e.target.value), sessionManual: e.target.value !== '' })}
-            >
-              <option value="" className="bg-bg">{t.form.placeholders.select}</option>
-              {sessions.map((g) => (
-                <option key={g.id} value={g.id} className="bg-bg">{g.name}</option>
-              ))}
-            </select>
+              className={autoSession ? 'input-auto !pr-16' : ''}
+              value={form.sessionTagId === null ? '' : String(form.sessionTagId)}
+              onChange={(v) => setForm({ ...form, sessionTagId: v === '' ? null : Number(v), sessionManual: v !== '' })}
+              options={[{ value: '', label: t.form.placeholders.select }, ...sessions.map((g) => ({ value: String(g.id), label: g.name }))]}
+            />
             {autoSession && (
-              <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
+              <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
                 {t.form.auto}
               </span>
             )}
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
           </div>
         </Field>
         <Field label={t.form.fields.timeframe} htmlFor="f-timeframe">
-          <SelectBox id="f-timeframe" value={form.timeframeTagId ?? ''} onChange={(v) => set('timeframeTagId', v === '' ? null : Number(v))}>
-            <option value="" className="bg-bg">{t.form.placeholders.select}</option>
-            {timeframes.map((g) => (
-              <option key={g.id} value={g.id} className="bg-bg">{g.name}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="f-timeframe"
+            value={form.timeframeTagId === null ? '' : String(form.timeframeTagId)}
+            onChange={(v) => set('timeframeTagId', v === '' ? null : Number(v))}
+            options={[{ value: '', label: t.form.placeholders.select }, ...timeframes.map((g) => ({ value: String(g.id), label: g.name }))]}
+          />
         </Field>
       </div>
       {newAsset && (
@@ -504,29 +500,6 @@ export function TradeFormPage() {
   )
 }
 
-function SelectBox({
-  id,
-  value,
-  onChange,
-  children,
-  error = false,
-}: {
-  id: string
-  value: string | number
-  onChange: (v: string) => void
-  children: React.ReactNode
-  error?: boolean
-}) {
-  return (
-    <div className="relative">
-      <select id={id} className={`input ${error ? 'input-error' : ''}`} value={value} onChange={(e) => onChange(e.target.value)}>
-        {children}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-    </div>
-  )
-}
-
 function PriceField({
   id,
   label,
@@ -601,11 +574,12 @@ function NewInstrumentForm({
           <input id="ni-name" className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t.form.instrumentClass} htmlFor="ni-class">
-          <SelectBox id="ni-class" value={assetClass} onChange={(v) => setAssetClass(v as AssetClass)}>
-            {ASSET_CLASSES.map((c) => (
-              <option key={c} value={c} className="bg-bg">{t.common.assetClasses[c]}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="ni-class"
+            value={assetClass}
+            onChange={(v) => setAssetClass(v as AssetClass)}
+            options={ASSET_CLASSES.map((c) => ({ value: c, label: t.common.assetClasses[c] }))}
+          />
         </Field>
         <Field label={t.form.instrumentMultiplier} htmlFor="ni-mult">
           <input id="ni-mult" className="input" inputMode="decimal" value={multiplier} onChange={(e) => setMultiplier(e.target.value)} />

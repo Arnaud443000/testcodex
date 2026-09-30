@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Select } from './ui/Select'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
@@ -20,23 +21,19 @@ function hostPreview(url: string): string {
 function ImportanceSelect({ id, value, onChange }: { id: string; value: Importance; onChange: (v: Importance) => void }) {
   const t = useT().news
   return (
-    <select id={id} className="control h-[42px] px-3.5" value={value} onChange={(e) => onChange(e.target.value as Importance)}>
-      {IMPORTANCES.map((i) => (
-        <option key={i} value={i} className="bg-bg">{t.importance[i]}</option>
-      ))}
-    </select>
+    <Select id={id} value={value} onChange={(v) => onChange(v as Importance)} options={IMPORTANCES.map((i) => ({ value: i, label: t.importance[i] }))} />
   )
 }
 
 function CurrencySelect({ id, value, onChange }: { id: string; value: string | null; onChange: (v: string | null) => void }) {
   const t = useT().news.settings
   return (
-    <select id={id} className="control h-[42px] px-3.5" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
-      <option value="" className="bg-bg">{t.currencyNone}</option>
-      {CURRENCIES.map((c) => (
-        <option key={c} value={c} className="bg-bg">{c}</option>
-      ))}
-    </select>
+    <Select
+      id={id}
+      value={value ?? ''}
+      onChange={(v) => onChange(v || null)}
+      options={[{ value: '', label: t.currencyNone }, ...CURRENCIES.map((c) => ({ value: c, label: c }))]}
+    />
   )
 }
 
@@ -361,10 +358,14 @@ export function NewsSettingsPanel() {
             <div className="flex flex-wrap items-end gap-4">
               <label className="flex flex-col gap-1.5">
                 <span className="caption">{s.formatLabel}</span>
-                <select className="control h-[42px] px-3.5" value={format} onChange={(e) => setFormat(e.target.value as NewsFileFormat)}>
-                  <option value="ics" className="bg-bg">{s.formatIcs}</option>
-                  <option value="csv" className="bg-bg">{s.formatCsv}</option>
-                </select>
+                <Select
+                  value={format}
+                  onChange={(v) => setFormat(v as NewsFileFormat)}
+                  options={[
+                    { value: 'ics', label: s.formatIcs },
+                    { value: 'csv', label: s.formatCsv },
+                  ]}
+                />
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className="caption">{s.fileImportance}</span>

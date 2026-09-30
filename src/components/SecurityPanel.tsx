@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { Select } from './ui/Select'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { useLock } from '../lib/lock'
@@ -231,13 +232,12 @@ export function SecurityPanel() {
               <p className="mt-1 max-w-[62ch] text-[13px] text-tx3">{s.idleHelp}</p>
             </div>
             <Field label={s.idleLabel} htmlFor="lock-idle" className="w-[220px]">
-              <select id="lock-idle" className="control h-[42px] px-3.5" value={status.idleMinutes ?? ''} onChange={(e) => void setIdle(e.target.value)}>
-                {idleChoices.map((m) => (
-                  <option key={m ?? 'never'} value={m ?? ''} className="bg-bg">
-                    {m === null ? s.idleNever : s.idleMinutes(m)}
-                  </option>
-                ))}
-              </select>
+              <Select
+                id="lock-idle"
+                value={status.idleMinutes === null || status.idleMinutes === undefined ? '' : String(status.idleMinutes)}
+                onChange={(v) => void setIdle(v)}
+                options={idleChoices.map((m) => ({ value: m === null ? '' : String(m), label: m === null ? s.idleNever : s.idleMinutes(m) }))}
+              />
             </Field>
             <button className="btn btn-secondary" onClick={() => void lockNow()} data-testid="lock-now">
               <Icon name="lock" size={16} />

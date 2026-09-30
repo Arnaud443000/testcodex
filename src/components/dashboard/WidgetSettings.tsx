@@ -5,17 +5,7 @@ import type { Account } from '../../types/account'
 import type { ResolvedScope, WidgetDefinition, WidgetInstance } from '../../types/dashboardLayout'
 import type { PeriodKey } from '../../types/stats'
 import { Field } from '../ui'
-import { Icon } from '../Icon'
-
-/** Liste déroulante avec le chevron des autres listes de l'application. */
-function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <span className="relative">
-      <select className="input" {...props}>{children}</select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-    </span>
-  )
-}
+import { Select } from '../ui/Select'
 
 /** Réglages propres à un widget (3.8.8) : période, compte, mode d'affichage — seulement ceux qui ont un sens pour lui. */
 export function WidgetSettings({
@@ -53,36 +43,29 @@ export function WidgetSettings({
             <Select
               id="ws-period"
               value={instance.period ?? ''}
-              onChange={(e) => onChange({ period: (e.target.value || null) as PeriodKey | null })}
-            >
-              <option value="" className="bg-bg">{t.settings.periodGlobal}</option>
-              {PERIOD_KEYS.map((p) => (
-                <option key={p} value={p} className="bg-bg">{t.periods[p]}</option>
-              ))}
-            </Select>
+              onChange={(v) => onChange({ period: (v || null) as PeriodKey | null })}
+              options={[{ value: '', label: t.settings.periodGlobal }, ...PERIOD_KEYS.map((p) => ({ value: p, label: t.periods[p] }))]}
+            />
           </Field>
         )}
         {def.account && (
           <Field label={t.settings.account} htmlFor="ws-account">
             <Select
               id="ws-account"
-              value={instance.accountId ?? ''}
-              onChange={(e) => onChange({ accountId: e.target.value === '' ? null : Number(e.target.value) })}
-            >
-              <option value="" className="bg-bg">{inherit}</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id} className="bg-bg">{a.archived ? `${a.name} (archivé)` : a.name}</option>
-              ))}
-            </Select>
+              value={instance.accountId === null || instance.accountId === undefined ? '' : String(instance.accountId)}
+              onChange={(v) => onChange({ accountId: v === '' ? null : Number(v) })}
+              options={[{ value: '', label: inherit }, ...accounts.map((a) => ({ value: String(a.id), label: a.archived ? `${a.name} (archivé)` : a.name }))]}
+            />
           </Field>
         )}
         {def.modes.length > 0 && (
           <Field label={t.settings.mode} htmlFor="ws-mode">
-            <Select id="ws-mode" value={instance.mode ?? def.modes[0]} onChange={(e) => onChange({ mode: e.target.value })}>
-              {def.modes.map((m) => (
-                <option key={m} value={m} className="bg-bg">{t.modes[def.kind]?.[m] ?? m}</option>
-              ))}
-            </Select>
+            <Select
+              id="ws-mode"
+              value={instance.mode ?? def.modes[0]}
+              onChange={(v) => onChange({ mode: v })}
+              options={def.modes.map((m) => ({ value: m, label: t.modes[def.kind]?.[m] ?? m }))}
+            />
           </Field>
         )}
         {hasAny && <p className="text-xs text-tx3">{t.settings.hint}</p>}

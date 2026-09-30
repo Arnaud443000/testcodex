@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Select } from '../components/ui/Select'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
@@ -208,11 +209,12 @@ export function GoalsPage() {
             <p className="mt-1 text-[13px] text-tx2">{g.formIntro}</p>
           </div>
           <Field label={g.metric} htmlFor="goal-metric">
-            <select id="goal-metric" className="input" value={metric} onChange={(e) => setMetric(e.target.value as GoalMetric)}>
-              {GOAL_METRICS.map((m) => (
-                <option key={m} value={m} className="bg-bg">{g.metrics[m]}</option>
-              ))}
-            </select>
+            <Select
+              id="goal-metric"
+              value={metric}
+              onChange={(v) => setMetric(v as GoalMetric)}
+              options={GOAL_METRICS.map((m) => ({ value: m, label: g.metrics[m] }))}
+            />
             <p className="text-xs text-tx3">{g.metricHelp[metric]}</p>
           </Field>
           <Field label={`${g.targetLabel}${g.units[metric] ? ` (${g.units[metric] === 'devise du compte' ? currency : g.units[metric]})` : ''}`} htmlFor="goal-target">

@@ -148,6 +148,7 @@ export const fr = {
     delete: 'Supprimer',
     back: 'Retour',
     loading: 'Chargement…',
+    select: { placeholder: 'Choisir…', empty: 'Aucune option disponible' },
     none: 'Aucun',
     unset: 'Non renseigné',
     error: (detail: string) => `Une erreur est survenue : ${detail}`,

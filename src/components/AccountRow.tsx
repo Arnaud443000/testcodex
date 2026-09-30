@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Select } from './ui/Select'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -64,11 +65,11 @@ function AccountEditForm({ account: a, onDone }: { account: Account; onDone: () 
         </label>
         <label className={field}>
           <span className="caption">{t.settings.type}</span>
-          <select className="control h-[42px] px-3.5" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
-            {Object.entries(t.settings.kinds).map(([k, l]) => (
-              <option key={k} value={k} className="bg-bg">{l}</option>
-            ))}
-          </select>
+          <Select
+            value={kind}
+            onChange={(v) => setKind(v as AccountKind)}
+            options={Object.entries(t.settings.kinds).map(([k, l]) => ({ value: k, label: l }))}
+          />
         </label>
         <label className={field}>
           <span className="caption">{t.settings.broker}</span>

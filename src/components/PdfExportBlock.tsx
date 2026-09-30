@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Select } from './ui/Select'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
@@ -85,22 +86,23 @@ export function PdfExportBlock() {
           <div className="flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="caption">{p.accountLabel}</span>
-              <select className="input min-w-[200px]" value={accountId ?? ''} disabled={busy} onChange={(e) => setAccountId(Number(e.target.value))}>
-                {allAccounts.map((a) => (
-                  <option key={a.id} value={a.id} className="bg-bg">
-                    {a.name} · {a.currency}
-                    {a.archived ? p.archivedSuffix : ''}
-                  </option>
-                ))}
-              </select>
+              <Select
+                className="min-w-[200px]"
+                value={accountId === null ? '' : String(accountId)}
+                disabled={busy}
+                onChange={(v) => setAccountId(Number(v))}
+                options={allAccounts.map((a) => ({ value: String(a.id), label: `${a.name} · ${a.currency}${a.archived ? p.archivedSuffix : ''}` }))}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="caption">{p.periodLabel}</span>
-              <select className="input min-w-[200px]" value={kind} disabled={busy} onChange={(e) => setKind(e.target.value as PdfPeriodKind)}>
-                {PDF_PERIOD_KINDS.map((k) => (
-                  <option key={k} value={k} className="bg-bg">{p.period[k]}</option>
-                ))}
-              </select>
+              <Select
+                className="min-w-[200px]"
+                value={kind}
+                disabled={busy}
+                onChange={(v) => setKind(v as PdfPeriodKind)}
+                options={PDF_PERIOD_KINDS.map((k) => ({ value: k, label: p.period[k] }))}
+              />
             </label>
             {kind === 'custom' && (
               <>

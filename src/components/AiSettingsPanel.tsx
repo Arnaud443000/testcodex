@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { aiErrorMessage } from '../lib/aiView'
 import type { AiStatus } from '../types/ai'
 import { Notice, Switch } from './ui'
+import { Select } from './ui/Select'
 
 const OTHER = '__other__'
 
@@ -138,25 +139,21 @@ export function AiSettingsPanel() {
 
         <div className="flex flex-col gap-3 rounded-inner border bg-white/[0.03] p-[18px]" style={{ borderColor: 'var(--hairline)' }}>
           <h4 className="caption"><label htmlFor="ai-model">{s.modelTitle}</label></h4>
-          <select
+          <Select
             id="ai-model"
-            className="control h-[42px] px-3.5"
             value={isOther ? OTHER : settings.model}
-            onChange={(e) => {
-              if (e.target.value === OTHER) setOtherModel(settings.model)
+            onChange={(v) => {
+              if (v === OTHER) setOtherModel(settings.model)
               else {
                 setOtherModel(null)
-                void setModel(e.target.value)
+                void setModel(v)
               }
             }}
-          >
-            {suggested.map((m) => (
-              <option key={m} value={m} className="bg-bg">
-                {s.modelNames[m] ?? m}{m === status.defaultModel ? s.defaultSuffix : ''}
-              </option>
-            ))}
-            <option value={OTHER} className="bg-bg">{s.otherModel}</option>
-          </select>
+            options={[
+              ...suggested.map((m) => ({ value: m, label: `${s.modelNames[m] ?? m}${m === status.defaultModel ? s.defaultSuffix : ''}` })),
+              { value: OTHER, label: s.otherModel },
+            ]}
+          />
           {isOther && (
             <form
               className="flex flex-wrap items-end gap-2.5"

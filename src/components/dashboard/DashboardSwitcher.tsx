@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../Icon'
+import { Select } from '../ui/Select'
 import { ConfigMenu } from './ConfigMenu'
 import { Modal } from './Modal'
 import { useT } from '../../i18n'
@@ -44,23 +45,16 @@ export function DashboardSwitcher({
     'control grid h-[42px] w-[42px] place-items-center !rounded-full text-tx2 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet disabled:opacity-60'
   return (
     <div className="flex items-center gap-2">
-      <span className="relative">
-        <select className="input min-w-[230px]" aria-label={t.switcherLabel} value={current.key} onChange={(e) => onSelect(e.target.value)}>
-          <optgroup label={t.builtinGroup} className="bg-bg">
-            {builtin.map((s) => (
-              <option key={s.key} value={s.key} className="bg-bg">{label(s)}</option>
-            ))}
-          </optgroup>
-          {custom.length > 0 && (
-            <optgroup label={t.customGroup} className="bg-bg">
-              {custom.map((s) => (
-                <option key={s.key} value={s.key} className="bg-bg">{label(s)}</option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-      </span>
+      <Select
+        className="min-w-[230px]"
+        ariaLabel={t.switcherLabel}
+        value={current.key}
+        onChange={onSelect}
+        options={[
+          ...builtin.map((s) => ({ value: s.key, label: label(s), group: t.builtinGroup })),
+          ...custom.map((s) => ({ value: s.key, label: label(s), group: t.customGroup })),
+        ]}
+      />
       <button type="button" className={iconBtn} aria-pressed={current.isDefault} disabled={current.isDefault} title={current.isDefault ? t.isDefault : t.makeDefault} aria-label={current.isDefault ? t.isDefault : t.makeDefault} onClick={onSetDefault}>
         <span className={current.isDefault ? 'text-violet' : ''}><Icon name="star" size={18} /></span>
       </button>

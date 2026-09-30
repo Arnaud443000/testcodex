@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Select } from '../components/ui/Select'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
@@ -154,15 +155,12 @@ export function EconomicCalendarPage() {
         </div>
         <label className="flex flex-col gap-1.5">
           <span className="caption">{n.page.currencyFilter}</span>
-          <span className="relative">
-            <select className="control h-[42px] min-w-[190px] appearance-none px-3.5 pr-9" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              <option value="" className="bg-bg">{n.page.allCurrencies}</option>
-              {(data?.currencies ?? []).map((c) => (
-                <option key={c} value={c} className="bg-bg">{c}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-          </span>
+          <Select
+            className="min-w-[190px]"
+            value={currency}
+            onChange={setCurrency}
+            options={[{ value: '', label: n.page.allCurrencies }, ...(data?.currencies ?? []).map((c) => ({ value: c, label: c }))]}
+          />
         </label>
         {data && <span className="ml-auto text-[13px] text-tx3">{n.page.count(data.events.length)}</span>}
       </section>

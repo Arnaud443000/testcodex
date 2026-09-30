@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Select } from '../components/ui/Select'
 import { useLocation } from 'react-router-dom'
 import { NewsSettingsPanel } from '../components/NewsSettingsPanel'
 import { AiSettingsPanel } from '../components/AiSettingsPanel'
@@ -60,11 +61,12 @@ function AccountForm() {
         </label>
         <label className={field}>
           <span className="caption">{t.settings.type}</span>
-          <select id="acc-kind" className="control h-[42px] px-3.5" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
-            {Object.entries(t.settings.kinds).map(([k, l]) => (
-              <option key={k} value={k} className="bg-bg">{l}</option>
-            ))}
-          </select>
+          <Select
+            id="acc-kind"
+            value={kind}
+            onChange={(v) => setKind(v as AccountKind)}
+            options={Object.entries(t.settings.kinds).map(([k, l]) => ({ value: k, label: l }))}
+          />
         </label>
         <label className={field}>
           <span className="caption">{t.settings.broker}</span>

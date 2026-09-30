@@ -3,6 +3,7 @@ import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
+import { Select } from './ui/Select'
 
 export function TopBar() {
   const { accounts, allAccounts, selectedId, select } = useAccounts()
@@ -19,22 +20,18 @@ export function TopBar() {
         <Icon name="wallet" />
         <span className="leading-tight">
           <small className="block text-[11px] text-tx3">{t.topbar.account}</small>
-          <select
-            aria-label={t.topbar.account}
-            className="min-h-[24px] cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-tx outline-none"
-            value={selectedId ?? ''}
-            onChange={(e) => select(e.target.value === '' ? null : Number(e.target.value))}
-          >
-            <option value="" className="bg-bg">{t.topbar.allAccounts}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
-            ))}
-            {viewedArchived && (
-              <option value={viewedArchived.id} className="bg-bg">{t.accountAdmin.archivedOption(viewedArchived.name)}</option>
-            )}
-          </select>
+          <Select
+            variant="inline"
+            ariaLabel={t.topbar.account}
+            value={selectedId === null ? '' : String(selectedId)}
+            onChange={(v) => select(v === '' ? null : Number(v))}
+            options={[
+              { value: '', label: t.topbar.allAccounts },
+              ...accounts.map((a) => ({ value: String(a.id), label: a.name })),
+              ...(viewedArchived ? [{ value: String(viewedArchived.id), label: t.accountAdmin.archivedOption(viewedArchived.name) }] : []),
+            ]}
+          />
         </span>
-        <span className="pointer-events-none absolute right-3"><Icon name="chevron" size={16} /></span>
       </label>
 
       <div className="control flex gap-0.5 !rounded-full p-1" role="group" aria-label={t.topbar.period}>

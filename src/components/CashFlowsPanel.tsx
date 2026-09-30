@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Select } from './ui/Select'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
@@ -92,11 +93,12 @@ export function CashFlowsPanel() {
         <>
           <label className="mb-4 flex w-fit flex-col gap-1.5">
             <span className="caption">{c.account}</span>
-            <select className="input min-w-[220px]" value={current.id} onChange={(e) => setAccountId(Number(e.target.value))}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
-              ))}
-            </select>
+            <Select
+              className="min-w-[220px]"
+              value={String(current.id)}
+              onChange={(v) => setAccountId(Number(v))}
+              options={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+            />
           </label>
 
           {flows === null ? (
@@ -132,10 +134,14 @@ export function CashFlowsPanel() {
           <form onSubmit={add} className="grid grid-cols-2 items-end gap-3.5 md:grid-cols-[150px_160px_170px_1fr_auto]">
             <label className="flex flex-col gap-1.5">
               <span className="caption">{c.kind}</span>
-              <select className="input" value={kind} onChange={(e) => setKind(e.target.value as CashFlowKind)}>
-                <option value="deposit" className="bg-bg">{c.kinds.deposit}</option>
-                <option value="withdrawal" className="bg-bg">{c.kinds.withdrawal}</option>
-              </select>
+              <Select
+                value={kind}
+                onChange={(v) => setKind(v as CashFlowKind)}
+                options={[
+                  { value: 'deposit', label: c.kinds.deposit },
+                  { value: 'withdrawal', label: c.kinds.withdrawal },
+                ]}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="caption">{c.amount} ({current.currency})</span>

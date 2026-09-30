@@ -15,6 +15,11 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --hairline: rgba(255, 255, 255, 0.08);
   --control: rgba(255, 255, 255, 0.05);
+  /* Panneaux flottants (menus déroulants, infobulles) : verre sombre. */
+  --popover: rgba(18, 22, 58, 0.97);
+  --popover-hover: rgba(255, 255, 255, 0.07);
+  --scroll-thumb: rgba(255, 255, 255, 0.18);
+  --scroll-thumb-hover: rgba(139, 127, 232, 0.55);
 }
 
 html,
@@ -23,10 +28,36 @@ body,
   height: 100%;
 }
 
-/* Liste de navigation qui défile : barre fine et discrète. */
-.nav-scroll {
+/* Liste qui défile (navigation, panneaux des menus) : barre fine aux couleurs de l'app, jamais la barre du système. */
+.nav-scroll,
+.pop-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+.pop-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.nav-scroll::-webkit-scrollbar,
+.pop-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.nav-scroll::-webkit-scrollbar-track,
+.pop-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.nav-scroll::-webkit-scrollbar-thumb,
+.pop-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.nav-scroll::-webkit-scrollbar-thumb:hover,
+.pop-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+  background-clip: content-box;
 }
 
 /* Focus clavier visible partout (lot 26) : même anneau violet que les boutons, quel que soit l'élément. */
@@ -108,8 +139,36 @@ body {
   textarea.input {
     @apply h-auto min-h-[90px] resize-y py-3 leading-[1.55];
   }
-  select.input {
-    @apply cursor-pointer appearance-none pr-9;
+  /* Menu déroulant (components/ui/Select.tsx) : un bouton qui a l'aspect d'un champ. */
+  .select-trigger {
+    @apply flex cursor-pointer items-center gap-2 px-3.5 text-left;
+  }
+  .select-trigger[aria-expanded='true'] {
+    border-color: rgba(139, 127, 232, 0.7);
+  }
+  /* Variante sans cadre (sélecteur de compte de la barre du haut). */
+  .select-inline {
+    @apply inline-flex min-h-[24px] cursor-pointer items-center gap-1.5 rounded-sm bg-transparent text-sm font-semibold text-tx;
+  }
+  /* Panneau flottant : verre sombre, rayon et ombre de la charte. Rendu dans un portail, au-dessus des boîtes de dialogue. */
+  .popover-panel {
+    background: var(--popover);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(18px);
+    @apply z-[70] rounded-inner p-1 font-sans text-sm text-tx shadow-card;
+  }
+  .popover-option {
+    @apply flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2 text-tx2;
+  }
+  .popover-option.is-active {
+    background: var(--popover-hover);
+    @apply text-tx;
+  }
+  .popover-option.is-selected {
+    @apply font-semibold text-tx;
+  }
+  .popover-option.is-disabled {
+    @apply cursor-not-allowed text-tx3 opacity-60;
   }
   .input-auto {
     border-color: rgba(139, 127, 232, 0.45);
@@ -208,6 +267,11 @@ body {
 :root[data-effects='reduced'] .glass-bar {
   background: #0f1330;
 }
+:root[data-effects='reduced'] .popover-panel {
+  backdrop-filter: none;
+  background: #171b33;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
 :root[data-effects='reduced'] .backdrop-blur-sm {
   backdrop-filter: none;
   background-color: rgba(8, 11, 32, 0.88);
@@ -263,4 +327,9 @@ body {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Le sélecteur de la barre du haut est entouré d'une pastille qui porte déjà l'anneau de focus (focus-within). */
+.select-inline:focus-visible {
+  outline: none;
 }

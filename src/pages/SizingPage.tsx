@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AssetPicker } from '../components/AssetPicker'
 import { EmptyState } from '../components/EmptyState'
-import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { Field, InputWithSuffix, Notice, Segmented } from '../components/ui'
 import { useT } from '../i18n'
@@ -145,14 +145,12 @@ export function SizingPage() {
         <section className="glass-card relative z-20 flex flex-col gap-5 px-6 py-[22px]" aria-label={s.sections.setup}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={s.fields.account} htmlFor="s-account">
-              <div className="relative">
-                <select id="s-account" className="input" value={form.accountId ?? ''} onChange={(e) => set('accountId', e.target.value === '' ? null : Number(e.target.value))}>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-              </div>
+              <Select
+                id="s-account"
+                value={form.accountId === null ? '' : String(form.accountId)}
+                onChange={(v) => set('accountId', v === '' ? null : Number(v))}
+                options={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+              />
             </Field>
             <Field label={s.fields.asset} htmlFor="s-asset">
               <AssetPicker id="s-asset" instruments={ref.instruments} value={form.instrumentId} onChange={(i: Instrument) => set('instrumentId', i.id)} />

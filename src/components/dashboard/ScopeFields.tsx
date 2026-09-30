@@ -1,7 +1,7 @@
 import { useT } from '../../i18n'
 import type { Account } from '../../types/account'
 import type { DashboardScope, ScopeKind } from '../../types/dashboardLayout'
-import { Icon } from '../Icon'
+import { Select } from '../ui/Select'
 
 /** Erreur de saisie de la portée (aucun calcul : la validation qui fait foi est celle de pulse-core). */
 export const scopeIncomplete = (scope: DashboardScope): boolean => scope.kind === 'account' && scope.accountId === null
@@ -48,20 +48,12 @@ export function ScopeFields({
       {scope.kind === 'account' && (
         <label className="mt-1 flex flex-col gap-1.5 text-sm text-tx2" htmlFor="dashboard-scope-account">
           {t.accountField}
-          <span className="relative">
-            <select
-              id="dashboard-scope-account"
-              className="input"
-              value={scope.accountId ?? ''}
-              onChange={(e) => onChange({ kind: 'account', accountId: e.target.value === '' ? null : Number(e.target.value) })}
-            >
-              <option value="" className="bg-bg">{t.accountChoose}</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id} className="bg-bg">{a.archived ? t.accountArchivedOption(a.name) : a.name}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-          </span>
+          <Select
+            id="dashboard-scope-account"
+            value={scope.accountId === null || scope.accountId === undefined ? '' : String(scope.accountId)}
+            onChange={(v) => onChange({ kind: 'account', accountId: v === '' ? null : Number(v) })}
+            options={[{ value: '', label: t.accountChoose }, ...accounts.map((a) => ({ value: String(a.id), label: a.archived ? t.accountArchivedOption(a.name) : a.name }))]}
+          />
         </label>
       )}
       <p className="mt-1 text-xs leading-relaxed text-tx3">{t.priority}</p>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { OutcomeBadge, Pnl } from '../components/ui'
 import { useT } from '../i18n'
@@ -160,19 +161,12 @@ export function TradesPage() {
               />
               <label className="flex flex-col gap-1.5">
                 <span className="caption">{t.trades.filters.result}</span>
-                <span className="relative">
-                  <select
-                    className="input !h-[38px] min-w-[140px]"
-                    value={filters.outcome ?? ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, outcome: (e.target.value || null) as Outcome | 'open' | null }))}
-                  >
-                    <option value="" className="bg-bg">{t.trades.filters.all}</option>
-                    {(['win', 'loss', 'breakeven', 'open'] as const).map((o) => (
-                      <option key={o} value={o} className="bg-bg">{t.common.outcomes[o]}</option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-                </span>
+                <Select
+                  className="!h-[38px] min-w-[140px]"
+                  value={filters.outcome ?? ''}
+                  onChange={(v) => setFilters((f) => ({ ...f, outcome: (v || null) as Outcome | 'open' | null }))}
+                  options={[{ value: '', label: t.trades.filters.all }, ...(['win', 'loss', 'breakeven', 'open'] as const).map((o) => ({ value: o, label: t.common.outcomes[o] }))]}
+                />
               </label>
               {hasActiveFilters(filters) && (
                 <button type="button" className="btn-link pb-2" onClick={() => setFilters(NO_FILTERS)}>
@@ -285,15 +279,12 @@ function FilterSelect({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="caption">{label}</span>
-      <span className="relative">
-        <select className="input !h-[38px] min-w-[140px]" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
-          <option value="" className="bg-bg">{allLabel}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-bg">{o.label}</option>
-          ))}
-        </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-      </span>
+      <Select
+        className="!h-[38px] min-w-[140px]"
+        value={value === null ? '' : String(value)}
+        onChange={(v) => onChange(v === '' ? null : Number(v))}
+        options={[{ value: '', label: allLabel }, ...options.map((o) => ({ value: String(o.value), label: o.label }))]}
+      />
     </label>
   )
 }
