@@ -262,3 +262,16 @@ Liste complète des défauts trouvés et de leur sort : `docs/audit-visuel-lot26
 - **Constat en route** : pendant le développement, un bouton placé dans le formulaire du trade soumettait le trade par erreur (formulaire imbriqué) ; corrigé avant livraison et verrouillé par une note dans `CLAUDE.md`.
 - **Non testé** : l'application installée sous Windows (WebView2, rendu réel, lecteur d'écran) ; seulement le cœur Rust (tests), le faux backend et Chromium sous Linux (captures 1440×900 et 1920×1080 dans `docs/captures/lot30-*.png`). Le lot 29 (menus déroulants, info-bulles, cases à cocher) n'a pas été touché : ce lot n'utilise aucun menu déroulant, donc rien à remplacer.
 
+
+## Lot 35 (pause volontaire) — points à vérifier
+**Votre demande** : ne pas entrer dans un trade de façon émotionnelle et impulsive ; après une perte, un bouton « Je fais une pause de X minutes » et un rappel visible jusqu'à la fin. **C'est un rappel, jamais un blocage.**
+
+- **Démarrer une pause** : bouton « Pause » de la barre du haut ; bouton « Faire une pause » sur les bannières de pertes d'affilée, de perte du jour et de revanche ; encadré proposé dans le formulaire de trade. Durées : 15 min, 30 min, 1 h, 2 h, jusqu'à demain matin (00:00), ou libre de 1 à 480 minutes. Motif et petit mot facultatifs.
+- **Pendant la pause** : puce « Pause jusqu'à 15:40 » avec les minutes restantes dans la barre du haut ; dans le formulaire de trade, un encadré « Êtes-vous sûr de vouloir saisir ce trade ? » avec « Je continue quand même » et « Terminer la pause ». **Vous pouvez toujours enregistrer.**
+- **Fin** : d'elle-même à l'heure dite (même si vous fermez et rouvrez Pulse), ou plus tôt avec « Terminer » (l'heure réelle est gardée). Une seule pause à la fois : en lancer une autre remplace la précédente.
+- **Proposition automatique** (Paramètres > Pause volontaire) : désactivée par défaut ; si vous l'activez, Pulse vous **propose** une pause après N pertes d'affilée, sans jamais en démarrer une tout seul.
+- **Ce que Pulse constate** (page Comportement, carte « Pauses », et un repère dans Discipline) : combien de trades ont été pris pendant une pause et, avec au moins 5 trades de chaque côté, comment ils se comparent aux autres, dit prudemment (« en même temps », jamais « parce que »). Seule l'heure d'**entrée** compte.
+- **Vos pauses restent chez vous** : ni exportées (CSV, PDF), ni lues par le coach IA, ni envoyées nulle part ; incluses dans les sauvegardes.
+- **Décision qui vous attend** : la migration devait être la v18 ; cette branche n'a que 14 migrations, elle est donc en v15 et sera renumérotée à la fusion.
+- **Non testé** : application installée sous Windows (WebView2, rendu réel), minuteur sur plusieurs heures, notification système (il n'y en a pas : seulement le repère dans l'application). Captures : `docs/captures/lot35-*.png`.
+
