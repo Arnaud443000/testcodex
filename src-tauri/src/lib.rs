@@ -38,6 +38,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager, State};
 
 mod lock_cmds;
+mod mcp_cmds;
 
 struct AppState {
     /// The open database, or `None` while the optional password lock (lot 22) is locked.
@@ -646,6 +647,14 @@ pub fn run() {
             });
             app.manage(AiState::new());
             app.manage(NewsPreviewState::default());
+            // Lot 37: an endpoint file left by a Pulse that did not stop cleanly is removed (its port
+            // may belong to another program by now); the access starts off unless « next launch » is on.
+            app.manage(mcp_cmds::McpState::default());
+            if let Err(e) = pulse_core::mcp::remove_stale_endpoint(&app.state::<AppState>().data_dir) {
+                eprintln!("Pulse: could not remove a stale MCP endpoint file ({e})");
+            }
+            mcp_cmds::maybe_autostart(app.handle());
+            mcp_cmds::spawn_expiry_loop(app.handle().clone());
             spawn_reminder_loop(app.handle().clone());
             lock_cmds::spawn_idle_loop(app.handle().clone());
             Ok(())
@@ -816,10 +825,23 @@ pub fn run() {
             get_upcoming_news,
             clear_news_events,
             test_news_source,
-            keep_tested_news
+            keep_tested_news,
+            mcp_cmds::get_mcp_status,
+            mcp_cmds::set_mcp_settings,
+            mcp_cmds::enable_mcp,
+            mcp_cmds::disable_mcp,
+            mcp_cmds::list_mcp_calls,
+            mcp_cmds::clear_mcp_calls,
+            mcp_cmds::get_mcp_install_command
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Pulse");
+        .build(tauri::generate_context!())
+        .expect("error while building Pulse")
+        .run(|app, event| {
+            // Lot 37: closing Pulse closes the MCP port and removes the endpoint file.
+            if let tauri::RunEvent::Exit = event {
+                mcp_cmds::stop(app, pulse_core::mcp::StopReason::Closed);
+            }
+        });
 }
 
 /// Edits an account (currency locked once it has history).

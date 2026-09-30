@@ -3152,6 +3152,7 @@ dependencies = [
  "chrono",
  "pulse-ai",
  "pulse-core",
+ "pulse-mcp",
  "pulse-news",
  "pulse-vault",
  "serde",

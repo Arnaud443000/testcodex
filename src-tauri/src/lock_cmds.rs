@@ -54,6 +54,8 @@ pub async fn unlock_database(app: AppHandle, password: String) -> Result<LockSta
         }
     }
     touch(&state);
+    // Lot 37: « next launch » of an encrypted database is applied at its first unlock.
+    crate::mcp_cmds::maybe_autostart(&app);
     status_of(&state)
 }
 
@@ -100,6 +102,9 @@ pub async fn change_lock_password(app: AppHandle, old_password: String, new_pass
 /// Writes what is pending, closes the database and forgets the keys. Refused (data kept) if the
 /// encrypted file cannot be written.
 pub(crate) fn lock_store(app: &AppHandle) -> Result<(), String> {
+    // Lot 37: the MCP access goes off first (port closed, endpoint file removed), before the database
+    // lock is taken (the runtime and the database are never held together).
+    crate::mcp_cmds::stop(app, pulse_core::mcp::StopReason::Locked);
     let state = app.state::<AppState>();
     let mut slot = state.db.lock().map_err(err)?;
     let Some(store) = slot.take() else { return Ok(()) };

@@ -51,11 +51,9 @@ pub fn list(protocol_version: &str) -> Vec<Value> {
         .iter()
         .map(|t| {
             let mut t = t.clone();
-            if supports_annotations(protocol_version) {
-                if let Value::Object(m) = &mut t {
-                    // Read-only, no destructive or cumulative effect, closed world (the user's own journal).
-                    m.insert("annotations".into(), json!({ "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false }));
-                }
+            // Read-only, no destructive or cumulative effect, closed world (the user's own journal).
+            if let (true, Value::Object(m)) = (supports_annotations(protocol_version), &mut t) {
+                m.insert("annotations".into(), json!({ "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false }));
             }
             t
         })

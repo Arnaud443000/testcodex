@@ -436,6 +436,31 @@ pub const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX economic_events_by_day ON economic_events (day);
     CREATE INDEX economic_events_by_start ON economic_events (importance, starts_at);",
+    // v15 to v19 — RESERVED for lots developed in parallel on other branches (lot 37 was told to take
+    // v20). They do nothing here; at the merge they are replaced by those lots' real migrations. A
+    // database migrated by this branch alone is at v20 without them: never install this branch alone on
+    // the real database (CLAUDE.md, « Serveur MCP (lot 37) »).
+    "-- v15: reserved (other lot)",
+    "-- v16: reserved (other lot)",
+    "-- v17: reserved (other lot)",
+    "-- v18: reserved (other lot)",
+    "-- v19: reserved (other lot)",
+    // v20 — local MCP access (lot 37): log of every tool call answered to the user's MCP client, with the
+    // exact text sent. Capped at the 500 latest rows (pruned at each write). Nothing computes from it,
+    // no tool reads it, no export writes it; it is in the backup and encrypted with the lock (it lives
+    // in the database). `tool` is the name as asked; `params` the arguments as received (JSON).
+    "CREATE TABLE mcp_calls (
+        id            INTEGER PRIMARY KEY,
+        at            INTEGER NOT NULL,
+        tz_offset_min INTEGER NOT NULL,
+        tool          TEXT NOT NULL CHECK (length(tool) BETWEEN 1 AND 64),
+        params        TEXT NOT NULL,
+        result        TEXT NOT NULL,
+        is_error      INTEGER NOT NULL CHECK (is_error IN (0, 1)),
+        size          INTEGER NOT NULL CHECK (size >= 0),
+        duration_ms   INTEGER NOT NULL CHECK (duration_ms >= 0)
+    );
+    CREATE INDEX mcp_calls_by_time ON mcp_calls (at);",
 ];
 
 pub fn latest_version() -> u32 {
