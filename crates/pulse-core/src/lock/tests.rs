@@ -198,6 +198,29 @@ fn encrypted_files_are_unreadable_without_the_key() {
 }
 
 #[test]
+fn a_pause_is_not_readable_in_the_encrypted_folder_and_comes_back_after_unlocking() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut store, _) = seeded(dir.path());
+    crate::pause::start(
+        store.conn(),
+        &crate::pause::NewPause { length: crate::pause::PauseLength::Minutes { minutes: 60 }, reason: Some("emotion".into()), note: Some("Pause-CANARI".into()), tz_offset_min: 0 },
+        NOW,
+    )
+    .unwrap();
+    store.enable(&pw("phrase de test jetable"), true, false, FAST).unwrap();
+    drop(store);
+    for f in all_files(dir.path()) {
+        let bytes = fs::read(&f).unwrap();
+        assert!(!contains(&bytes, b"Pause-CANARI") && !contains(&bytes, b"CREATE TABLE pauses"), "{f:?} leaks a pause");
+    }
+    // Locked: no store, so nothing can be read or written (the shell answers `lock:locked`).
+    let again = Store::unlock(dir.path(), &pw("phrase de test jetable"), NOW).unwrap();
+    let c = crate::pause::current(again.conn(), NOW + 20 * 60_000).unwrap().unwrap();
+    assert_eq!((c.remaining_min, c.pause.note.as_deref()), (40, Some("Pause-CANARI")), "the reminder returns after unlocking while the pause runs");
+    assert_eq!(crate::pause::current(again.conn(), NOW + 61 * 60_000).unwrap(), None);
+}
+
+#[test]
 fn wrong_passwords_are_refused_slowed_down_and_never_delete_anything() {
     let dir = tempfile::tempdir().unwrap();
     let (mut store, _) = seeded(dir.path());

@@ -436,6 +436,23 @@ pub const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX economic_events_by_day ON economic_events (day);
     CREATE INDEX economic_events_by_start ON economic_events (importance, starts_at);",
+    // Lot 35 — voluntary pause (asked as v18: the v15 to v17 of the parallel lots are not in this branch,
+    // so this is the next free number here; to renumber at the merge). A reminder, never a lock: nothing
+    // reads this table to refuse a trade. Instants are UTC ms; `ended_at` stays NULL while the pause runs
+    // or when it ended by itself at `planned_end_at`. No foreign key: a pause belongs to the trader, not
+    // to an account. Not exported (CSV, PDF), not read by the coach, never sent anywhere.
+    "CREATE TABLE pauses (
+        id             INTEGER PRIMARY KEY,
+        started_at     INTEGER NOT NULL,
+        planned_end_at INTEGER NOT NULL,
+        ended_at       INTEGER,
+        tz_offset_min  INTEGER NOT NULL CHECK (tz_offset_min BETWEEN -840 AND 840),
+        reason         TEXT CHECK (reason IS NULL OR length(reason) BETWEEN 1 AND 20),
+        note           TEXT CHECK (note IS NULL OR length(note) BETWEEN 1 AND 140),
+        CHECK (planned_end_at > started_at),
+        CHECK (ended_at IS NULL OR ended_at >= started_at)
+    );
+    CREATE INDEX pauses_by_start ON pauses (started_at);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -934,5 +951,31 @@ mod tests {
         conn.execute("DELETE FROM trades", []).unwrap();
         conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
         assert_eq!(count("SELECT COUNT(*) FROM insight_log"), 0);
+    }
+    #[test]
+    fn the_pause_table_is_added_and_existing_data_is_kept() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        let before = latest_version() - 1; // the pause migration is the last one
+        migrate_to(&mut conn, before).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let mut t = trades::TradeData::new(a, eu, trades::Direction::Long, "1".parse().unwrap(), "1.1".parse().unwrap(), 1_000);
+        t.exit_price = Some("1.2".parse().unwrap());
+        t.exit_time = Some(2_000);
+        trades::create(&conn, &t).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('dashboard.default', 'custom:2')", []).unwrap();
+        assert!(conn.prepare("SELECT * FROM pauses").is_err(), "no pauses before");
+
+        migrate_to(&mut conn, latest_version()).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((count("SELECT COUNT(*) FROM trades"), count("SELECT COUNT(*) FROM accounts"), count("SELECT COUNT(*) FROM settings WHERE key = 'dashboard.default'")), (1, 1, 1));
+        assert_eq!(count("SELECT COUNT(*) FROM pauses"), 0);
+        // No foreign key: deleting an account (and its trades) never touches a pause.
+        conn.execute("INSERT INTO pauses (started_at, planned_end_at, tz_offset_min) VALUES (1000, 2000, 60)", []).unwrap();
+        conn.execute("DELETE FROM trades", []).unwrap();
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM pauses"), 1);
     }
 }

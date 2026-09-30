@@ -141,7 +141,7 @@ fn side(trades: &[&Closed], scores: &[&TradeDiscipline], days: &BTreeSet<String>
 }
 
 /// Expectancy in R when the side has enough trades with an R.
-fn comparable_r(s: &Summary) -> Option<f64> {
+pub(crate) fn comparable_r(s: &Summary) -> Option<f64> {
     s.expectancy_r.filter(|_| s.r_trade_count >= MIN_R_TRADES)
 }
 
