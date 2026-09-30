@@ -208,3 +208,29 @@ describe('constat', () => {
     expect(r.higher('Score', '+10')).toContain('en même temps')
   })
 })
+
+describe('liens avec un trade', () => {
+  it('idées actives de l’actif d’abord, puis celles déjà liées (clôturées ou d’un autre actif) : jamais perdues', async () => {
+    const { linkableIdeas } = await import('./analysisView')
+    const list = linkableIdeas(
+      [{ id: 1, symbol: 'ALGO', note: 'a' }, { id: 2, symbol: 'ALGO', note: 'b' }],
+      [{ id: 2, symbol: 'ALGO', note: 'b', status: 'active' }, { id: 7, symbol: 'BTC', note: 'c', status: 'closed' }, { id: 8, symbol: 'ETH', note: 'd', status: 'active' }],
+    )
+    expect(list.map((i) => [i.id, i.source, i.closed])).toEqual([[1, 'active', false], [2, 'active', false], [7, 'linked', true], [8, 'linked', false]])
+  })
+  it('coche et décoche sans doublon', async () => {
+    const { toggleId } = await import('./analysisView')
+    expect(toggleId([1, 2], 3, true)).toEqual([1, 2, 3])
+    expect(toggleId([1, 2], 2, true)).toEqual([1, 2])
+    expect(toggleId([1, 2], 1, false)).toEqual([2])
+    expect(toggleId([], 1, false)).toEqual([])
+  })
+  it('coupe un texte long à un mot', async () => {
+    const { snippet } = await import('./analysisView')
+    expect(snippet('court')).toBe('court')
+    expect(snippet('un   texte\n\tavec des espaces')).toBe('un texte avec des espaces')
+    const long = 'mot '.repeat(40)
+    const s = snippet(long, 30)
+    expect(s.endsWith('…') && [...s].length <= 31 && !s.includes('mo…')).toBe(true)
+  })
+})

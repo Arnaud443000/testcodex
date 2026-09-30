@@ -259,3 +259,44 @@ export function comparisonLines(c: LinkedComparison): ComparisonLine[] {
 export const formatRate = (rate: number | null) => (rate === null ? '—' : formatRatioPercent(rate, 0))
 
 export { formatPoints }
+
+// --- Liens avec un trade (formulaire et détail) ----------------------------------------------------
+
+export interface LinkableIdea {
+  id: number
+  symbol: string
+  note: string
+  /** `active` : active sur l'actif du trade ; `linked` : déjà liée à ce trade mais plus proposée (clôturée, autre actif). */
+  source: 'active' | 'linked'
+  closed: boolean
+}
+
+/**
+ * Idées montrées dans la section « Analyse et idées » du formulaire : les idées actives sur l'actif choisi, puis celles déjà
+ * liées au trade que l'on ne proposerait plus (clôturées, ou autre actif) : elles restent visibles et décochables, jamais perdues.
+ */
+export function linkableIdeas(
+  active: { id: number; symbol: string; note: string }[],
+  linked: { id: number; symbol: string; note: string; status: 'active' | 'closed' }[],
+): LinkableIdea[] {
+  const out: LinkableIdea[] = active.map((i) => ({ id: i.id, symbol: i.symbol, note: i.note, source: 'active', closed: false }))
+  for (const l of linked) {
+    if (!out.some((x) => x.id === l.id)) out.push({ id: l.id, symbol: l.symbol, note: l.note, source: 'linked', closed: l.status === 'closed' })
+  }
+  return out
+}
+
+/** Coche ou décoche un identifiant dans une liste, sans doublon. */
+export function toggleId(list: number[], id: number, on: boolean): number[] {
+  const rest = list.filter((x) => x !== id)
+  return on ? [...rest, id] : rest
+}
+
+/** Début d'un texte pour une liste : coupé proprement, sans couper un mot en deux quand c'est possible. */
+export function snippet(text: string, max = 90): string {
+  const t = text.replace(/\s+/g, ' ').trim()
+  if ([...t].length <= max) return t
+  const cut = [...t].slice(0, max).join('')
+  const at = cut.lastIndexOf(' ')
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()}…`
+}
