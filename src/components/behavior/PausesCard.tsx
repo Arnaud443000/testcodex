@@ -104,12 +104,13 @@ function Comparison({ report, currency }: { report: PauseReport; currency: strin
       </div>
       <ul className="mt-2 flex flex-col gap-1 text-[13px] text-tx2">
         {([
-          [p.expectancy, report.expectancyR.verdict],
-          [p.discipline, report.discipline.verdict],
-        ] as const).map(([what, verdict]) => (
-          <li key={what}>{verdict === 'notEnoughData' ? `${what} : ${p.verdict.notEnoughData}.` : p.verdictLine(what, p.verdict[verdict])}</li>
+          [p.expectancy, report.expectancyR, formatR(report.expectancyR.present), formatR(report.expectancyR.absent)],
+          [p.discipline, report.discipline, formatNumber(report.discipline.present, 0), formatNumber(report.discipline.absent, 0)],
+        ] as const).map(([what, c, d, o]) => (
+          <li key={what}>{c.verdict === 'notEnoughData' ? p.verdictLine.notEnoughData(what) : p.verdictLine[c.verdict](what, d, o)}</li>
         ))}
       </ul>
+      <p className="mt-1 text-[13px] text-tx2">{p.sameTime}</p>
     </div>
   )
 }

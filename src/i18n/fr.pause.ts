@@ -75,8 +75,13 @@ export const frPause = {
     avgPnl: 'P&L net moyen',
     expectancy: 'Expectancy (R)',
     discipline: 'Score de discipline',
-    verdict: { lower: 'plus bas', similar: 'comparable', higher: 'plus haut', notEnoughData: 'pas assez de données' } as Record<string, string>,
-    verdictLine: (what: string, word: string) => `${what}${NB}: ${word} pour les trades pris pendant une pause. Ces deux faits se constatent en même temps, l’un n’explique pas l’autre.`,
+    verdictLine: {
+      lower: (what: string, d: string, o: string) => `${what}\u00A0: plus bas pendant une pause que sur les autres trades (${d} contre ${o}).`,
+      similar: (what: string, d: string, o: string) => `${what}\u00A0: du même ordre pendant une pause et sur les autres trades (${d} contre ${o}).`,
+      higher: (what: string, d: string, o: string) => `${what}\u00A0: plus haut pendant une pause que sur les autres trades (${d} contre ${o}).`,
+      notEnoughData: (what: string) => `${what}\u00A0: pas assez de données pour comparer.`,
+    },
+    sameTime: 'Ces constats se font en même temps\u00A0: l’un n’explique pas l’autre.',
     notEnough: (min: number, d: number, o: number) =>
       `Pas assez de trades pour comparer : il en faut au moins ${min} dans chaque groupe (${d} pendant une pause, ${o} pour les autres).`,
     afterTheFact:

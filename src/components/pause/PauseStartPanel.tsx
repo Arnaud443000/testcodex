@@ -12,6 +12,6 @@ export function PauseStartPanel({ label }: { label: string }) {
       <PausePicker focusOnOpen onDone={() => setOpen(false)} onCancel={() => setOpen(false)} />
     </div>
   ) : (
-    <button type="button" className="btn btn-secondary btn-sm mt-3" onClick={() => setOpen(true)}>{label}</button>
+    <button type="button" className="btn btn-secondary btn-sm mt-3 self-start" onClick={() => setOpen(true)}>{label}</button>
   )
 }
