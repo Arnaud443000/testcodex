@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { catalogView, EMOTION_NAME_MAX, myList, nameProblem, removalChoice, type NameProblem } from '../lib/emotionList'
@@ -63,8 +63,8 @@ export function EmotionListPanel({
   const addSuggestion = (name: string, restored: boolean) =>
     void run(async () => void (await onAdd(name)), restored ? tx.restoredStatus(name) : tx.addedStatus(name))
 
-  const submitOther = (e: FormEvent) => {
-    e.preventDefault()
+  // Pas de <form> : le panneau vit dans le formulaire de trade, et un formulaire imbriqué soumettrait le trade.
+  const submitOther = () => {
     const p = nameProblem(draft, tags)
     setProblem(p)
     if (p) return
@@ -161,7 +161,7 @@ export function EmotionListPanel({
       </div>
 
       {catalogOpen && (
-        <div className="flex flex-col gap-4 rounded-inner border p-4" style={{ borderColor: 'var(--glass-border)' }}>
+        <div id="emotions-catalogue" className="flex flex-col gap-4 rounded-inner border p-4" style={{ borderColor: 'var(--glass-border)' }}>
           <div>
             <h4 className="text-sm font-semibold">{tx.catalogTitle}</h4>
             <p className="mt-1 text-[13px] text-tx2">{tx.catalogIntro}</p>
@@ -172,7 +172,7 @@ export function EmotionListPanel({
               <div className="flex flex-wrap gap-2">
                 {g.entries.map((e) =>
                   e.state === 'inList' ? (
-                    <span key={e.name} className="chip chip-static opacity-70" aria-label={`${e.name} — ${tx.inList}`}>
+                    <span key={e.name} className="chip chip-static !gap-1.5 opacity-70" aria-label={`${e.name} — ${tx.inList}`}>
                       <span aria-hidden="true">✓ </span>
                       {e.name}
                     </span>
@@ -193,7 +193,7 @@ export function EmotionListPanel({
               </div>
             </div>
           ))}
-          <form onSubmit={submitOther} className="flex flex-col gap-1.5" noValidate>
+          <div className="flex flex-col gap-1.5">
             <span className="caption">{tx.otherTitle}</span>
             <div className="flex flex-wrap items-start gap-2">
               <input
@@ -206,13 +206,19 @@ export function EmotionListPanel({
                   setDraft(e.target.value)
                   setProblem(null)
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    submitOther()
+                  }
+                }}
               />
-              <button type="submit" className="btn btn-secondary btn-sm" disabled={busy}>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={submitOther}>
                 {tx.otherAdd}
               </button>
             </div>
             {problem && <p role="alert" className="text-xs text-[#F5A198]">{problemText(problem)}</p>}
-          </form>
+          </div>
         </div>
       )}
 

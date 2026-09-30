@@ -125,6 +125,46 @@ export const SCENARIOS = [
     await page.getByText('Prochaines news', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
     await page.waitForTimeout(600)
   }],
+  // Lot 30 : Ma liste d'émotions, dans l'ordre d'un usage réel (formulaire, catalogue, saisie libre, retrait, Paramètres).
+  ['emotions-formulaire', async (page) => {
+    await go(page, '/trades/new')
+    await page.evaluate(() => document.querySelector('[aria-label="Avant"]')?.scrollIntoView({ block: 'center' }))
+    await page.waitForTimeout(300)
+  }],
+  ['emotions-catalogue', async (page) => {
+    await page.getByRole('button', { name: 'Ajouter une émotion' }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.evaluate(() => document.getElementById('emotions-catalogue')?.scrollIntoView({ block: 'start' }))
+    await page.waitForTimeout(300)
+  }],
+  ['emotions-saisie-libre', async (page) => {
+    await page.getByRole('button', { name: 'Ajouter Avidité à Ma liste' }).click().catch(() => {})
+    await page.getByLabel('Une émotion qui manque').fill('Méfiance').catch(() => {})
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByLabel('Une émotion qui manque').fill('   ').catch(() => {})
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByLabel('Une émotion qui manque').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['emotions-retrait-confirmation', async (page) => {
+    await page.getByRole('button', { name: 'Retirer Doute de Ma liste' }).click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByRole('group', { name: /Retirer/ }).first().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['emotions-retrait-fait', async (page) => {
+    await page.getByRole('button', { name: 'Retirer de ma liste' }).click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByRole('status').filter({ hasText: 'retirée de Ma liste' }).evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['emotions-parametres', async (page) => {
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('emotions')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')
