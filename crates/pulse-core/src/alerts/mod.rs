@@ -8,6 +8,8 @@
 pub mod log;
 // Lot 25: 3.6.8, trade taken during a major economic news.
 pub mod news;
+// Lot 31: optional alert, a trade entered before any analysis of the day.
+pub mod no_analysis;
 pub mod settings;
 
 pub use log::{AlertRecord, active_alerts, dismiss, history};
@@ -96,6 +98,8 @@ pub enum AlertDetail {
         window_after_min: u32,
         comparison: news::NewsComparison,
     },
+    /// Lot 31: entered before any pre-trade analysis of its local day (optional alert, off by default).
+    NoAnalysis { day: String },
 }
 
 impl AlertDetail {
@@ -111,6 +115,7 @@ impl AlertDetail {
             AlertDetail::UnusualSession { .. } => 7,
             AlertDetail::NoStopLoss { .. } => 8,
             AlertDetail::NewsTrade { .. } => 9,
+            AlertDetail::NoAnalysis { .. } => 10,
         }
     }
 }

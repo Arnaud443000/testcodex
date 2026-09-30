@@ -36,6 +36,8 @@ pub use sequences::{
     AfterLossesReport, MIN_SEQUENCE_TRADES, MIN_SIZE_CASES, SequenceGroup, SizeChangeCase, SizeChangeGroup, SizeChangeReport, after_losses,
     after_losses_report, size_change, size_change_report,
 };
+pub(crate) use discipline::{mean_score, of_closed};
+pub(crate) use factors::compare as compare_values;
 pub use simulation::{PlanSimulation, Scenario, SimulatedResult, plan_simulation, plan_simulation_report};
 
 use crate::error::Result;

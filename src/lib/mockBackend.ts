@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 14, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 15, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -449,6 +449,7 @@ export const mock = {
   },
   deleteTrade: async (tid: number): Promise<void> => {
     if (!trades.delete(tid)) throw new Error(`not found: trade ${tid}`)
+    mockAnalysis.dropTradeLinks(tid)
   },
   previewTrade: async (d: TradeData): Promise<Preview> => {
     const instrument = instruments.find((i) => i.id === d.instrumentId)
@@ -735,6 +736,15 @@ function alertsAt(accountIds: number[], now: number, tz: number): Alert[] {
       tz,
     ),
   )
+  // Lot 31 : alerte facultative « sans analyse du jour » (éteinte par défaut).
+  const stamps = mockAnalysis.noAnalysisStamps(analysisDayOf(now, tz))
+  const enabled = mockAnalysis.noAnalysisEnabled()
+  for (const account of chosen) {
+    const mine = [...trades.values()].filter((t) => t.accountId === account.id)
+    for (const n of noAnalysisAlerts(mine, stamps, now, tz, enabled)) {
+      all.push({ id: n.id, accountId: n.accountId, severity: 'warning', messageKey: 'noAnalysis', at: n.at, tradeId: n.tradeId, kind: 'noAnalysis', day: n.day })
+    }
+  }
   return sortAlerts(all)
 }
 
@@ -960,3 +970,13 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+// --- Lot 31 : analyse avant trading, idées à surveiller, revue du lendemain (miroir de pulse-core/analysis) ---
+import { createAnalysisMock, dayOf as analysisDayOf, noAnalysisAlerts } from './mockAnalysis'
+export const mockAnalysis = createAnalysisMock({
+  instruments: () => instruments,
+  tags: () => tags,
+  tradeExists: (tid) => trades.has(tid),
+  news: { enabled: () => mockNews.isEnabled(), eventsOfDay: (day) => mockNews.eventsOfDay(day) },
+  comparison: (q, linked) => behavior.mockLinkedComparison(behaviorInput(q.accountIds), q, linked),
+  now: () => Date.now(),
+})

@@ -18,6 +18,7 @@ export const fr = {
     discipline: 'Discipline',
     insights: 'Insights',
     journal: 'Journal',
+    analysis: 'Analyse',
     goals: 'Objectifs',
     replay: 'Replay',
     settings: 'Paramètres',
@@ -449,6 +450,7 @@ export const fr = {
       accounts: 'Comptes',
       rules: 'Règles et checklist',
       emotions: 'Émotions',
+      analysis: 'Analyse avant trading',
       discipline: 'Discipline',
       alerts: 'Alertes',
       cashflows: 'Dépôts et retraits',
@@ -1294,6 +1296,8 @@ export const fr = {
         `Trade pris en session ${session}, où vous tradez rarement (${count} sur vos ${history} trades précédents, ${share}).`,
       noStopLossOpen: 'Position ouverte sans stop loss prévu.',
       noStopLossClosed: 'Trade du jour pris sans stop loss prévu.',
+      // Lot 31 : alerte facultative, éteinte par défaut.
+      noAnalysis: 'Trade pris sans analyse du jour : aucune analyse de séance n’existait encore à son entrée.',
       // Lot 25 (3.6.8) : constat, jamais une cause.
       newsEvent: (title: string, currency: string, time: string) => `${title}${currency ? ` ${currency}` : ''} à ${time}`,
       newsMore: (n: number) => `et ${n} ${n > 1 ? 'autres' : 'autre'}`,
@@ -1430,6 +1434,7 @@ export const fr = {
       unusualSession: 'Session inhabituelle',
       noStopLoss: 'Trade sans stop loss',
       newsTrade: 'Trade pendant une news',
+      noAnalysis: 'Trade sans analyse du jour',
     } as Record<string, string>,
     count: (shown: number, total: number) => (shown === total ? `${shown} ${shown > 1 ? 'alertes' : 'alerte'}` : `${shown} sur ${total} alertes`),
     truncated: (n: number) => `Seules les ${n} alertes les plus récentes sont chargées.`,
@@ -1592,6 +1597,8 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  // Lot 31 : analyse avant trading, idées à surveiller
+  analysis: frAnalysis,
 }
 
 export type Messages = typeof fr
@@ -1604,3 +1611,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frAnalysis } from './fr.analysis'

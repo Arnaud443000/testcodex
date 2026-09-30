@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { fr } from '../i18n/fr'
 import { isNavActive, NAV, NAV_GROUPS, SETTINGS_ITEM } from './navigation'
 
-/** Les 14 adresses de la barre latérale avant le lot 26 : le regroupement ne doit en perdre aucune (liens existants). */
-const BEFORE = ['/', '/trades', '/calendar', '/analytics', '/comparisons', '/behavior', '/discipline', '/insights', '/journal', '/goals', '/replay', '/coach', '/sizing', '/settings']
+/** Les adresses de la barre latérale (14 avant le lot 26, plus `/analysis` au lot 31) : le regroupement ne doit en perdre aucune (liens existants). */
+const BEFORE = ['/', '/analysis', '/trades', '/calendar', '/analytics', '/comparisons', '/behavior', '/discipline', '/insights', '/journal', '/goals', '/replay', '/coach', '/sizing', '/settings']
 const active = (path: string) => NAV.filter((i) => isNavActive(i, path)).map((i) => i.to)
 
 describe('navigation regroupée (lot 26)', () => {
@@ -27,6 +27,8 @@ describe('navigation regroupée (lot 26)', () => {
   it('une seule entrée est active à la fois, y compris sur les sous-pages', () => {
     expect(active('/')).toEqual(['/'])
     expect(active('/trades')).toEqual(['/trades'])
+    expect(active('/analysis')).toEqual(['/analysis'])
+    expect(NAV_GROUPS.find((g) => g.key === 'capture')!.items.map((i) => i.to)).toEqual(['/analysis', '/trades', '/journal'])
     expect(active('/trades/new')).toEqual(['/trades'])
     expect(active('/trades/12/edit')).toEqual(['/trades'])
     expect(active('/calendar/news')).toEqual(['/calendar'])

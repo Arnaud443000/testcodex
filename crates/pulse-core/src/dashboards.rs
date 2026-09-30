@@ -137,6 +137,9 @@ const LIBRARY: &[Def] = &[
     // Upcoming economic news (lot 25): the calendar is neither per account nor per period; the mode
     // chooses the importance shown (medium and high by default).
     def("upcoming_news", "temporal", (10, 16), (8, 10), NEWS_MODES, false, false),
+    // Ideas to watch (lot 31): the ideas belong to no account and follow no period (they last several days);
+    // the widget shows how many are active, how many the morning review waits for, and the oldest ones.
+    def("ideas", "tracking", (10, 14), (8, 8), &[], false, false),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

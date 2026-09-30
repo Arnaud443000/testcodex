@@ -1,5 +1,9 @@
 use pulse_core::accounts::{self, Account, AccountUpdate, NewAccount};
 use pulse_core::alerts::{self, Alert, AlertRecord, AlertSettings};
+use pulse_core::analysis::{
+    self, Analysis, AnalysisInput, AnalysisReport, AnalysisSettings, IdeaInput, IdeaOutcome, IdeaStatus, IdeaView, NewsBlock, Question,
+    QuestionKind, ReviewBanner, ReviewQueue, TradeLinks,
+};
 use pulse_core::behavior::{
     self, DisciplineReport, EmotionReport, FirstTradeReport, MistakeReport, PatternReport, PlanReport, RuleAdherenceReport,
     StreakReport, TradeDiscipline,
@@ -747,6 +751,33 @@ pub fn run() {
             get_active_alerts,
             dismiss_alert,
             get_alert_history,
+            get_analysis_questions,
+            add_analysis_question,
+            update_analysis_question,
+            move_analysis_question,
+            set_analysis_question_archived,
+            create_analysis,
+            update_analysis,
+            delete_analysis,
+            list_analyses_of_day,
+            list_analyses_before,
+            get_news_block,
+            create_idea,
+            update_idea,
+            list_ideas,
+            get_review_queue,
+            get_review_banner,
+            dismiss_review_banner,
+            idea_keep,
+            idea_complete,
+            idea_snooze,
+            idea_close,
+            idea_delete,
+            get_analysis_settings,
+            set_analysis_settings,
+            get_trade_links,
+            set_trade_links,
+            get_analysis_report,
             get_alert_settings,
             set_alert_settings,
             get_asset_report,
@@ -1612,4 +1643,169 @@ fn keep_tested_news(state: State<AppState>, preview: State<NewsPreviewState>) ->
     let conn = state.conn()?;
     let summary = pulse_core::news::settings::keep_tested(&conn, now_ms(), &plan, parsed).map_err(err)?;
     Ok(NewsRefresh { fetched: true, summary: Some(summary), status: pulse_core::news::settings::status(&conn).map_err(err)? })
+}
+
+// --- Lot 31: pre-trade analysis, ideas to watch, morning review (every command reads the database, so a
+// locked application answers `lock:locked` and nothing is written) ---
+
+#[tauri::command]
+fn get_analysis_questions(state: State<AppState>, include_archived: bool) -> Result<Vec<Question>, String> {
+    let conn = state.conn()?;
+    analysis::questions::list(&conn, include_archived).map_err(err)
+}
+
+#[tauri::command]
+fn add_analysis_question(state: State<AppState>, label: String, kind: QuestionKind, options: serde_json::Value) -> Result<Question, String> {
+    let conn = state.conn()?;
+    analysis::questions::add(&conn, &label, kind, &options).map_err(err)
+}
+
+#[tauri::command]
+fn update_analysis_question(state: State<AppState>, id: i64, label: Option<String>, options: Option<serde_json::Value>) -> Result<Question, String> {
+    let conn = state.conn()?;
+    analysis::questions::update(&conn, id, label.as_deref(), options.as_ref()).map_err(err)
+}
+
+#[tauri::command]
+fn move_analysis_question(state: State<AppState>, id: i64, delta: i32) -> Result<Vec<Question>, String> {
+    let conn = state.conn()?;
+    analysis::questions::move_by(&conn, id, delta).map_err(err)
+}
+
+#[tauri::command]
+fn set_analysis_question_archived(state: State<AppState>, id: i64, archived: bool) -> Result<Question, String> {
+    let conn = state.conn()?;
+    analysis::questions::set_archived(&conn, id, archived).map_err(err)
+}
+
+#[tauri::command]
+fn create_analysis(state: State<AppState>, input: AnalysisInput) -> Result<Analysis, String> {
+    let conn = state.conn()?;
+    analysis::sessions::create(&conn, &input, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn update_analysis(state: State<AppState>, id: i64, input: AnalysisInput) -> Result<Analysis, String> {
+    let conn = state.conn()?;
+    analysis::sessions::update(&conn, id, &input, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn delete_analysis(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.conn()?;
+    analysis::sessions::delete(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn list_analyses_of_day(state: State<AppState>, day: String) -> Result<Vec<Analysis>, String> {
+    let conn = state.conn()?;
+    analysis::sessions::list_day(&conn, &day).map_err(err)
+}
+
+#[tauri::command]
+fn list_analyses_before(state: State<AppState>, day: String, limit: u32) -> Result<Vec<Analysis>, String> {
+    let conn = state.conn()?;
+    analysis::sessions::list_before(&conn, &day, limit).map_err(err)
+}
+
+#[tauri::command]
+fn get_news_block(state: State<AppState>, day: Option<String>) -> Result<NewsBlock, String> {
+    let conn = state.conn()?;
+    analysis::news_block::news_block(&conn, day.as_deref(), now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn create_idea(state: State<AppState>, input: IdeaInput) -> Result<analysis::Idea, String> {
+    let conn = state.conn()?;
+    analysis::ideas::create(&conn, &input, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn update_idea(state: State<AppState>, id: i64, input: IdeaInput) -> Result<analysis::Idea, String> {
+    let conn = state.conn()?;
+    analysis::ideas::update(&conn, id, &input, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn list_ideas(state: State<AppState>, status: IdeaStatus, instrument_id: Option<i64>, tz_offset_min: i32) -> Result<Vec<IdeaView>, String> {
+    let conn = state.conn()?;
+    analysis::ideas::list_views(&conn, status, instrument_id, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn get_review_queue(state: State<AppState>, tz_offset_min: i32) -> Result<ReviewQueue, String> {
+    let conn = state.conn()?;
+    analysis::review::queue(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn get_review_banner(state: State<AppState>, tz_offset_min: i32) -> Result<Option<ReviewBanner>, String> {
+    let conn = state.conn()?;
+    analysis::review::banner(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn dismiss_review_banner(state: State<AppState>, tz_offset_min: i32) -> Result<(), String> {
+    let conn = state.conn()?;
+    analysis::review::dismiss_banner(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn idea_keep(state: State<AppState>, id: i64, tz_offset_min: i32) -> Result<IdeaView, String> {
+    let conn = state.conn()?;
+    analysis::review::keep(&conn, id, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn idea_complete(state: State<AppState>, id: i64, body: String, tz_offset_min: i32) -> Result<IdeaView, String> {
+    let conn = state.conn()?;
+    analysis::review::complete(&conn, id, &body, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn idea_snooze(state: State<AppState>, id: i64, days: u32, tz_offset_min: i32) -> Result<IdeaView, String> {
+    let conn = state.conn()?;
+    analysis::review::snooze(&conn, id, days, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn idea_close(state: State<AppState>, id: i64, outcome: IdeaOutcome, reason: Option<String>, tz_offset_min: i32) -> Result<IdeaView, String> {
+    let conn = state.conn()?;
+    analysis::review::close(&conn, id, outcome, reason.as_deref(), now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn idea_delete(state: State<AppState>, id: i64, tz_offset_min: i32) -> Result<(), String> {
+    let conn = state.conn()?;
+    analysis::review::delete(&conn, id, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn get_analysis_settings(state: State<AppState>) -> Result<AnalysisSettings, String> {
+    let conn = state.conn()?;
+    analysis::review::settings(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_analysis_settings(state: State<AppState>, settings: AnalysisSettings) -> Result<AnalysisSettings, String> {
+    let conn = state.conn()?;
+    analysis::review::set_settings(&conn, &settings).map_err(err)
+}
+
+#[tauri::command]
+fn get_trade_links(state: State<AppState>, trade_id: i64) -> Result<TradeLinks, String> {
+    let conn = state.conn()?;
+    analysis::links::get(&conn, trade_id).map_err(err)
+}
+
+#[tauri::command]
+fn set_trade_links(state: State<AppState>, trade_id: i64, idea_ids: Vec<i64>, analysis_ids: Vec<i64>) -> Result<TradeLinks, String> {
+    let conn = state.conn()?;
+    analysis::links::set(&conn, trade_id, &idea_ids, &analysis_ids).map_err(err)
+}
+
+#[tauri::command]
+fn get_analysis_report(state: State<AppState>, query: StatsQuery) -> Result<AnalysisReport, String> {
+    let conn = state.conn()?;
+    analysis::report::report(&conn, &query).map_err(err)
 }

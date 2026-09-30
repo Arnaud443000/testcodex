@@ -81,6 +81,8 @@ const RANK: Record<AlertDetail['kind'], number> = {
   consecutiveLosses: 0, tradesPerDay: 1, tradesPerWindow: 2, dailyLoss: 3, weeklyLoss: 4, revenge: 5, outsideHours: 6, unusualSession: 7, noStopLoss: 8,
   // Lot 25 : rang de pulse-core ; l'alerte 3.6.8 elle-même n'est pas simulée dans le navigateur.
   newsTrade: 9,
+  // Lot 31 : alerte facultative « sans analyse du jour » (rang de pulse-core).
+  noAnalysis: 10,
 }
 const SEVERITY_RANK: Record<AlertSeverity, number> = { critical: 0, warning: 1 }
 

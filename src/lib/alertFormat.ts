@@ -29,6 +29,8 @@ export function alertMessage(t: Messages, a: Alert): string {
       return m.unusualSession(a.session, a.sessionCount, a.historyCount, formatRatioPercent(a.share, 0))
     case 'noStopLoss':
       return a.open ? m.noStopLossOpen : m.noStopLossClosed
+    case 'noAnalysis':
+      return m.noAnalysis
     case 'newsTrade': {
       const names = a.events.map((e) => m.newsEvent(e.title, e.currency, e.parisTime))
       if (a.eventCount > a.events.length) names.push(m.newsMore(a.eventCount - a.events.length))

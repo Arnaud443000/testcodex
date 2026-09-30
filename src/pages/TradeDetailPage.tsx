@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
+import { TradeLinksCard } from '../components/analysis/TradeLinksCard'
 import { TradeCardDialog } from '../components/TradeCardDialog'
 import { ScreenshotAiCard } from '../components/ScreenshotAiCard'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
@@ -199,6 +200,7 @@ export function TradeDetailPage() {
           </div>
 
           <TradeDisciplineCard tradeId={trade.id} />
+          <TradeLinksCard tradeId={trade.id} />
         </div>
 
         <aside className="flex flex-col gap-5">

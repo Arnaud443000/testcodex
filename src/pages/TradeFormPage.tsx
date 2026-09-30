@@ -10,6 +10,7 @@ import { RulesPanel } from '../components/RulesPanel'
 import { ScreenshotDrop } from '../components/ScreenshotDrop'
 import { EmotionListPanel } from '../components/EmotionListPanel'
 import { TagChips } from '../components/TagChips'
+import { TradeAnalysisSection, type TradeLinksDraft } from '../components/analysis/TradeAnalysisSection'
 import { ChipButton, Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -49,6 +50,8 @@ export function TradeFormPage() {
   const [newAsset, setNewAsset] = useState(false)
   const [emotionPanelOpen, setEmotionPanelOpen] = useState(false)
   const slRef = useRef<HTMLInputElement>(null)
+  // Lot 31 : idées / analyses que ce trade suit (facultatif ; `null` = pas encore lus, rien n'est écrit).
+  const [links, setLinks] = useState<TradeLinksDraft | null>(null)
 
   const set = <K extends keyof TradeForm>(key: K, value: TradeForm[K]) => setForm((f) => (f ? { ...f, [key]: value } : f))
 
@@ -162,6 +165,8 @@ export function TradeFormPage() {
     setSaving(true)
     try {
       const saved = editId === null ? await api.createTrade(built.data) : await api.updateTrade(editId, built.data)
+      // Lot 31 : le lien est enregistré avec le trade ; une erreur ici ne perd jamais le trade déjà enregistré.
+      if (links) await api.setTradeLinks(saved.id, links.ideaIds, links.analysisIds).catch(() => undefined)
       navigate(`/trades/${saved.id}`)
     } catch (e) {
       setSaveError(String(e).replace(/^Error: /, ''))
@@ -462,6 +467,8 @@ export function TradeFormPage() {
           </>
         }
       />
+
+      <TradeAnalysisSection instrumentId={form.instrumentId} editingTradeId={editId} links={links} onLinks={setLinks} />
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid items-start gap-5">
