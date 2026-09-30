@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { catalogView, EMOTION_NAME_MAX, myList, nameProblem, removalChoice, type NameProblem } from '../lib/emotionList'
@@ -177,17 +178,17 @@ export function EmotionListPanel({
                       {e.name}
                     </span>
                   ) : (
-                    <button
-                      key={e.name}
-                      type="button"
-                      className="chip"
-                      disabled={busy}
-                      aria-label={e.state === 'archived' ? tx.restoreLabel(e.name) : tx.add(e.name)}
-                      title={e.state === 'archived' ? tx.restore : undefined}
-                      onClick={() => addSuggestion(e.name, e.state === 'archived')}
-                    >
-                      + {e.name}
-                    </button>
+                    <Tooltip key={e.name} content={e.state === 'archived' ? tx.restore : undefined}>
+                      <button
+                        type="button"
+                        className="chip"
+                        disabled={busy}
+                        aria-label={e.state === 'archived' ? tx.restoreLabel(e.name) : tx.add(e.name)}
+                        onClick={() => addSuggestion(e.name, e.state === 'archived')}
+                      >
+                        + {e.name}
+                      </button>
+                    </Tooltip>
                   ),
                 )}
               </div>

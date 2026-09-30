@@ -363,7 +363,11 @@ export function TradeFormPage() {
                 onClick={() => set('emotions', toggleEmotion(form.emotions, m, tag.id))}
               >
                 {tag.name}
-                {removed && <span className="ml-1.5 text-[11px] text-tx3" title={t.emotions.removedHint}>({t.emotions.removedFromList})</span>}
+                {removed && (
+                  <Tooltip content={t.emotions.removedHint} focusable>
+                    <span className="ml-1.5 text-[11px] text-tx3">({t.emotions.removedFromList})</span>
+                  </Tooltip>
+                )}
               </ChipButton>
             ))}
             {emotionChoices.length === 0 && <span className="text-[13px] text-tx3">{t.emotions.empty}</span>}
