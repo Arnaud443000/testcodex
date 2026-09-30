@@ -13,6 +13,7 @@
     "audit:effets": "node scripts/check-effects.mjs",
     "audit:a11y": "node scripts/check-a11y.mjs",
     "audit:composants": "node scripts/check-components.mjs",
+    "audit:pause": "node scripts/check-pause.mjs",
     "audit:blocs": "node scripts/check-dashboard.mjs",
     "tauri": "tauri"
   },
