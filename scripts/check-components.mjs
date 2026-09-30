@@ -200,6 +200,37 @@ async function newPage(w = 1440, h = 900) {
   await page.context().close()
 }
 
+// ───────────────────────── Sélecteur d'actif ─────────────────────────
+{
+  const page = await newPage()
+  for (const route of ['/sizing', '/trades/new']) {
+    await go(page, route)
+    const asset = page.locator('#s-asset, #f-asset').first()
+    check((await asset.count()) === 1, `actif : le champ existe sur ${route}`)
+    await asset.click()
+    const list = page.getByRole('listbox', { name: /actif/i })
+    check((await list.count()) === 1, `actif : la liste s’ouvre (${route})`)
+    check(await list.evaluate((el) => el.closest('.popover-panel')?.parentElement === document.body), `actif : panneau dans un portail (${route})`)
+    check((await list.evaluate((el) => getComputedStyle(el).scrollbarWidth)) === 'thin', `actif : barre de défilement fine aux couleurs de l’app (${route})`)
+    await asset.fill('xau')
+    await page.getByRole('option').first().click()
+    const v1 = await asset.inputValue()
+    check(/^\S+ — .+/.test(v1), `actif : le champ affiche « SYMBOLE — nom » (${route}) : ${v1}`)
+    const overlay = await asset.evaluate((el) => el.parentElement.querySelectorAll('span.absolute.inset-y-0').length)
+    check(overlay === 0, `actif : plus de texte superposé au champ (${route})`)
+    const fits = await asset.evaluate((el) => getComputedStyle(el).textOverflow === 'ellipsis' && getComputedStyle(el).whiteSpace === 'nowrap')
+    check(fits, `actif : texte sur une ligne coupée par « … » (${route})`)
+    await shot(page, `lot29-apres-selecteur-actif-ferme-${route.slice(1).replace(/\//g, '-')}-1440x900`)
+    await asset.click()
+    await page.keyboard.press('Escape')
+    check((await asset.inputValue()) === v1, `actif : après ouverture puis fermeture, la valeur est intacte (${route})`)
+    await asset.click()
+    await shot(page, `lot29-apres-selecteur-actif-ouvert-${route.slice(1).replace(/\//g, '-')}-1440x900`)
+    await page.keyboard.press('Escape')
+  }
+  await page.context().close()
+}
+
 await browser.close()
 if (server) server.kill()
 console.log(failures.length ? `\n${failures.length} échec(s)` : '\nTout est bon.')

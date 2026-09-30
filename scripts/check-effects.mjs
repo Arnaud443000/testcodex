@@ -55,6 +55,17 @@ if (shots) await page.screenshot({ path: `${shots}/lot26-effets-reduits-dashboar
 await page.reload()
 await page.waitForTimeout(600)
 check((await mode(page)) === 'reduced', 'après rechargement : toujours réduit')
+
+// 3 bis. Effets réduits : menu déroulant et infobulle sans flou ni animation (lot 29)
+await page.getByRole('combobox', { name: 'Compte' }).click()
+const menuLook = await page.getByRole('listbox').evaluate((el) => ({ blur: getComputedStyle(el).backdropFilter, fond: getComputedStyle(el).backgroundColor }))
+check(menuLook.blur === 'none', 'réduits : le menu déroulant n’est plus flouté')
+check(menuLook.fond === 'rgb(23, 27, 51)', 'réduits : le menu déroulant a un fond plein')
+await page.keyboard.press('Escape')
+await page.getByRole('link', { name: 'Notifications' }).hover()
+await page.waitForTimeout(450)
+const tipLook = await page.getByRole('tooltip').evaluate((el) => ({ blur: getComputedStyle(el).backdropFilter, anim: getComputedStyle(el).animationName }))
+check(tipLook.blur === 'none' && tipLook.anim === 'none', 'réduits : l’infobulle est sans flou et sans animation')
 await ctx.close()
 
 // 4. « Suivre le système » avec un système qui demande moins d'animations

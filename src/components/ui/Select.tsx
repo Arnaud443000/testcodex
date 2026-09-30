@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useT } from '../../i18n'
 import {
   firstEnabled,
   lastEnabled,
   moveActive,
-  placePanel,
   sectionize,
   selectedLabel,
   startIndex,
@@ -13,10 +12,9 @@ import {
   type SelectOption,
 } from '../../lib/listboxModel'
 import { Icon } from '../Icon'
+import { useFloatingBox } from './useFloatingBox'
 
 export type { SelectOption }
-
-type Box = { left: number; top?: number; bottom?: number; width: number; maxHeight: number; side: 'below' | 'above' }
 
 const ITEM_H = 36
 const GROUP_H = 30
@@ -64,26 +62,13 @@ export function Select({
   const typed = useRef({ text: '', at: 0 })
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const [box, setBox] = useState<Box | null>(null)
 
   const sections = useMemo(() => sectionize(options), [options])
   const label = selectedLabel(options, value)
   const groupCount = sections.filter((s) => s.group !== null).length
 
-  const place = useCallback(() => {
-    const el = buttonRef.current
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    const wanted = Math.min(WANTED_MAX, Math.max(options.length, 1) * ITEM_H + groupCount * GROUP_H + 8)
-    const p = placePanel(window.innerHeight - r.bottom - 6, r.top - 6, wanted)
-    const width = Math.max(r.width, 160)
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
-    setBox(
-      p.side === 'below'
-        ? { left, top: r.bottom + 6, width, maxHeight: p.maxHeight, side: 'below' }
-        : { left, bottom: window.innerHeight - r.top + 6, width, maxHeight: p.maxHeight, side: 'above' },
-    )
-  }, [options.length, groupCount])
+  const wanted = Math.min(WANTED_MAX, Math.max(options.length, 1) * ITEM_H + groupCount * GROUP_H + 8)
+  const box = useFloatingBox(buttonRef, open, wanted)
 
   const openMenu = () => {
     if (disabled) return
@@ -91,18 +76,6 @@ export function Select({
     setOpen(true)
   }
   const close = useCallback(() => setOpen(false), [])
-
-  useLayoutEffect(() => {
-    if (!open) return
-    place()
-    const again = () => place()
-    window.addEventListener('resize', again)
-    window.addEventListener('scroll', again, true)
-    return () => {
-      window.removeEventListener('resize', again)
-      window.removeEventListener('scroll', again, true)
-    }
-  }, [open, place])
 
   // Clic dehors : ferme (le panneau est dans un portail, donc hors du bouton).
   useEffect(() => {
