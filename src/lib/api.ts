@@ -520,6 +520,18 @@ export const api = {
   },
   isBrowserPreview: !inTauri,
 
+  // --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ; valeurs et statuts calculés par pulse-core ---
+  setProcessGoal: (goal: NewProcessGoal): Promise<ProcessGoal> =>
+    inTauri ? invoke('set_process_goal', { goal }) : mockProcessGoals.setProcessGoal(goal),
+  listProcessGoals: (periodKind: ProcessPeriodKind, periodKey: string): Promise<ProcessGoal[]> =>
+    inTauri ? invoke('list_process_goals', { periodKind, periodKey }) : mockProcessGoals.listProcessGoals(periodKind, periodKey),
+  deleteProcessGoal: (id: number): Promise<void> => (inTauri ? invoke('delete_process_goal', { id }) : mockProcessGoals.deleteProcessGoal(id)),
+  /** Reprend les objectifs de la période précédente de même type, sans écraser ceux qui existent. */
+  copyProcessGoals: (periodKind: ProcessPeriodKind, periodKey: string): Promise<ProcessGoal[]> =>
+    inTauri ? invoke('copy_process_goals', { periodKind, periodKey }) : mockProcessGoals.copyProcessGoals(periodKind, periodKey),
+  getProcessGoalProgress: (query: ProcessProgressQuery): Promise<ProcessProgress> =>
+    inTauri ? invoke('get_process_goal_progress', { query }) : mockProcessGoals.getProcessGoalProgress(query),
+
   // --- Lot 24 : carte de trade (3.7.7) ---
   /** R, rendement en % et P&L net d'un trade (jamais un solde), calculés par pulse-core. */
   getTradeCardFigures: (tradeId: number): Promise<TradeCardFigures> =>
@@ -571,3 +583,5 @@ import type {
   NewsStatus,
 } from '../types/news'
 import { mockNews } from './mockBackend'
+import type { NewProcessGoal, ProcessGoal, ProcessPeriodKind, ProcessProgress, ProcessProgressQuery } from '../types/processGoals'
+import { mockProcessGoals } from './mockBackend'

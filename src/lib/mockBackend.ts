@@ -960,3 +960,15 @@ export const mockSizing = {
 // --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
 import { createNewsMock } from './mockNews'
 export const mockNews = createNewsMock()
+
+// --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ---
+import { createProcessGoalsMock } from './mockProcessGoals'
+export const mockProcessGoals = createProcessGoalsMock({
+  // Comme pulse-core : liste vide = comptes actifs ; devises mélangées refusées par behaviorInput.
+  input: (accountIds) => {
+    const ids = accountIds.length ? accountIds : accounts.filter((a) => !a.archived).map((a) => a.id)
+    const input = behaviorInput(ids)
+    return { ...input, currency: input.accounts[0]?.currency ?? null }
+  },
+  journal: () => [...journalEntries.values()],
+})
