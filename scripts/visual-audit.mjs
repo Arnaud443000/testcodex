@@ -62,6 +62,8 @@ export const ROUTES = [
   ['objectifs', '/goals'],
   ['replay', '/replay'],
   ['alertes', '/alerts'],
+  // Lot 33 : état vide = aucun compte prop ; chargé = compte prop sans règles (le jeu de démonstration n'en a pas).
+  ['prop', '/prop'],
   ['parametres', '/settings'],
 ]
 
@@ -125,6 +127,48 @@ export const SCENARIOS = [
     await page.getByText('Prochaines news', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
     await page.waitForTimeout(600)
   }],
+  // Lot 33 : suivi prop firm. Règles et trades ajoutés au compte « Prop challenge » par l'API simulée, APRÈS le
+  // parcours des pages (les autres captures « chargées » ne changent pas). Chaque étape aggrave la perte du jour :
+  // ok → attention (≥ 70 %) → critique (≥ 90 %) → atteinte (≥ 100 %).
+  ['prop-sans-regles', async (page) => { await go(page, '/'); await go(page, '/prop') }],
+  ['prop-editeur', async (page) => {
+    await go(page, '/prop')
+    await page.getByRole('button', { name: 'Paramétrer les règles' }).first().click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByLabel('Heure', { exact: true }).fill('17:00').catch(() => {})
+    await page.getByTestId('prop-dailyLoss-enable').click().catch(() => {})
+    await page.waitForTimeout(200)
+  }],
+  ['prop-editeur-erreurs', async (page) => {
+    await page.getByRole('button', { name: 'Enregistrer les règles' }).click().catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['prop-statut-ok', async (page) => {
+    await page.keyboard.press('Escape')
+    await propSeed(page, 'ok')
+  }],
+  ['prop-statut-attention', async (page) => { await propSeed(page, 'warning') }],
+  ['prop-statut-critique', async (page) => { await propSeed(page, 'critical') }],
+  ['prop-statut-atteinte', async (page) => { await propSeed(page, 'reached') }],
+  ['prop-widget', async (page) => {
+    // Widget « Prop firm » ajouté en mode édition ; la barre du haut est sur « tous les comptes » : il lit le seul compte prop.
+    await go(page, '/')
+    await page.getByRole('button', { name: 'Modifier le dashboard' }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Ajouter un widget' }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Suivi', exact: true }).click().catch(() => {})
+    await page.getByRole('button', { name: /Ajouter Prop firm/ }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: /Fermer/ }).first().click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByRole('button', { name: 'Enregistrer comme copie' }).first().click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click().catch(() => {})
+    await page.waitForTimeout(600)
+    await page.getByTestId('prop-widget').last().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(600)
+  }],
   // Lot 30 : Ma liste d'émotions, dans l'ordre d'un usage réel (formulaire, catalogue, saisie libre, retrait, Paramètres).
   ['emotions-formulaire', async (page) => {
     await go(page, '/trades/new')
@@ -180,6 +224,43 @@ export const SCENARIOS = [
     }
   }],
 ]
+
+/**
+ * Lot 33 : règles (capital 50 000 : perte du jour 5 % = 2 500, perte max 10 % statique, objectif 8 %, 5 jours,
+ * cohérence 60 %) et trades clôturés du compte prop, puis la page /prop relue. `step` ajoute les pertes du jour.
+ */
+async function propSeed(page, step) {
+  await page.evaluate(async (step) => {
+    const { api } = await import('/src/lib/api.ts')
+    const prop = (await api.listAccounts()).find((a) => a.kind === 'prop')
+    const btc = (await api.listInstruments()).find((i) => i.symbol === 'BTCUSD')
+    if (!prop || !btc) return
+    const DAY = 86_400_000
+    const now = Date.now()
+    const trade = (exitTime, pnl) =>
+      api.createTrade({
+        accountId: prop.id, instrumentId: btc.id, direction: 'long', size: '1', multiplier: '1', entryPrice: '60000',
+        exitPrice: String(60000 + pnl), entryTime: exitTime - 20 * 60_000, exitTime, tzOffsetMin: 120, plannedSl: '59000',
+        fees: '0', thesis: '', postMortem: '', tagIds: [], emotions: [], ruleChecks: [], checklist: [],
+      })
+    if (step === 'ok') {
+      await api.setPropRules(prop.id, {
+        phaseLabel: 'Évaluation 1', startedOn: new Date(now - 10 * DAY).toISOString().slice(0, 10),
+        dailyLoss: { mode: 'percent', value: '5' }, dailyReference: 'initialBalance', maxLoss: { mode: 'percent', value: '10' },
+        maxLossKind: 'static', trailingLocksAtInitial: false, resetTime: '00:00', resetZone: 'paris',
+        profitTarget: { mode: 'percent', value: '8' }, minTradingDays: 5, consistencyMaxBestDayPercent: '60',
+      })
+      for (const [k, pnl] of [[4, 800], [3, 700], [2, 600], [1, 900]]) await trade(now - k * DAY, pnl)
+      await trade(now - 10 * 60_000, -500)
+    }
+    if (step === 'warning') await trade(now - 8 * 60_000, -1300)
+    if (step === 'critical') await trade(now - 6 * 60_000, -500)
+    if (step === 'reached') await trade(now - 4 * 60_000, -300)
+  }, step)
+  await go(page, '/')
+  await go(page, '/prop')
+  await page.waitForTimeout(300)
+}
 
 async function scenario(page, run, tradeId) {
   await run(page, tradeId)

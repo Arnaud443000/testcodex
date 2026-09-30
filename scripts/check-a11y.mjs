@@ -39,7 +39,7 @@ check((await page.locator('aside [aria-current="page"]').innerText()).includes('
 
 // Boutons-icônes nommés (toutes les pages principales)
 let unnamed = []
-for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar']) {
+for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar', '/prop']) {
   await page.evaluate((h) => { location.hash = h }, route)
   await page.waitForTimeout(500)
   unnamed.push(...(await page.evaluate(() => [...document.querySelectorAll('button, a[href]')].filter((el) => el.getBoundingClientRect().width > 0 && !(el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim())).map((el) => el.outerHTML.slice(0, 90)))))
@@ -66,6 +66,26 @@ await page.keyboard.press('Escape')
 await page.waitForTimeout(300)
 check((await page.locator('[role=dialog]').count()) === 0, 'Échap ferme la boîte')
 check((await page.evaluate(() => document.activeElement?.textContent?.trim())) === 'Créer une carte', 'le focus revient au bouton qui a ouvert la boîte')
+
+// Lot 33 : éditeur des règles prop firm (compte « Prop challenge » du jeu de démonstration, sans règles).
+await page.evaluate(() => { location.hash = '/prop' })
+await page.waitForTimeout(800)
+const propOpener = page.getByRole('button', { name: 'Paramétrer les règles' })
+await propOpener.focus()
+await propOpener.click()
+await page.waitForTimeout(600)
+check((await page.locator('[role=dialog][aria-modal=true]').count()) === 1, 'prop firm : l’éditeur des règles est une boîte modale nommée')
+check(await inside(), 'prop firm : à l\'ouverture, le focus est dans l’éditeur')
+escaped = false
+for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); if (!(await inside())) escaped = true }
+check(!escaped, 'prop firm : Tab ×40, le focus ne sort jamais de l’éditeur')
+escaped = false
+for (let i = 0; i < 40; i++) { await page.keyboard.press('Shift+Tab'); if (!(await inside())) escaped = true }
+check(!escaped, 'prop firm : Maj+Tab ×40, le focus ne sort jamais de l’éditeur')
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+check((await page.locator('[role=dialog]').count()) === 0, 'prop firm : Échap ferme l’éditeur')
+check((await page.evaluate(() => document.activeElement?.textContent?.trim())) === 'Paramétrer les règles', 'prop firm : le focus revient au bouton d’ouverture')
 
 await browser.close()
 if (server) server.kill()
