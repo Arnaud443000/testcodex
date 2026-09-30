@@ -70,6 +70,7 @@ export function AlertBanner() {
   const severalAccounts = new Set(alerts.map((x) => x.accountId)).size > 1 || allAccounts.filter((x) => !x.archived).length > 1
   const shown = expanded ? alerts : alerts.slice(0, FIRST)
   const hidden = alerts.length - shown.length
+  const pausing = alerts.find((x) => x.id === pausingFor)
 
   return (
     <div className="mb-5">
@@ -112,22 +113,23 @@ export function AlertBanner() {
                   {tradePath && location.pathname !== tradePath && (
                     <Link to={tradePath} className="btn btn-secondary btn-sm">{a.viewTrade}</Link>
                   )}
-                  {pauseReasonForAlert(x) !== null && !pauseRunning && pausingFor !== x.id && (
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPausingFor(x.id)}>{t.pause.alert.button}</button>
+                  {pauseReasonForAlert(x) !== null && !pauseRunning && (
+                    <button type="button" className="btn btn-secondary btn-sm" aria-expanded={pausingFor === x.id} onClick={() => setPausingFor(x.id)}>{t.pause.alert.button}</button>
                   )}
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => void dismiss([x.id])}>{a.dismiss}</button>
                 </span>
-                {pausingFor === x.id && !pauseRunning && (
-                  <div className="basis-full">
-                    <PausePicker reason={pauseReasonForAlert(x)} focusOnOpen onDone={() => setPausingFor(null)} onCancel={() => setPausingFor(null)} />
-                  </div>
-                )}
               </li>
             )
           })}
         </ul>
         {error && <p className="mt-2">{error}</p>}
       </Notice>
+      {/* Lot 35 : le choix d'une pause est une carte à part, sous la bannière (dans le flux), jamais dans une ligne d'alerte. */}
+      {pausing && !pauseRunning && (
+        <section className="glass-card mt-4 p-5" aria-label={t.pause.picker.title}>
+          <PausePicker reason={pauseReasonForAlert(pausing)} focusOnOpen onDone={() => setPausingFor(null)} onCancel={() => setPausingFor(null)} />
+        </section>
+      )}
     </div>
   )
 }

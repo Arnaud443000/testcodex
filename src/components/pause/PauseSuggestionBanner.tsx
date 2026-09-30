@@ -55,12 +55,12 @@ export function PauseSuggestionBanner() {
       >
         <strong className="block">{t.suggestion.title(suggestion.losses)}</strong>
         {t.suggestion.text}
-        {choosing && (
-          <div className="mt-3">
-            <PausePicker reason="lossStreak" focusOnOpen onDone={() => setChoosing(false)} onCancel={() => setChoosing(false)} />
-          </div>
-        )}
       </Notice>
+      {choosing && (
+        <section className="glass-card mt-4 p-5" aria-label={t.picker.title}>
+          <PausePicker reason="lossStreak" focusOnOpen onDone={() => setChoosing(false)} onCancel={() => setChoosing(false)} />
+        </section>
+      )}
     </div>
   )
 }
