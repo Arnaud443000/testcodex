@@ -355,6 +355,14 @@ export function createNewsMock(now: () => number = Date.now) {
       return { fetched: true, summary, status: status() }
     },
 
+    /** Lot 31 : lecture pour le bloc « annonces du jour » de l'analyse (aucun événement n'est créé). */
+    isEnabled(): boolean {
+      return settings.enabled
+    },
+    eventsOfDay(parisDayKey: string): EconomicEvent[] {
+      return [...events.values()].filter((e) => e.day === parisDayKey).sort(ORDER)
+    },
+
     async getNewsCalendar(view: CalendarView, filter: NewsFilter): Promise<NewsCalendar> {
       const t = now()
       const today = parisDay(t)

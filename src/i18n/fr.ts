@@ -1294,6 +1294,8 @@ export const fr = {
         `Trade pris en session ${session}, où vous tradez rarement (${count} sur vos ${history} trades précédents, ${share}).`,
       noStopLossOpen: 'Position ouverte sans stop loss prévu.',
       noStopLossClosed: 'Trade du jour pris sans stop loss prévu.',
+      // Lot 31 : alerte facultative, éteinte par défaut.
+      noAnalysis: 'Trade pris sans analyse du jour : aucune analyse de séance n’existait encore à son entrée.',
       // Lot 25 (3.6.8) : constat, jamais une cause.
       newsEvent: (title: string, currency: string, time: string) => `${title}${currency ? ` ${currency}` : ''} à ${time}`,
       newsMore: (n: number) => `et ${n} ${n > 1 ? 'autres' : 'autre'}`,
@@ -1430,6 +1432,7 @@ export const fr = {
       unusualSession: 'Session inhabituelle',
       noStopLoss: 'Trade sans stop loss',
       newsTrade: 'Trade pendant une news',
+      noAnalysis: 'Trade sans analyse du jour',
     } as Record<string, string>,
     count: (shown: number, total: number) => (shown === total ? `${shown} ${shown > 1 ? 'alertes' : 'alerte'}` : `${shown} sur ${total} alertes`),
     truncated: (n: number) => `Seules les ${n} alertes les plus récentes sont chargées.`,

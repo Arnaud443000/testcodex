@@ -671,3 +671,27 @@ export function mockPlanSimulation(input: BehaviorInput, q: StatsQuery): PlanSim
 export function mockRevengeOf(input: BehaviorInput, t: TradeView): Revenge | null {
   return context(input).revenge(t)
 }
+
+// --- Lot 31 : trades liés à une idée ou à une analyse, comparés aux autres (miroir de `analysis::report`) ---
+import type { LinkedComparison, LinkedSide } from '../types/analysis'
+
+/** Score de discipline et expectancy R déjà calculés ci-dessus, aucune formule nouvelle ; 5 trades par côté au moins. */
+export function mockLinkedComparison(input: BehaviorInput, q: StatsQuery, linked: Set<number>): LinkedComparison {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const side = (trades: Closed[]): LinkedSide => {
+    const { score } = meanScore(trades.map((t) => disciplineOf(ctx, input.settings, t)))
+    const summary = summarize(trades.map(asMock))
+    return { tradeCount: trades.length, disciplineScore: score, expectancyR: withR(summary, MIN_R_TRADES), rTradeCount: summary.rTradeCount }
+  }
+  const a = side(list.filter((t) => linked.has(t.id)))
+  const b = side(list.filter((t) => !linked.has(t.id)))
+  const enough = a.tradeCount >= 5 && b.tradeCount >= 5
+  return {
+    linked: a,
+    unlinked: b,
+    discipline: compare(a.disciplineScore, b.disciplineScore, enough, 10),
+    expectancyR: compare(a.expectancyR, b.expectancyR, enough, 0.25),
+    minTradeCount: 5,
+  }
+}

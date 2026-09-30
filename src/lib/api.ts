@@ -533,6 +533,67 @@ export const api = {
   /** Écrit l'image (PNG en base64) à `path` ; renvoie la taille écrite en octets. */
   saveTradeCardImage: (path: string, image: string): Promise<number> =>
     inTauri ? invoke('save_trade_card_image', { path, image }) : mockTradeCard.saveTradeCardImage(path, image),
+
+  // --- Lot 31 : analyse avant trading, idées à surveiller, revue du lendemain (aucun réseau, aucune IA) ---
+  // `tzOffsetMin` = décalage du PC : c'est lui qui définit « aujourd'hui » et « le lendemain ».
+  getAnalysisQuestions: (includeArchived: boolean): Promise<Question[]> =>
+    inTauri ? invoke('get_analysis_questions', { includeArchived }) : mockAnalysis.getAnalysisQuestions(includeArchived),
+  addAnalysisQuestion: (label: string, kind: QuestionKind, options: Question['options']): Promise<Question> =>
+    inTauri ? invoke('add_analysis_question', { label, kind, options }) : mockAnalysis.addAnalysisQuestion(label, kind, options),
+  /** `label = null` remet le libellé d'origine (questions d'origine) ; `options = null` les garde. */
+  updateAnalysisQuestion: (id: number, label: string | null, options: Question['options'] | null): Promise<Question> =>
+    inTauri ? invoke('update_analysis_question', { id, label, options }) : mockAnalysis.updateAnalysisQuestion(id, label, options),
+  moveAnalysisQuestion: (id: number, delta: number): Promise<Question[]> =>
+    inTauri ? invoke('move_analysis_question', { id, delta }) : mockAnalysis.moveAnalysisQuestion(id, delta),
+  /** Archiver, jamais supprimer : les réponses passées restent lisibles. */
+  setAnalysisQuestionArchived: (id: number, archived: boolean): Promise<Question> =>
+    inTauri ? invoke('set_analysis_question_archived', { id, archived }) : mockAnalysis.setAnalysisQuestionArchived(id, archived),
+  createAnalysis: (input: AnalysisInput): Promise<Analysis> =>
+    inTauri ? invoke('create_analysis', { input }) : mockAnalysis.createAnalysis(input),
+  updateAnalysis: (id: number, input: AnalysisInput): Promise<Analysis> =>
+    inTauri ? invoke('update_analysis', { id, input }) : mockAnalysis.updateAnalysis(id, input),
+  deleteAnalysis: (id: number): Promise<void> => (inTauri ? invoke('delete_analysis', { id }) : mockAnalysis.deleteAnalysis(id)),
+  listAnalysesOfDay: (day: string): Promise<Analysis[]> =>
+    inTauri ? invoke('list_analyses_of_day', { day }) : mockAnalysis.listAnalysesOfDay(day),
+  /** Analyses des jours strictement avant `day`, les plus récentes d'abord. */
+  listAnalysesBefore: (day: string, limit: number): Promise<Analysis[]> =>
+    inTauri ? invoke('list_analyses_before', { day, limit }) : mockAnalysis.listAnalysesBefore(day, limit),
+  /** Annonces fortes du jour de Paris, lues dans le calendrier déjà stocké (`day = null` : aujourd'hui). */
+  getNewsBlock: (day: string | null): Promise<NewsBlock> => (inTauri ? invoke('get_news_block', { day }) : mockAnalysis.getNewsBlock(day)),
+  createIdea: (input: IdeaInput): Promise<Idea> => (inTauri ? invoke('create_idea', { input }) : mockAnalysis.createIdea(input)),
+  updateIdea: (id: number, input: IdeaInput): Promise<Idea> =>
+    inTauri ? invoke('update_idea', { id, input }) : mockAnalysis.updateIdea(id, input),
+  listIdeas: (status: IdeaStatus, instrumentId: number | null, tzOffsetMin: number): Promise<IdeaView[]> =>
+    inTauri ? invoke('list_ideas', { status, instrumentId, tzOffsetMin }) : mockAnalysis.listIdeas(status, instrumentId, tzOffsetMin),
+  getReviewQueue: (tzOffsetMin: number): Promise<ReviewQueue> =>
+    inTauri ? invoke('get_review_queue', { tzOffsetMin }) : mockAnalysis.getReviewQueue(tzOffsetMin),
+  /** `null` = pas de bannière (même jour que la dernière revue, ou aucune idée à revoir). Lecture seule. */
+  getReviewBanner: (tzOffsetMin: number): Promise<ReviewBanner | null> =>
+    inTauri ? invoke('get_review_banner', { tzOffsetMin }) : mockAnalysis.getReviewBanner(tzOffsetMin),
+  dismissReviewBanner: (tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('dismiss_review_banner', { tzOffsetMin }) : mockAnalysis.dismissReviewBanner(tzOffsetMin),
+  ideaKeep: (id: number, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_keep', { id, tzOffsetMin }) : mockAnalysis.ideaKeep(id, tzOffsetMin),
+  ideaComplete: (id: number, body: string, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_complete', { id, body, tzOffsetMin }) : mockAnalysis.ideaComplete(id, body, tzOffsetMin),
+  /** « Redemander dans X jours » : 1 à 30. */
+  ideaSnooze: (id: number, days: number, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_snooze', { id, days, tzOffsetMin }) : mockAnalysis.ideaSnooze(id, days, tzOffsetMin),
+  ideaClose: (id: number, outcome: IdeaOutcome, reason: string | null, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_close', { id, outcome, reason, tzOffsetMin }) : mockAnalysis.ideaClose(id, outcome, reason, tzOffsetMin),
+  /** Suppression définitive (l'interface demande confirmation). */
+  ideaDelete: (id: number, tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('idea_delete', { id, tzOffsetMin }) : mockAnalysis.ideaDelete(id, tzOffsetMin),
+  getAnalysisSettings: (): Promise<AnalysisSettings> => (inTauri ? invoke('get_analysis_settings') : mockAnalysis.getAnalysisSettings()),
+  setAnalysisSettings: (settings: AnalysisSettings): Promise<AnalysisSettings> =>
+    inTauri ? invoke('set_analysis_settings', { settings }) : mockAnalysis.setAnalysisSettings(settings),
+  getTradeLinks: (tradeId: number): Promise<TradeLinks> =>
+    inTauri ? invoke('get_trade_links', { tradeId }) : mockAnalysis.getTradeLinks(tradeId),
+  /** Remplace les liens du trade par ceux donnés (la liste complète). */
+  setTradeLinks: (tradeId: number, ideaIds: number[], analysisIds: number[]): Promise<TradeLinks> =>
+    inTauri ? invoke('set_trade_links', { tradeId, ideaIds, analysisIds }) : mockAnalysis.setTradeLinks(tradeId, ideaIds, analysisIds),
+  getAnalysisReport: (query: StatsQuery): Promise<AnalysisReport> =>
+    inTauri ? invoke('get_analysis_report', { query }) : mockAnalysis.getAnalysisReport(query),
 }
 
 
@@ -571,3 +632,21 @@ import type {
   NewsStatus,
 } from '../types/news'
 import { mockNews } from './mockBackend'
+import type {
+  Analysis,
+  AnalysisInput,
+  AnalysisReport,
+  AnalysisSettings,
+  Idea,
+  IdeaInput,
+  IdeaOutcome,
+  IdeaStatus,
+  IdeaView,
+  NewsBlock,
+  Question,
+  QuestionKind,
+  ReviewBanner,
+  ReviewQueue,
+  TradeLinks,
+} from '../types/analysis'
+import { mockAnalysis } from './mockBackend'

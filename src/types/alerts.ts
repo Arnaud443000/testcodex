@@ -26,6 +26,7 @@ export type AlertMessageKey =
   | 'noStopLoss.open'
   | 'noStopLoss.closed'
   | 'newsTrade'
+  | 'noAnalysis'
 
 /** Perte du jour ou de la semaine face à ses limites (3.6.3). */
 export interface LossDetail {
@@ -56,6 +57,8 @@ export type AlertDetail =
   | { kind: 'unusualSession'; session: string; sessionCount: number; historyCount: number; share: number }
   | { kind: 'noStopLoss'; open: boolean }
   | ({ kind: 'newsTrade' } & NewsTradeDetail)
+  /** Lot 31 : trade entré avant toute analyse de séance du jour (alerte facultative, éteinte par défaut). */
+  | { kind: 'noAnalysis'; day: string }
 
 export type AlertKind = AlertDetail['kind']
 
