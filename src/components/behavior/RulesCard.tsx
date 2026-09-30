@@ -4,6 +4,7 @@ import { useT } from '../../i18n'
 import { MIN_CHECKS_FOR_TREND, formatMonthKey } from '../../lib/behaviorFormat'
 import { formatPoints, formatRatioPercent } from '../../lib/format'
 import type { MonthAdherence, RuleAdherence, RuleAdherenceReport } from '../../types/behavior'
+import { FitList } from '../ui/fit'
 import { Card, EmptyLine, Note } from './parts'
 
 /** Une barre par mois : la hauteur est le taux de respect (0 à 100 %), fourni par pulse-core. Un mois sans coche reste vide. */
@@ -76,11 +77,11 @@ export function RulesCard({ report }: { report: RuleAdherenceReport }) {
             </div>
             <b className="text-[28px] font-semibold leading-none tabular-nums">{formatRatioPercent(report.rate, 0)}</b>
           </div>
-          <ul>
+          <FitList moreTo="/behavior">
             {report.rules.map((r) => (
               <RuleRow key={r.ruleId} rule={r} />
             ))}
-          </ul>
+          </FitList>
           <Note>{t.trendNote}</Note>
         </>
       )}

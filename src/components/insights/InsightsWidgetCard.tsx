@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { groupInsights, insightMessage } from '../../lib/insightsView'
 import type { Insight } from '../../types/insights'
+import { FitList, useCardDensity } from '../ui/fit'
 import { PriorityBadge } from './InsightCard'
 
 /** Nombre d'insights montrés dans le widget ; les autres sont sur la page. */
@@ -15,8 +17,10 @@ export function InsightsWidgetCard({ title, insights }: { title: string; insight
   const ordered = groupInsights(insights).flatMap((g) => g.items)
   const shown = ordered.slice(0, SHOWN)
   const rest = ordered.length - shown.length
+  const ref = useRef<HTMLElement>(null)
+  const density = useCardDensity(ref, true, insights)
   return (
-    <section className="glass-card flex h-full flex-col overflow-auto p-6" data-testid="widget-insights">
+    <section ref={ref} data-density={density > 0 ? density : undefined} className="fit-card glass-card flex h-full flex-col pop-scroll p-6" data-testid="widget-insights">
       <h3 className="mb-3 whitespace-nowrap text-base font-semibold">{title}</h3>
       {shown.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 text-center" role="status">
@@ -24,7 +28,7 @@ export function InsightsWidgetCard({ title, insights }: { title: string; insight
           <p className="max-w-[40ch] text-xs leading-relaxed text-tx3">{x.emptyHint}</p>
         </div>
       ) : (
-        <ul className="flex flex-1 flex-col gap-3">
+        <FitList moreTo="/insights" className="flex flex-col gap-3">
           {shown.map((i) => (
             <li key={i.id} className="flex flex-col gap-1.5 border-b pb-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
               <div className="flex items-center gap-2">
@@ -34,7 +38,7 @@ export function InsightsWidgetCard({ title, insights }: { title: string; insight
               <p className="text-[13px] leading-relaxed">{insightMessage(t, i)}</p>
             </li>
           ))}
-        </ul>
+        </FitList>
       )}
       <div className="mt-3 flex items-center justify-between gap-3">
         {rest > 0 ? <span className="text-xs text-tx3">{x.widget.more(rest)}</span> : <span />}

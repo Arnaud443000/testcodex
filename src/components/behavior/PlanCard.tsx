@@ -37,7 +37,7 @@ export function PlanCard({ report, currency, simulation }: { report: PlanReport;
         {block(p.yes, yes)}
         {block(p.no, no)}
       </div>
-      <p className="mt-2 text-xs text-tx3">{p.expectancyNote}</p>
+      <p className="fit-optional mt-2 text-xs text-tx3">{p.expectancyNote}</p>
       {others.length > 0 && (
         <div className="mt-3">
           <div className="caption mb-1">{p.others}</div>
@@ -134,7 +134,7 @@ function SimulationBlock({ simulation, currency }: { simulation: PlanSimulation;
       {usable && (
         // Une ligne par scénario, qui se replie proprement : la carte ne fait qu'un tiers de la page et un tableau à
         // quatre colonnes y écrivait un mot par ligne (audit du lot 26).
-        <ul className="mt-3 flex flex-col text-xs tabular-nums">
+        <ul className="fit-optional mt-3 flex flex-col text-xs tabular-nums">
           {rows.map((r) => (
             <li key={r.label} className="border-t py-2.5" style={{ borderColor: 'var(--hairline)' }}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">

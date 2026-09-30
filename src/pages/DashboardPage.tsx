@@ -13,6 +13,7 @@ import { WidgetSettings } from '../components/dashboard/WidgetSettings'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
+import { Tooltip } from '../components/ui/Tooltip'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
@@ -278,9 +279,10 @@ export function DashboardPage() {
     <PageHeader
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
+      inline
       actions={
         layout && ready && !editing ? (
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <DashboardSwitcher
               summaries={summaries}
               current={layout}
@@ -295,10 +297,13 @@ export function DashboardPage() {
               transferBusy={transferBusy}
             />
             {!narrow && (
-              <button type="button" className="btn btn-secondary" onClick={() => startEdit()}>
-                <Icon name="edit" size={16} />
-                {b.toolbar.edit}
-              </button>
+              // Le crayon seul serait ambigu (renommer ? modifier ?) : l'action principale garde un mot.
+              <Tooltip content={b.toolbar.edit}>
+                <button type="button" className="btn btn-secondary btn-sm" aria-label={b.toolbar.edit} onClick={() => startEdit()}>
+                  <Icon name="edit" size={15} />
+                  {b.toolbar.editShort}
+                </button>
+              </Tooltip>
             )}
           </div>
         ) : undefined

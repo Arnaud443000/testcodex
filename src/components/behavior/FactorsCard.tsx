@@ -3,6 +3,7 @@ import { useT } from '../../i18n'
 import { formatR } from '../../lib/format'
 import { formatMoneyGap, formatRGap, formatScore, formatScoreGap } from '../../lib/behaviorFormat'
 import type { Comparison, ExternalFactorReport, FactorReport } from '../../types/behavior'
+import { FitList } from '../ui/fit'
 import { Card, EmptyLine, Note } from './parts'
 
 /** Une comparaison (discipline ou espérance) : avec / sans, puis une phrase prudente, jamais de « parce que ». */
@@ -71,12 +72,12 @@ export function FactorsCard({ report, currency }: { report: ExternalFactorReport
         </>
       ) : (
         <>
-          <p className="-mt-2 mb-3 text-sm text-tx2">{t.subtitle}</p>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <p className="fit-optional -mt-2 mb-3 text-sm text-tx2">{t.subtitle}</p>
+          <FitList as="div" moreTo="/behavior" className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             {report.factors.map((f) => (
               <FactorBlock key={f.key} f={f} report={report} currency={currency} />
             ))}
-          </div>
+          </FitList>
           <Note>{t.coverage(report.journalDayCount, report.tradingDayCount)} {t.prudence}</Note>
         </>
       )}

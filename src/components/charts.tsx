@@ -21,7 +21,7 @@ function scale(values: number[]) {
 }
 
 /** Courbe d'équité (charte 4.3) : trait dégradé bleu → violet, remplissage, grille à 5 %, point final lumineux. */
-export function EquityChart({ points, label }: { points: CurvePoint[]; label: string }) {
+export function EquityChart({ points, label, fill = false }: { points: CurvePoint[]; label: string; fill?: boolean }) {
   // La courbe démarre à 0 : le premier trade est un vrai départ, pas un point isolé.
   const first = points[0]
   const series = first ? [{ time: first.time - 1, value: 0 }, ...points] : []
@@ -38,45 +38,48 @@ export function EquityChart({ points, label }: { points: CurvePoint[]; label: st
   const dotX = last ? x(last.time) : 0
   const dotY = last ? y(last.value) : 0
   const labels = [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + f * tSpan)
+  // `fill` : le tracé prend toute la hauteur que la carte lui laisse (widget du tableau de bord, hauteur fixée par la grille).
   return (
-    <div className="relative" role="img" aria-label={label}>
-      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="eq-stroke" x1="0" x2="1">
-            <stop offset="0" stopColor="#4A5FD9" />
-            <stop offset="1" stopColor="#8B7FE8" />
-          </linearGradient>
-          <linearGradient id="eq-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#8B7FE8" stopOpacity="0.32" />
-            <stop offset="1" stopColor="#8B7FE8" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {grid.map((g) => (
-          <line key={g} x1={PAD_X} x2={W - PAD_X} y1={g} y2={g} stroke="rgba(255,255,255,.05)" />
-        ))}
-        {series.length > 0 && (
-          <>
-            <line x1={PAD_X} x2={W - PAD_X} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,.18)" strokeDasharray="4 5" />
-            <path d={`${line} L${dotX.toFixed(1)},${H - PAD_BOTTOM} L${x(t0).toFixed(1)},${H - PAD_BOTTOM} Z`} fill="url(#eq-fill)" />
-            <path
-              d={line}
-              fill="none"
-              stroke="url(#eq-stroke)"
-              strokeWidth="2.4"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(139,127,232,.95))' }}
-            />
-          </>
+    <div className={fill ? 'flex h-full min-h-[120px] flex-col' : 'relative'} role="img" aria-label={label}>
+      <div className={fill ? 'relative min-h-0 flex-1' : 'relative'}>
+        <svg width="100%" height={fill ? '100%' : H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" className={fill ? 'block' : undefined}>
+          <defs>
+            <linearGradient id="eq-stroke" x1="0" x2="1">
+              <stop offset="0" stopColor="#4A5FD9" />
+              <stop offset="1" stopColor="#8B7FE8" />
+            </linearGradient>
+            <linearGradient id="eq-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#8B7FE8" stopOpacity="0.32" />
+              <stop offset="1" stopColor="#8B7FE8" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {grid.map((g) => (
+            <line key={g} x1={PAD_X} x2={W - PAD_X} y1={g} y2={g} stroke="rgba(255,255,255,.05)" />
+          ))}
+          {series.length > 0 && (
+            <>
+              <line x1={PAD_X} x2={W - PAD_X} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,.18)" strokeDasharray="4 5" />
+              <path d={`${line} L${dotX.toFixed(1)},${H - PAD_BOTTOM} L${x(t0).toFixed(1)},${H - PAD_BOTTOM} Z`} fill="url(#eq-fill)" />
+              <path
+                d={line}
+                fill="none"
+                stroke="url(#eq-stroke)"
+                strokeWidth="2.4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                style={{ filter: 'drop-shadow(0 0 8px rgba(139,127,232,.95))' }}
+              />
+            </>
+          )}
+        </svg>
+        {last && (
+          <span
+            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60 bg-violet"
+            style={{ left: `${(dotX / W) * 100}%`, top: `${(dotY / H) * 100}%`, boxShadow: '0 0 12px rgba(139,127,232,.9)' }}
+          />
         )}
-      </svg>
-      {last && (
-        <span
-          className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60 bg-violet"
-          style={{ left: `${(dotX / W) * 100}%`, top: `${(dotY / H) * 100}%`, boxShadow: '0 0 12px rgba(139,127,232,.9)' }}
-        />
-      )}
+      </div>
       {series.length > 0 && (
         <div className="flex justify-between px-[2.6%] text-xs text-tx3" aria-hidden="true">
           {labels.map((l, i) => (

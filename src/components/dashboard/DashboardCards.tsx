@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Tooltip } from '../ui/Tooltip'
+import { FitCard } from '../ui/fit'
 import { CalendarGrid } from '../CalendarGrid'
 import { EquityChart, Sparkline } from '../charts'
 import { EmptyState } from '../EmptyState'
@@ -52,7 +53,7 @@ export function HeroCard({ data, period }: { data: Dashboard; period: PeriodKey 
   const points = report.equityCurve.map((p) => ({ time: p.time, value: Number(p.cumulativeNetPnl) }))
   const last = report.equityCurve[report.equityCurve.length - 1]
   return (
-    <section className="glass-card h-full overflow-auto p-6">
+    <FitCard>
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="caption">{t.dashboard.netPnl}</div>
@@ -77,20 +78,23 @@ export function HeroCard({ data, period }: { data: Dashboard; period: PeriodKey 
           {report.openTradeCount > 0 && <span className="badge badge-warn">{t.dashboard.openTrades(report.openTradeCount)}</span>}
         </div>
       </div>
-      <div className="mt-3">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col">
         {s.tradeCount === 0 ? (
           <EmptyState title={t.dashboard.noneOnPeriodTitle}>{t.dashboard.noneOnPeriodText}</EmptyState>
         ) : (
           <>
-            <EquityChart
-              points={points}
-              label={t.dashboard.equityLabel(s.tradeCount, formatDate(report.equityCurve[0].time), formatDate(last.time))}
-            />
-            <p className="mt-2 text-xs text-tx3">{t.dashboard.equityNote}</p>
+            <div className="min-h-0 flex-1">
+              <EquityChart
+                fill
+                points={points}
+                label={t.dashboard.equityLabel(s.tradeCount, formatDate(report.equityCurve[0].time), formatDate(last.time))}
+              />
+            </div>
+            <p className="mt-2 shrink-0 text-xs text-tx3">{t.dashboard.equityNote}</p>
           </>
         )}
       </div>
-    </section>
+    </FitCard>
   )
 }
 
@@ -99,7 +103,7 @@ export function CapitalCard({ data }: { data: Dashboard }) {
   const { report } = data
   const currency = report.currency ?? 'USD'
   return (
-    <section className="glass-card flex h-full flex-col gap-1 overflow-auto p-6">
+    <FitCard className="gap-1">
       <h3 className="mb-2 text-base font-semibold">{t.dashboard.capital.title}</h3>
       <div className="hairline-row"><span className="text-tx2">{t.dashboard.capital.current}</span><b className="text-lg">{formatMoney(report.currentCapital, currency)}</b></div>
       <div className="hairline-row"><span className="text-tx2">{t.dashboard.capital.initial}</span><span>{formatMoney(report.initialCapital, currency)}</span></div>
@@ -107,7 +111,7 @@ export function CapitalCard({ data }: { data: Dashboard }) {
       <div className="hairline-row"><span className="text-tx2">{t.dashboard.capital.withdrawals}</span><span>{formatMoney(report.totalWithdrawals, currency)}</span></div>
       <p className="mt-3 text-xs leading-relaxed text-tx3">{t.dashboard.capital.note}</p>
       <Link to="/settings" className="btn-link mt-2 self-start">{t.dashboard.capital.manage}</Link>
-    </section>
+    </FitCard>
   )
 }
 
@@ -235,7 +239,7 @@ export function DailyCard({ data }: { data: Dashboard }) {
   const magnitudes = days.map((d) => Math.abs(Number(d.netPnl)))
   const max = Math.max(...magnitudes, 0) || 1
   return (
-    <section className="glass-card flex h-full flex-col overflow-auto p-6">
+    <FitCard>
       <h3 className="mb-4 text-base font-semibold">{t.dashboard.daily.title}</h3>
       {days.length === 0 ? (
         <p className="py-10 text-center text-sm text-tx2">{t.dashboard.daily.empty}</p>
@@ -266,19 +270,21 @@ export function DailyCard({ data }: { data: Dashboard }) {
           </div>
         </div>
       )}
-    </section>
+    </FitCard>
   )
 }
 
 export function CalendarCard({ month }: { month: Calendar }) {
   const t = useT()
   return (
-    <section className="glass-card h-full overflow-auto p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <FitCard>
+      <div className="mb-3 flex shrink-0 items-center justify-between">
         <h3 className="text-base font-semibold">{t.dashboard.activity(formatMonthName(month.year, month.month))}</h3>
         <Link to="/calendar" className="btn-link">{t.dashboard.viewCalendar}</Link>
       </div>
-      <CalendarGrid calendar={month} compact />
-    </section>
+      <div className="min-h-0 flex-1">
+        <CalendarGrid calendar={month} compact fill />
+      </div>
+    </FitCard>
   )
 }

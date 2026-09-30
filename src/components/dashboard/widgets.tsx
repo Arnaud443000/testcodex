@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Tooltip } from '../ui/Tooltip'
+import { FitCard, FitList } from '../ui/fit'
 import { Link } from 'react-router-dom'
 import { DisciplineCard } from '../behavior/DisciplineCard'
 import { EmotionsCard, type Moment } from '../behavior/EmotionsCard'
@@ -42,10 +43,10 @@ export interface WidgetProps {
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="glass-card flex h-full flex-col overflow-auto p-6">
+    <FitCard>
       <h3 className="mb-3 whitespace-nowrap text-base font-semibold">{title}</h3>
       {children}
-    </section>
+    </FitCard>
   )
 }
 
@@ -241,7 +242,7 @@ function RecentTrades({ scope, instance }: WidgetProps) {
     )
   }
   return (
-    <section className="glass-card flex h-full flex-col overflow-auto p-6">
+    <FitCard>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
         <Link to="/trades" className="btn-link whitespace-nowrap">{w.recent.seeAll}</Link>
@@ -271,7 +272,7 @@ function RecentTrades({ scope, instance }: WidgetProps) {
           ))}
         </tbody>
       </table>
-    </section>
+    </FitCard>
   )
 }
 
@@ -296,12 +297,12 @@ function GoalsWidget({ scope }: WidgetProps) {
     )
   }
   return (
-    <section className="glass-card flex h-full flex-col overflow-auto p-6">
+    <FitCard>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
         <Link to="/goals" className="btn-link whitespace-nowrap">{w.goals.manage}</Link>
       </div>
-      <ul className="flex flex-col gap-4">
+      <FitList moreTo="/goals" className="flex flex-col gap-4">
         {data.map((p) => {
           const label = g.metrics[p.goal.metric]
           const pct = p.fraction === null ? 0 : Math.min(100, p.fraction * 100)
@@ -333,8 +334,8 @@ function GoalsWidget({ scope }: WidgetProps) {
             </li>
           )
         })}
-      </ul>
-    </section>
+      </FitList>
+    </FitCard>
   )
 }
 

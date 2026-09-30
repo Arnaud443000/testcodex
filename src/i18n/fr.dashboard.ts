@@ -81,6 +81,7 @@ export const frDashboardBuilder = {
     builtinGroup: 'Dashboards livrés',
     customGroup: 'Mes dashboards',
     edit: 'Modifier le dashboard',
+    editShort: 'Modifier',
     editing: 'Modification du dashboard',
     addWidget: 'Ajouter un widget',
     reset: 'Réinitialiser',

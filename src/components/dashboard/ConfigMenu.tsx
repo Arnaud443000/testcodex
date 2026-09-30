@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../Icon'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 
 /** Menu « Configuration » : dupliquer, exporter, importer (3.8.7). Échap ou un clic à côté le ferme. */
@@ -41,18 +42,19 @@ export function ConfigMenu({
         }
       }}
     >
-      <button
-        type="button"
-        className="btn btn-secondary"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={t.menuLabel}
-        disabled={busy}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {t.menu}
-        <Icon name="chevron" size={16} />
-      </button>
+      <Tooltip content={t.menu}>
+        <button
+          type="button"
+          className={`btn-icon ${open ? '!bg-white/10 !text-tx' : ''}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`${t.menu} : ${t.menuLabel}`}
+          disabled={busy}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Icon name="more" size={18} />
+        </button>
+      </Tooltip>
       {open && (
         <div role="menu" aria-label={t.menuLabel} className="glass-card bg-bg absolute right-0 z-40 mt-2 flex w-[320px] flex-col p-2">
           {items.map((i) => (

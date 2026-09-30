@@ -378,3 +378,25 @@ body {
 .select-inline:focus-visible {
   outline: none;
 }
+
+/* Cartes de widgets (lot 29) : quand le contenu déborde de la hauteur fixée par la grille, `useCardDensity` passe data-density
+   à 1 (marges et lignes réduites) puis à 2 (textes facultatifs masqués). Hors du @layer : doit l'emporter sur les utilitaires. */
+.fit-card[data-density] {
+  padding: 16px 20px;
+}
+.fit-card[data-density] > :first-child {
+  margin-bottom: 8px;
+}
+.fit-card[data-density] .hairline-row {
+  padding-block: 5px;
+}
+.fit-card[data-density='2'] .fit-optional {
+  display: none;
+}
+.fit-card[data-density] .cmp-block {
+  padding: 10px 12px;
+}
+.fit-card[data-density] .cmp-value {
+  margin-top: 2px;
+  font-size: 22px;
+}

@@ -1,6 +1,7 @@
 import { useT } from '../../i18n'
 import { Tooltip } from '../ui/Tooltip'
-import { Fragment } from 'react'
+import { Fragment, useContext } from 'react'
+import { EmbeddedCardContext } from '../ui/fit'
 import { roundDecimal } from '../../lib/decimal'
 import { formatPercentValue, heatTier, isLossBin, rBinLabel } from '../../lib/behaviorFormat'
 import { formatMoney, formatR, formatRatioPercent, formatSignedAmount, formatSignedMoney } from '../../lib/format'
@@ -110,6 +111,7 @@ export function HeatmapCard({ report, currency }: { report: Heatmap; currency: s
 export function LongShortCard({ report, currency }: { report: LongShort; currency: string }) {
   const t = useT()
   const l = t.behavior.longShort
+  const embedded = useContext(EmbeddedCardContext)
   const block = (label: string, s: LongShort['long']) =>
     s.tradeCount === 0 ? (
       <CompareBlock label={label} value="—" tone="text-tx2" lines={[t.behavior.trades(0), l.empty]} />
@@ -124,7 +126,7 @@ export function LongShortCard({ report, currency }: { report: LongShort; currenc
   const share = report.longShare
   return (
     <Card title={l.title} span="xl:col-span-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+      <div className={`grid gap-3 ${embedded ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'}`}>
         {block(t.common.directions.long, report.long)}
         {block(t.common.directions.short, report.short)}
       </div>

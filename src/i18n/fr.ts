@@ -149,6 +149,7 @@ export const fr = {
     back: 'Retour',
     loading: 'Chargement…',
     select: { placeholder: 'Choisir…', empty: 'Aucune option disponible' },
+    fitMore: (n: number) => (n === 1 ? 'Voir 1 autre' : `Voir les ${n} autres`),
     none: 'Aucun',
     unset: 'Non renseigné',
     error: (detail: string) => `Une erreur est survenue : ${detail}`,

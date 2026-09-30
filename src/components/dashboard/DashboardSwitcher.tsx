@@ -42,12 +42,11 @@ export function DashboardSwitcher({
   const label = (s: DashboardSummary) => (s.isDefault ? `${s.name} ${t.defaultMark}` : s.name)
   const builtin = summaries.filter((s) => s.builtin)
   const custom = summaries.filter((s) => !s.builtin)
-  const iconBtn =
-    'control grid h-[42px] w-[42px] place-items-center !rounded-full text-tx2 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet disabled:opacity-60'
+  const iconBtn = 'btn-icon disabled:opacity-60'
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Select
-        className="min-w-[230px]"
+        className="!h-9 !w-auto min-w-[200px] max-w-[280px] !text-[13.5px]"
         ariaLabel={t.switcherLabel}
         value={current.key}
         onChange={onSelect}
@@ -58,21 +57,21 @@ export function DashboardSwitcher({
       />
       <Tooltip content={current.isDefault ? t.isDefault : t.makeDefault}>
         <button type="button" className={iconBtn} aria-pressed={current.isDefault} disabled={current.isDefault} aria-label={current.isDefault ? t.isDefault : t.makeDefault} onClick={onSetDefault}>
-          <span className={current.isDefault ? 'text-violet' : ''}><Icon name="star" size={18} /></span>
+          <span className={current.isDefault ? 'text-violet' : ''}><Icon name="star" size={17} /></span>
         </button>
       </Tooltip>
       {!current.builtin && (
         <>
           <Tooltip content={t.rename}>
-            <button type="button" className={iconBtn} aria-label={t.rename} onClick={onRename}><Icon name="edit" size={18} /></button>
+            <button type="button" className={iconBtn} aria-label={t.rename} onClick={onRename}><Icon name="edit" size={17} /></button>
           </Tooltip>
           <Tooltip content={t.delete}>
-            <button type="button" className={iconBtn} aria-label={t.delete} onClick={() => setConfirmDelete(true)}><Icon name="cross" size={18} /></button>
+            <button type="button" className={iconBtn} aria-label={t.delete} onClick={() => setConfirmDelete(true)}><Icon name="cross" size={17} /></button>
           </Tooltip>
         </>
       )}
       <Tooltip content={t.newDashboard}>
-        <button type="button" className={iconBtn} aria-label={t.newDashboard} onClick={onNew}><Icon name="plus" size={18} /></button>
+        <button type="button" className={iconBtn} aria-label={t.newDashboard} onClick={onNew}><Icon name="plus" size={17} /></button>
       </Tooltip>
       <ConfigMenu onDuplicate={onDuplicate} onExport={onExport} onImport={onImport} busy={transferBusy} />
       {confirmDelete && (

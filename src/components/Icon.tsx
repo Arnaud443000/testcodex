@@ -64,6 +64,14 @@ const PATHS = {
   chevron: <path d="M6 9l6 6 6-6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   cross: <path d="M6 6l12 12M18 6L6 18" />,
+  // Lot 29 : menu « Configuration » du tableau de bord (trois points).
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.3" />
+      <circle cx="12" cy="12" r="1.3" />
+      <circle cx="19" cy="12" r="1.3" />
+    </>
+  ),
   // Lot 29 : état indéterminé d'une case à cocher.
   minus: <path d="M6 12h12" />,
   alert: (

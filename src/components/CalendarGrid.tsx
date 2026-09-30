@@ -11,20 +11,28 @@ export function CalendarGrid({
   selectedDay,
   onSelect,
   compact = false,
+  fill = false,
 }: {
   calendar: Calendar
   selectedDay?: string | null
   onSelect?: (day: string) => void
   compact?: boolean
+  /** Les lignes se partagent la hauteur donnée par le conteneur (carte du tableau de bord : hauteur fixée par la grille). */
+  fill?: boolean
 }) {
   const t = useT()
   const byDay = new Map<number, CalendarDay>(calendar.days.map((d) => [d.dayOfMonth, d]))
   const lead = calendar.firstWeekday - 1
-  const height = compact ? 'h-[46px]' : 'h-[78px]'
+  const height = fill ? 'min-h-[28px]' : compact ? 'h-[46px]' : 'h-[78px]'
+  const weeks = Math.ceil((lead + calendar.daysInMonth) / 7)
   const cells = Array.from({ length: calendar.daysInMonth }, (_, i) => i + 1)
   const currency = calendar.currency ?? 'USD'
   return (
-    <div className="grid grid-cols-7 gap-2" role="grid">
+    <div
+      className={`grid grid-cols-7 ${fill ? 'h-full gap-1.5' : 'gap-2'}`}
+      style={fill ? { gridTemplateRows: `auto repeat(${weeks}, minmax(28px, 1fr))` } : undefined}
+      role="grid"
+    >
       {t.calendar.weekdaysShort.map((d, i) => (
         <div key={i} className="pb-1 text-center text-[11px] font-semibold text-tx3" role="columnheader">{d}</div>
       ))}

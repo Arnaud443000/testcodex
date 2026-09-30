@@ -7,6 +7,7 @@ import { formatRatioPercent } from '../../lib/format'
 import { formatLoss } from '../../lib/behaviorFormat'
 import { mistakeLink } from '../../lib/mistakeFilter'
 import type { MistakeReport } from '../../types/behavior'
+import { FitList } from '../ui/fit'
 import { Card, EmptyLine, Note, Segmented } from './parts'
 
 type Sort = 'count' | 'cost'
@@ -35,7 +36,7 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
         <EmptyLine>{t.empty}</EmptyLine>
       ) : (
         <>
-          <ul>
+          <FitList moreTo="/behavior">
             {rows.map((m) => (
               <li key={`${m.source}-${m.id}`} className="flex items-center gap-3 border-b py-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                 <span
@@ -66,7 +67,7 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                 <b className={`whitespace-nowrap tabular-nums ${signOf(m.cost) > 0 ? 'text-loss' : 'text-neutral'}`}>{formatLoss(m.cost, currency)}</b>
               </li>
             ))}
-          </ul>
+          </FitList>
           <Note>{t.summary(report.tradesWithMistake, report.tradeCount)}</Note>
         </>
       )}
