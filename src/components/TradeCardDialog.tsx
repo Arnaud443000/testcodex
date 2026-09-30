@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useT } from '../i18n'
@@ -143,10 +144,7 @@ export function TradeCardDialog({ trade, setupName, screenshotUrl, onClose }: { 
 
   const check = ({ id, hint, disabled = false }: { id: keyof Omit<CardOptions, 'format'>; hint?: string; disabled?: boolean }) => (
     <li key={id} className="flex flex-col gap-0.5">
-      <label className={`flex items-center gap-2.5 text-sm ${disabled ? 'opacity-50' : 'cursor-pointer'}`}>
-        <input type="checkbox" className="h-4 w-4 shrink-0 accent-violet" checked={options[id] && !disabled} disabled={disabled} onChange={(e) => set(id, e.target.checked)} />
-        <span className="font-medium">{d.options[id]}</span>
-      </label>
+      <Checkbox checked={options[id] && !disabled} disabled={disabled} onChange={(v) => set(id, v)} label={<span className="font-medium">{d.options[id]}</span>} />
       {hint && <p className="pl-[26px] text-xs text-tx3">{hint}</p>}
     </li>
   )

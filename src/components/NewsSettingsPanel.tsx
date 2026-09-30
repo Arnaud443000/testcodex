@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Tooltip } from './ui/Tooltip'
 import { Select } from './ui/Select'
@@ -208,10 +209,7 @@ export function NewsSettingsPanel() {
                       ))}
                     </ul>
                   </Notice>
-                  <label className="flex max-w-[95ch] items-start gap-2.5 text-sm leading-relaxed">
-                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={form.ffConsent} onChange={(e) => set({ ffConsent: e.target.checked })} />
-                    <span>{s.ffConsent}</span>
-                  </label>
+                  <Checkbox className="max-w-[95ch] leading-relaxed" align="start" checked={form.ffConsent} onChange={(v) => set({ ffConsent: v })} label={s.ffConsent} />
                   {!form.ffConsent && <p className="text-[12.5px] text-tx3">{s.ffConsentNeeded}</p>}
                 </div>
               )}

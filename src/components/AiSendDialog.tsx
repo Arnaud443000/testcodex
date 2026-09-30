@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useT } from '../i18n'
@@ -37,10 +38,7 @@ export function AiSendDialog({ preview, onSend, onCancel }: { preview: AiSendPre
             {d.firstUse.map((p) => (
               <p key={p} className="leading-relaxed text-tx2">{p}</p>
             ))}
-            <label className="mt-1 flex cursor-pointer items-start gap-2.5 font-medium">
-              <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-violet" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
-              {d.firstUseCheck}
-            </label>
+            <Checkbox className="mt-1 font-medium" align="start" checked={understood} onChange={setUnderstood} label={d.firstUseCheck} />
           </section>
         )}
 

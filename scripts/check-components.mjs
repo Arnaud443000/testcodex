@@ -173,6 +173,33 @@ async function newPage(w = 1440, h = 900) {
   await page.context().close()
 }
 
+// ───────────────────────── Case à cocher ─────────────────────────
+{
+  const page = await newPage()
+  await go(page, '/replay')
+  check((await page.locator('input[type=checkbox]:not(label.group input)').count()) === 0, 'case : aucune case native hors du composant')
+  const box = page.getByRole('checkbox', { name: /capture/i }).first()
+  check((await box.count()) === 1, 'case : un vrai <input type=checkbox> nommé par son libellé')
+  check(!(await box.isChecked()), 'case : décochée au départ')
+  const label = page.locator('label.group', { has: box })
+  const lb = await label.boundingBox()
+  check(lb.height >= 24, `case : la ligne libellée fait ${Math.round(lb.height)} px de haut (≥ 24)`)
+  await label.getByText(/capture/i).click()
+  check(await box.isChecked(), 'case : un clic sur le libellé la coche')
+  check((await label.locator('svg').count()) === 1, 'case : la coche est dessinée (forme), pas seulement la couleur')
+  await shot(page, 'lot29-apres-case-cochee-1440x900')
+  await box.focus()
+  await page.keyboard.press('Space')
+  check(!(await box.isChecked()), 'case : Espace la décoche au clavier')
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  const ring = await label.locator('span[aria-hidden]').first().evaluate((el) => getComputedStyle(el).outlineStyle)
+  check(ring === 'solid', 'case : l’anneau de focus est sur le contour de la case')
+  // Désactivée : carte de trade (options grisées) si disponible
+  await go(page, '/trades')
+  await page.context().close()
+}
+
 await browser.close()
 if (server) server.kill()
 console.log(failures.length ? `\n${failures.length} échec(s)` : '\nTout est bon.')

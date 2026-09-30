@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Tooltip } from './ui/Tooltip'
 import { Link } from 'react-router-dom'
@@ -135,10 +136,7 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
             <Scale label={d.mood} value={form.mood} labels={d.moodScale} onChange={(v) => set('mood', v)} />
             <Scale label={d.sleep} value={form.sleepQuality} labels={d.sleepScale} onChange={(v) => set('sleepQuality', v)} />
             <Scale label={d.fatigue} value={form.fatigue} labels={d.fatigueScale} onChange={(v) => set('fatigue', v)} />
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-violet" checked={form.lateHours} onChange={(e) => set('lateHours', e.target.checked)} />
-              {d.lateHours}
-            </label>
+            <Checkbox checked={form.lateHours} onChange={(v) => set('lateHours', v)} label={d.lateHours} />
           </div>
 
           <Field label={d.wentWell} htmlFor="j-well">

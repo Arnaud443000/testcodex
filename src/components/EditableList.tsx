@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useState, type FormEvent } from 'react'
 import { useT } from '../i18n'
 
@@ -129,10 +130,7 @@ export function EditableList({
         <button type="submit" className="btn btn-primary" disabled={busy}>{addLabel}</button>
       </form>
       {archivedCount > 0 && (
-        <label className="mt-4 flex w-fit cursor-pointer items-center gap-2 text-[13px] text-tx2">
-          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-          {t.settings.list.showArchived} ({archivedCount})
-        </label>
+        <Checkbox className="mt-4 text-[13px] text-tx2" checked={showArchived} onChange={setShowArchived} label={`${t.settings.list.showArchived} (${archivedCount})`} />
       )}
       {error && <div className="nt nt-bad mt-3" role="alert">{error}</div>}
     </section>

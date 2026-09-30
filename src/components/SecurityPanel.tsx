@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Select } from './ui/Select'
 import { useT } from '../i18n'
@@ -196,10 +197,7 @@ export function SecurityPanel() {
           </div>
           <p className="max-w-[78ch] text-[13px] leading-relaxed text-tx3">{s.policy(min)}</p>
           {copies > 0 && (
-            <label className="flex items-start gap-2.5 text-[13px] leading-relaxed">
-              <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-violet" checked={encryptCopies} onChange={(e) => setEncryptCopies(e.target.checked)} disabled={busy} />
-              <span>{s.copies(copies)}</span>
-            </label>
+            <Checkbox className="text-[13px] leading-relaxed" align="start" checked={encryptCopies} onChange={setEncryptCopies} disabled={busy} label={s.copies(copies)} />
           )}
           <div className="nt nt-bad" role="note" data-testid="lost-warning">
             <span className="mt-px shrink-0">
@@ -208,10 +206,7 @@ export function SecurityPanel() {
             <div className="min-w-0 flex-1">
               <div className="font-semibold">{s.lostTitle}</div>
               <p className="mt-1 leading-relaxed">{s.lostBody}</p>
-              <label className="mt-3 flex items-start gap-2.5 font-medium text-tx">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-violet" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} disabled={busy} data-testid="lock-understood" />
-                <span>{s.understood}</span>
-              </label>
+              <Checkbox className="mt-3 font-medium text-tx" align="start" checked={understood} onChange={setUnderstood} disabled={busy} testId="lock-understood" label={s.understood} />
             </div>
           </div>
           {errorBox}

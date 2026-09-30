@@ -1,3 +1,4 @@
+import { Checkbox } from '../ui/Checkbox'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useT } from '../../i18n'
@@ -20,10 +21,7 @@ export function CoachConsentDialog({ host, model, onAccept, onCancel }: { host: 
             <p key={p} className="leading-relaxed text-tx2">{p}</p>
           ))}
           <p className="leading-relaxed text-tx2">{t.coach.reminder.to(host, model)}</p>
-          <label className="mt-1 flex cursor-pointer items-start gap-2.5 font-medium">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-violet" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
-            {c.check}
-          </label>
+          <Checkbox className="mt-1 font-medium" align="start" checked={understood} onChange={setUnderstood} label={c.check} />
         </section>
         <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-col gap-3 border-t bg-bg px-6 pb-6 pt-4" style={{ borderColor: 'var(--hairline)' }}>
           <p className="text-[13px] font-medium text-tx">{t.coach.reminder.notAutomatic}</p>

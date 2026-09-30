@@ -1,3 +1,4 @@
+import { Checkbox } from '../components/ui/Checkbox'
 import { useEffect, useMemo, useState } from 'react'
 import { Tooltip } from '../components/ui/Tooltip'
 import { Select } from '../components/ui/Select'
@@ -218,14 +219,8 @@ export function ReplayPage() {
             options={[{ value: '', label: r.filters.all }, ...ref.instruments.map((i) => ({ value: String(i.id), label: i.symbol }))]}
           />
         </label>
-        <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-violet" checked={filters.withScreenshot} onChange={(e) => set('withScreenshot', e.target.checked)} />
-          {r.filters.withScreenshot}
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-violet" checked={filters.withNotes} onChange={(e) => set('withNotes', e.target.checked)} />
-          {r.filters.withNotes}
-        </label>
+        <Checkbox className="mb-2" checked={filters.withScreenshot} onChange={(v) => set('withScreenshot', v)} label={r.filters.withScreenshot} />
+        <Checkbox className="mb-2" checked={filters.withNotes} onChange={(v) => set('withNotes', v)} label={r.filters.withNotes} />
         {filtered && (
           <button type="button" className="btn-link pb-2.5" onClick={() => setFilters(NO_FILTERS)}>{r.filters.reset}</button>
         )}

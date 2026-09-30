@@ -80,4 +80,7 @@ describe('éléments natifs', () => {
   it('aucun title= natif sur un élément : utiliser components/ui/Tooltip', () => {
     expect(offenders('title')).toEqual([])
   })
+  it('aucune case à cocher native : utiliser components/ui/Checkbox', () => {
+    expect(offenders('checkbox')).toEqual([])
+  })
 })

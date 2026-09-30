@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useEffect, useState } from 'react'
 import { Select } from './ui/Select'
 import { useT } from '../i18n'
@@ -120,13 +121,7 @@ export function PdfExportBlock() {
               {busy ? p.working : p.button}
             </button>
           </div>
-          <label className="flex items-start gap-2.5 text-sm">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-violet" checked={includeName} disabled={busy} onChange={(e) => setIncludeName(e.target.checked)} />
-            <span>
-              {p.includeName}
-              <span className="mt-0.5 block text-[13px] text-tx3">{p.includeNameHelp}</span>
-            </span>
-          </label>
+          <Checkbox align="start" checked={includeName} disabled={busy} onChange={setIncludeName} label={p.includeName} description={p.includeNameHelp} />
         </>
       )}
 
