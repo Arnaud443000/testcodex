@@ -10,6 +10,7 @@ import { CashFlowsPanel } from '../components/CashFlowsPanel'
 import { DataPanel } from '../components/DataPanel'
 import { DisplayPanel } from '../components/DisplayPanel'
 import { EmotionListPanel } from '../components/EmotionListPanel'
+import { AnalysisSettingsPanel } from '../components/AnalysisSettingsPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
@@ -161,7 +162,7 @@ function EmotionsSection() {
 
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
-  ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
+  ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['analysis', 'analysis'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
   ['reminder', 'rappel'], ['display', 'affichage'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
@@ -233,6 +234,7 @@ export function SettingsPage() {
         <ChecklistSection />
       </div>
       <div id="emotions" className="scroll-mt-4"><EmotionsSection /></div>
+      <div id="analysis" className="scroll-mt-4"><AnalysisSettingsPanel /></div>
       <div id="discipline" className="scroll-mt-4"><BehaviorSettingsPanel /></div>
       <div className="scroll-mt-4"><AlertSettingsPanel /></div>
       <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>

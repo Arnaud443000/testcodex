@@ -28,6 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: 'capture',
     items: [
+      { to: '/analysis', key: 'analysis', icon: 'analysis' },
       { to: '/trades', key: 'trades', icon: 'trades' },
       { to: '/journal', key: 'journal', icon: 'journal' },
     ],

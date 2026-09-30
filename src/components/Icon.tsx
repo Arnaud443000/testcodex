@@ -8,6 +8,12 @@ const PATHS = {
     </>
   ),
   trades: <path d="M4 7h16M4 12h16M4 17h10" />,
+  analysis: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2.5" />
+      <path d="M9 4h6v3H9zM9 12h6M9 16h4" />
+    </>
+  ),
   calendar: (
     <>
       <rect x="3" y="5" width="18" height="16" rx="2.5" />

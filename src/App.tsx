@@ -5,6 +5,8 @@ import { AccountsProvider } from './lib/accounts'
 import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
 import { AlertBanner } from './components/AlertBanner'
+import { ReviewBanner } from './components/ReviewBanner'
+import { AnalysisPage } from './pages/AnalysisPage'
 import { InsightsProvider } from './lib/insights'
 import { InsightsPage } from './pages/InsightsPage'
 import { DisciplinePage } from './pages/DisciplinePage'
@@ -84,8 +86,10 @@ export default function App() {
               <NewsAutoRefresh />
               <AlertBanner />
               <ReminderBanner />
+              <ReviewBanner />
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/analysis" element={<AnalysisPage />} />
                 <Route path="/trades" element={<TradesPage />} />
                 <Route path="/trades/new" element={<TradeFormPage />} />
                 <Route path="/trades/:id" element={<TradeDetailPage />} />

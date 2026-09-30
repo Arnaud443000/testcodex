@@ -18,6 +18,7 @@ export const fr = {
     discipline: 'Discipline',
     insights: 'Insights',
     journal: 'Journal',
+    analysis: 'Analyse',
     goals: 'Objectifs',
     replay: 'Replay',
     settings: 'Paramètres',
@@ -449,6 +450,7 @@ export const fr = {
       accounts: 'Comptes',
       rules: 'Règles et checklist',
       emotions: 'Émotions',
+      analysis: 'Analyse avant trading',
       discipline: 'Discipline',
       alerts: 'Alertes',
       cashflows: 'Dépôts et retraits',
@@ -1595,6 +1597,8 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  // Lot 31 : analyse avant trading, idées à surveiller
+  analysis: frAnalysis,
 }
 
 export type Messages = typeof fr
@@ -1607,3 +1611,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frAnalysis } from './fr.analysis'
