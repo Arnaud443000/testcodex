@@ -10,6 +10,8 @@ pub mod log;
 pub mod news;
 // Lot 31: optional alert, a trade entered before any analysis of the day.
 pub mod no_analysis;
+// Lot 33: prop firm rules (daily loss, maximum loss, consistency).
+pub mod prop;
 pub mod settings;
 
 pub use log::{AlertRecord, active_alerts, dismiss, history};
@@ -100,6 +102,10 @@ pub enum AlertDetail {
     },
     /// Lot 31: entered before any pre-trade analysis of its local day (optional alert, off by default).
     NoAnalysis { day: String },
+    /// Lot 33: a prop firm rule nearing or reaching its limit (closed trades only).
+    PropDailyLoss(prop::PropAlertDetail),
+    PropMaxLoss(prop::PropAlertDetail),
+    PropConsistency(prop::PropAlertDetail),
 }
 
 impl AlertDetail {
@@ -116,6 +122,9 @@ impl AlertDetail {
             AlertDetail::NoStopLoss { .. } => 8,
             AlertDetail::NewsTrade { .. } => 9,
             AlertDetail::NoAnalysis { .. } => 10,
+            AlertDetail::PropDailyLoss(_) => 11,
+            AlertDetail::PropMaxLoss(_) => 12,
+            AlertDetail::PropConsistency(_) => 13,
         }
     }
 }

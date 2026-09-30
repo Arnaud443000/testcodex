@@ -83,6 +83,10 @@ const RANK: Record<AlertDetail['kind'], number> = {
   newsTrade: 9,
   // Lot 31 : alerte facultative « sans analyse du jour » (rang de pulse-core).
   noAnalysis: 10,
+  // Lot 33 : alertes prop firm (simulées par `mockProp.ts`).
+  propDailyLoss: 10,
+  propMaxLoss: 11,
+  propConsistency: 12,
 }
 const SEVERITY_RANK: Record<AlertSeverity, number> = { critical: 0, warning: 1 }
 

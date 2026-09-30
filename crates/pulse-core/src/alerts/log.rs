@@ -52,6 +52,7 @@ pub fn active_alerts(conn: &Connection, account_ids: &[i64], now: i64, tz_offset
         alerts.extend(evaluate(&ledger, now, tz_offset_min, &behavior, &thresholds)?);
         alerts.extend(super::news::evaluate(&ledger, &news_events, now, tz_offset_min, &news_settings)?);
         alerts.extend(super::no_analysis::evaluate(&ledger, &today_analyses, now, tz_offset_min, no_analysis_on));
+        alerts.extend(super::prop::for_account(conn, &account, now)?);
     }
     super::sort(&mut alerts);
 

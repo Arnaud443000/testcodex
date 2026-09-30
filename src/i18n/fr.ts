@@ -24,6 +24,7 @@ export const fr = {
     settings: 'Paramètres',
     coach: 'Coach IA',
     sizing: 'Calculateur',
+    prop: 'Prop firm',
     groups: { capture: 'Saisir', analyse: 'Analyser', understand: 'Comprendre', tools: 'Outils' },
     label: 'Navigation principale',
   },
@@ -1436,6 +1437,7 @@ export const fr = {
       noStopLoss: 'Trade sans stop loss',
       newsTrade: 'Trade pendant une news',
       noAnalysis: 'Trade sans analyse du jour',
+      ...frProp.alerts.kinds,
     } as Record<string, string>,
     count: (shown: number, total: number) => (shown === total ? `${shown} ${shown > 1 ? 'alertes' : 'alerte'}` : `${shown} sur ${total} alertes`),
     truncated: (n: number) => `Seules les ${n} alertes les plus récentes sont chargées.`,
@@ -1601,6 +1603,8 @@ export const fr = {
   // Lot 31 : analyse avant trading, idées à surveiller
   analysis: frAnalysis,
   backupAuto: frBackupAuto,
+  // Lot 33 : suivi d'un compte prop firm
+  prop: frProp,
 }
 
 export type Messages = typeof fr
@@ -1615,3 +1619,4 @@ import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
 import { frAnalysis } from './fr.analysis'
 import { frBackupAuto } from './fr.backupAuto'
+import { frProp } from './fr.prop'

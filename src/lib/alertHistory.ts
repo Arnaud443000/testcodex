@@ -13,6 +13,10 @@ export const ALERT_KINDS: AlertKind[] = [
   'noStopLoss',
   'newsTrade',
   'noAnalysis',
+  // Lot 33
+  'propDailyLoss',
+  'propMaxLoss',
+  'propConsistency',
 ]
 
 export interface HistoryFilter {

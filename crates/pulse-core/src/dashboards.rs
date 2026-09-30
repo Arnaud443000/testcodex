@@ -140,6 +140,8 @@ const LIBRARY: &[Def] = &[
     // Ideas to watch (lot 31): the ideas belong to no account and follow no period (they last several days);
     // the widget shows how many are active, how many the morning review waits for, and the oldest ones.
     def("ideas", "tracking", (10, 14), (8, 8), &[], false, false),
+    // Prop firm (lot 33): the rules of one prop account, at the current trading day; no period of its own.
+    def("prop_firm", "tracking", (10, 16), (8, 12), &[], false, true),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

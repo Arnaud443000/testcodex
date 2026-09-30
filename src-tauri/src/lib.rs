@@ -857,7 +857,12 @@ pub fn run() {
             run_auto_backup_now,
             list_auto_backups,
             answer_auto_backup_invite,
-            open_auto_backup_folder
+            open_auto_backup_folder,
+            get_prop_rules,
+            set_prop_rules,
+            delete_prop_rules,
+            get_prop_status,
+            set_prop_alerts
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1993,4 +1998,42 @@ fn open_auto_backup_folder(state: State<AppState>) -> Result<(), String> {
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     let program = "xdg-open";
     std::process::Command::new(program).arg(&folder).spawn().map(|_| ()).map_err(|_| BackupError::Io.to_string())
+}
+// --- Lot 33 : suivi d'un compte prop firm (trades clôturés seulement ; aucune perte latente devinée) ---
+
+#[tauri::command]
+fn get_prop_rules(state: State<AppState>, account_id: i64) -> Result<Option<pulse_core::prop::PropRules>, String> {
+    let conn = state.conn()?;
+    pulse_core::prop::rules::require_prop_account(&conn, account_id).map_err(err)?;
+    pulse_core::prop::rules::get(&conn, account_id).map_err(err)
+}
+
+/// Validates (codes `prop:<code>`) and saves the rules of a prop account.
+#[tauri::command]
+fn set_prop_rules(state: State<AppState>, account_id: i64, rules: pulse_core::prop::PropRulesInput) -> Result<pulse_core::prop::PropRules, String> {
+    let conn = state.conn()?;
+    pulse_core::prop::rules::set(&conn, account_id, &rules, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn delete_prop_rules(state: State<AppState>, account_id: i64) -> Result<(), String> {
+    let conn = state.conn()?;
+    pulse_core::prop::rules::delete(&conn, account_id).map_err(err)
+}
+
+/// Status of a prop account at the instant read here (`None` = no rules). The trading day comes from
+/// the firm's reset time and zone, never from the PC: `tz_offset_min` is accepted like the alert
+/// commands but no figure depends on it.
+#[tauri::command]
+fn get_prop_status(state: State<AppState>, account_id: i64, tz_offset_min: i32) -> Result<Option<pulse_core::prop::PropStatus>, String> {
+    let _ = tz_offset_min;
+    let conn = state.conn()?;
+    pulse_core::prop::status(&conn, account_id, now_ms()).map_err(err)
+}
+
+/// Setting `alerts.prop` (on by default).
+#[tauri::command]
+fn set_prop_alerts(state: State<AppState>, enabled: bool) -> Result<bool, String> {
+    let conn = state.conn()?;
+    alerts::prop::set_enabled(&conn, enabled).map_err(err)
 }

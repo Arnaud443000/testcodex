@@ -67,6 +67,8 @@ const LIBRARY: WidgetDefinition[] = [
   def('upcoming_news', 'temporal', [10, 16], [8, 10], ['medium', 'high', 'all'], false, false),
   // Idées à surveiller (lot 31) : ni compte ni période (une idée dure plusieurs jours), pas de mode.
   def('ideas', 'tracking', [10, 14], [8, 8], [], false, false),
+  // Prop firm (lot 33) : un compte prop, au jour de trading en cours ; pas de période propre.
+  def('prop_firm', 'tracking', [10, 16], [8, 12], [], false, true),
 ]
 
 const w = (uid: string, kind: string, x: number, y: number, wd: number, h: number, mode: string | null = null): WidgetInstance => ({

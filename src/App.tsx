@@ -26,6 +26,7 @@ import { TradesPage } from './pages/TradesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CoachPage } from './pages/CoachPage'
 import { SizingPage } from './pages/SizingPage'
+import { PropPage } from './pages/PropPage'
 import { EconomicCalendarPage } from './pages/EconomicCalendarPage'
 import { NewsAutoRefresh } from './lib/newsAutoRefresh'
 import { LockProvider, useLock } from './lib/lock'
@@ -110,6 +111,7 @@ export default function App() {
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/coach" element={<CoachPage />} />
                 <Route path="/sizing" element={<SizingPage />} />
+                <Route path="/prop" element={<PropPage />} />
               </Routes>
               </div>
             </ScrollArea>

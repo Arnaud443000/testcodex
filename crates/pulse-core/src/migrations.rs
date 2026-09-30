@@ -520,6 +520,34 @@ pub const MIGRATIONS: &[&str] = &[
         PRIMARY KEY (trade_id, analysis_id)
     );
     CREATE INDEX trade_analyses_by_analysis ON trade_analyses (analysis_id);",
+    // v16 — prop firm rules (lot 33): one row per `prop` account, deleted with it. Money and percents are
+    // exact decimals in TEXT (validated by `prop::rules`, the CHECKs are a coarse net); a limit is either
+    // both columns or none. `started_on` is a day "YYYY-MM-DD", `reset_time` "HH:MM" in `reset_zone`.
+    "CREATE TABLE prop_rules (
+        account_id                INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+        phase_label               TEXT CHECK (phase_label IS NULL OR length(trim(phase_label)) BETWEEN 1 AND 60),
+        started_on                TEXT NOT NULL CHECK (length(started_on) = 10),
+        daily_loss_mode           TEXT CHECK (daily_loss_mode IS NULL OR daily_loss_mode IN ('percent','amount')),
+        daily_loss_value          TEXT,
+        daily_reference           TEXT NOT NULL CHECK (daily_reference IN ('initial_balance','day_start_balance')),
+        max_loss_mode             TEXT CHECK (max_loss_mode IS NULL OR max_loss_mode IN ('percent','amount')),
+        max_loss_value            TEXT,
+        max_loss_kind             TEXT NOT NULL CHECK (max_loss_kind IN ('static','trailing')),
+        trailing_locks_at_initial INTEGER NOT NULL DEFAULT 0 CHECK (trailing_locks_at_initial IN (0,1)),
+        reset_time                TEXT NOT NULL CHECK (length(reset_time) = 5),
+        reset_zone                TEXT NOT NULL CHECK (reset_zone IN ('paris','new_york')),
+        profit_target_mode        TEXT CHECK (profit_target_mode IS NULL OR profit_target_mode IN ('percent','amount')),
+        profit_target_value       TEXT,
+        min_trading_days          INTEGER CHECK (min_trading_days IS NULL OR min_trading_days >= 1),
+        consistency_max_best_day_percent TEXT,
+        updated_at                INTEGER NOT NULL,
+        CHECK ((daily_loss_mode IS NULL) = (daily_loss_value IS NULL)),
+        CHECK ((max_loss_mode IS NULL) = (max_loss_value IS NULL)),
+        CHECK ((profit_target_mode IS NULL) = (profit_target_value IS NULL))
+    );
+    CREATE TRIGGER prop_rules_prop_account_only BEFORE INSERT ON prop_rules
+    WHEN (SELECT kind FROM accounts WHERE id = NEW.account_id) IS NOT 'prop'
+    BEGIN SELECT RAISE(ABORT, 'prop rules need a prop account'); END;",
 ];
 
 pub fn latest_version() -> u32 {

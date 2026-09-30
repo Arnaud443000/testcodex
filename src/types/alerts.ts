@@ -1,5 +1,6 @@
 import type { Decimal } from './money'
 import type { ExposureBasis } from './behavior'
+import type { PropAlertDetail } from './prop'
 
 /**
  * Alertes à seuils (garde-fous, cahier 3.6) : miroir des types de `pulse-core/src/alerts/`.
@@ -27,6 +28,16 @@ export type AlertMessageKey =
   | 'noStopLoss.closed'
   | 'newsTrade'
   | 'noAnalysis'
+  // Lot 33 : règles d'un compte prop firm (trades clôturés seulement).
+  | 'propDailyLoss.warning'
+  | 'propDailyLoss.critical'
+  | 'propDailyLoss.reached'
+  | 'propMaxLoss.warning'
+  | 'propMaxLoss.critical'
+  | 'propMaxLoss.reached'
+  | 'propConsistency.warning'
+  | 'propConsistency.critical'
+  | 'propConsistency.reached'
 
 /** Perte du jour ou de la semaine face à ses limites (3.6.3). */
 export interface LossDetail {
@@ -59,6 +70,9 @@ export type AlertDetail =
   | ({ kind: 'newsTrade' } & NewsTradeDetail)
   /** Lot 31 : trade entré avant toute analyse de séance du jour (alerte facultative, éteinte par défaut). */
   | { kind: 'noAnalysis'; day: string }
+  | ({ kind: 'propDailyLoss' } & PropAlertDetail)
+  | ({ kind: 'propMaxLoss' } & PropAlertDetail)
+  | ({ kind: 'propConsistency' } & PropAlertDetail)
 
 export type AlertKind = AlertDetail['kind']
 

@@ -54,6 +54,8 @@ pub mod sizing;
 pub mod news;
 // Lot 31 (analyse avant trading, idées à surveiller, revue du lendemain ; sans réseau ni IA).
 pub mod analysis;
+// Lot 33 (suivi d'un compte prop firm : règles, calculs sur les trades clôturés).
+pub mod prop;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};
