@@ -39,7 +39,7 @@ check((await page.locator('aside [aria-current="page"]').innerText()).includes('
 
 // Boutons-icônes nommés (toutes les pages principales)
 let unnamed = []
-for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar']) {
+for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar', '/goals?type=process']) {
   await page.evaluate((h) => { location.hash = h }, route)
   await page.waitForTimeout(500)
   unnamed.push(...(await page.evaluate(() => [...document.querySelectorAll('button, a[href]')].filter((el) => el.getBoundingClientRect().width > 0 && !(el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim())).map((el) => el.outerHTML.slice(0, 90)))))
@@ -66,6 +66,32 @@ await page.keyboard.press('Escape')
 await page.waitForTimeout(300)
 check((await page.locator('[role=dialog]').count()) === 0, 'Échap ferme la boîte')
 check((await page.evaluate(() => document.activeElement?.textContent?.trim())) === 'Créer une carte', 'le focus revient au bouton qui a ouvert la boîte')
+
+// Lot 34 : boîtes de l'objectif de comportement (création puis modification), statuts en texte.
+await page.evaluate((h) => { location.hash = h }, '/goals?type=process&kind=week')
+await page.waitForTimeout(700)
+const custom = page.getByRole('button', { name: 'Autre objectif…' })
+await custom.focus()
+await custom.click()
+await page.waitForTimeout(400)
+check(await inside(), 'objectif de comportement : à l\'ouverture, le focus est dans la boîte')
+escaped = false
+for (let i = 0; i < 20; i++) { await page.keyboard.press('Tab'); if (!(await inside())) escaped = true }
+check(!escaped, 'objectif de comportement : Tab ×20 reste dans la boîte')
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+check((await page.locator('[role=dialog]').count()) === 0, 'objectif de comportement : Échap ferme la boîte')
+check((await page.evaluate(() => document.activeElement?.textContent?.trim())) === 'Autre objectif…', 'objectif de comportement : le focus revient au bouton d\'ouverture')
+await page.getByRole('button', { name: /^Créer l’objectif/ }).first().click()
+await page.waitForTimeout(600)
+const badges = await page.locator('[data-testid="process-goals"] [data-status]').evaluateAll((els) => els.map((e) => ({ text: e.textContent.trim(), icon: !!e.querySelector('svg') })))
+check(badges.length > 0 && badges.every((b) => b.text && b.icon), 'objectif de comportement : chaque statut a un texte et une icône (jamais la couleur seule)')
+await page.getByRole('button', { name: /^Modifier l’objectif/ }).first().click()
+await page.waitForTimeout(400)
+check((await page.evaluate(() => document.activeElement?.id)) === 'process-goal-target', 'objectif de comportement : en modification, le focus va à la cible (mesure figée)')
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+check((await page.locator('[role=dialog]').count()) === 0, 'objectif de comportement : Échap ferme la boîte de modification')
 
 await browser.close()
 if (server) server.kill()
