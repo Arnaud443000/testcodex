@@ -32,7 +32,7 @@ export function TradeLinksCard({ tradeId }: { tradeId: number }) {
         <ul className="flex flex-col gap-2.5">
           {links.analyses.map((a) => (
             <li key={`a${a.id}`} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="capitalize tabular-nums">{d.analysis(formatTimeOfDay(a.createdAt, a.tzOffsetMin), formatDayLong(a.day))}</span>
+              <span className="tabular-nums">{d.analysis(formatTimeOfDay(a.createdAt, a.tzOffsetMin), formatDayLong(a.day))}</span>
               <Link className="btn-link" to={a.day === day ? '/analysis' : '/analysis?tab=archives'}>{d.open}</Link>
             </li>
           ))}
@@ -41,7 +41,7 @@ export function TradeLinksCard({ tradeId }: { tradeId: number }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{d.idea(i.symbol)}</span>
                 <span className="flex items-center gap-3">
-                  <span className={`badge ${i.status === 'closed' ? 'badge-neutral' : 'badge-warn'}`}>{d.status[i.status]}</span>
+                  <span className="badge badge-neutral">{d.status[i.status]}</span>
                   <Link className="btn-link" to={i.status === 'closed' ? '/analysis?tab=archives' : '/analysis?tab=ideas'}>{d.open}</Link>
                 </span>
               </div>

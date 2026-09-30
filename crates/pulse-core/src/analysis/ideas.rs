@@ -127,10 +127,10 @@ fn clean(conn: &Connection, input: &IdeaInput) -> Result<Clean> {
     let timeframes = TIMEFRAMES.iter().filter(|t| input.timeframes.iter().any(|x| x == *t)).map(|t| t.to_string()).collect();
     let note = opt_text("note", Some(&input.note), MAX_NOTE_CHARS)?.ok_or_else(|| CoreError::Invalid("the note is required".into()))?;
     let (low, high) = (price("low level", &input.level_low)?, price("high level", &input.level_high)?);
-    if let (Some(l), Some(h)) = (low, high) {
-        if l > h {
-            return Err(CoreError::Invalid("the low level must not be above the high level".into()));
-        }
+    if let (Some(l), Some(h)) = (low, high)
+        && l > h
+    {
+        return Err(CoreError::Invalid("the low level must not be above the high level".into()));
     }
     Ok(Clean { timeframes, note, low, high, invalidation: opt_text("invalidation", input.invalidation.as_deref(), MAX_INVALIDATION_CHARS)? })
 }

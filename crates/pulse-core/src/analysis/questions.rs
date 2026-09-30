@@ -97,10 +97,10 @@ pub fn clean_options(kind: QuestionKind, options: &Value) -> Result<Value> {
         QuestionKind::Choice => {
             let mut choices: Vec<String> = Vec::new();
             for c in options.get("choices").and_then(Value::as_array).into_iter().flatten() {
-                if let Some(t) = opt_text("choice", c.as_str(), MAX_CHOICE_CHARS)? {
-                    if !choices.iter().any(|x| x.eq_ignore_ascii_case(&t)) {
-                        choices.push(t);
-                    }
+                if let Some(t) = opt_text("choice", c.as_str(), MAX_CHOICE_CHARS)?
+                    && !choices.iter().any(|x| x.eq_ignore_ascii_case(&t))
+                {
+                    choices.push(t);
                 }
             }
             if !(2..=MAX_CHOICES).contains(&choices.len()) {

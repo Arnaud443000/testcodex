@@ -66,7 +66,7 @@ pub struct ReviewQueue {
 /// Les idées à revoir ce matin, dans l'ordre de la revue.
 pub fn queue(conn: &Connection, now: i64, tz: i32) -> Result<ReviewQueue> {
     let mut items: Vec<IdeaView> = ideas::list_views(conn, IdeaStatus::Active, None, now, tz)?.into_iter().filter(|v| v.in_review).collect();
-    // `stable` : à rang égal, la plus ancienne (mise à jour, puis id) d'abord, comme la liste de départ.
+    // À rang égal : la plus ancienne mise à jour d'abord, puis l'identifiant.
     items.sort_by_key(|v| (!v.returned, !v.stale, v.idea.updated_at, v.idea.id));
     let visible = items.len().min(REVIEW_VISIBLE);
     Ok(ReviewQueue { day: day_of(now, tz), hidden: items.len() - visible, visible, items })

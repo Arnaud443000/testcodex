@@ -42,6 +42,10 @@ export const SIZES = [
 /** Routes parcourues. `seedId` est remplacé par l'identifiant du premier trade. */
 export const ROUTES = [
   ['dashboard', '/'],
+  // Lot 31 : analyse avant trading (les trois onglets ; « vide » = aucune donnée, « chargé » = jeu de démonstration).
+  ['analyse-seance', '/analysis'],
+  ['analyse-idees', '/analysis?tab=ideas'],
+  ['analyse-archives', '/analysis?tab=archives'],
   ['trades', '/trades'],
   ['trade-nouveau', '/trades/new'],
   ['trade-detail', '/trades/:id'],
@@ -163,6 +167,73 @@ export const SCENARIOS = [
   ['emotions-parametres', async (page) => {
     await go(page, '/settings')
     await page.evaluate(() => document.getElementById('emotions')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
+  // Lot 31 : analyse avant trading, dans l'ordre d'un usage réel (séance remplie, revue du matin, report, archives, Paramètres, trade).
+  ['analyse-seance-remplie', async (page) => {
+    await go(page, '/analysis')
+    await page.getByLabel('Niveaux importants', { exact: false }).first().fill('4 250 – 4 300 (résistance hebdo)', { timeout: 3000 }).catch(() => {})
+    await page.getByRole('group', { name: 'Journalière' }).getByRole('button', { name: 'Haussière' }).click({ timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: 'Conviction 7 sur 10' }).click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-seance-vide-refusee', async (page) => {
+    await go(page, '/analysis')
+    await page.getByRole('button', { name: 'Enregistrer l’analyse' }).click({ timeout: 3000 }).catch(() => {})
+    await page.getByText('une analyse vide n’est pas enregistrée').first().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-banniere-revue', async (page) => { await go(page, '/goals') }],
+  ['analyse-revue-matin', async (page) => { await go(page, '/analysis?tab=ideas') }],
+  ['analyse-report-menu', async (page) => {
+    await go(page, '/analysis?tab=ideas')
+    await page.getByRole('button', { name: 'Redemander dans…' }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByRole('combobox', { name: /Redemander dans/ }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-report-libre-invalide', async (page) => {
+    await page.getByRole('option', { name: 'Un autre nombre de jours…' }).click({ timeout: 3000 }).catch(() => {})
+    await page.getByLabel('Nombre de jours (1 à 30)').first().fill('45', { timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: 'Reporter', exact: true }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-report-fait', async (page) => {
+    await page.getByLabel('Nombre de jours (1 à 30)').first().fill('5', { timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: 'Reporter', exact: true }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(500)
+    await page.getByText('Idées reportées').first().evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-cloture', async (page) => {
+    await go(page, '/analysis?tab=ideas')
+    await page.getByRole('button', { name: 'Clôturer', exact: true }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: 'Ça a fonctionné' }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-idee-nouvelle', async (page) => {
+    await go(page, '/analysis?tab=ideas&new=1')
+    await page.getByRole('button', { name: 'Enregistrer l’idée' }).click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-archives-ouvertes', async (page) => {
+    await go(page, '/analysis?tab=archives')
+    await page.getByRole('button', { name: /analyse/ }).filter({ hasText: /\(1 analyse\)/ }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['analyse-parametres', async (page) => {
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('analysis')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
+  ['analyse-formulaire-trade', async (page) => {
+    await go(page, '/trades/new')
+    await page.getByRole('button', { name: /Analyse et idées/ }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['analyse-detail-trade', async (page, id) => {
+    await go(page, `/trades/${id}`)
+    await page.evaluate(() => document.getElementById('trade-links-title')?.scrollIntoView({ block: 'center' }))
     await page.waitForTimeout(400)
   }],
   ['ecran-verrouillage', async (page) => {

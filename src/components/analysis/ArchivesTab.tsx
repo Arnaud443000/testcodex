@@ -47,7 +47,7 @@ function DayGroup({ day, items, questions, tags }: { day: string; items: Analysi
   return (
     <section className="glass-card px-5 py-3">
       <button type="button" className="flex min-h-[32px] w-full items-center justify-between gap-3 text-left" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="text-sm font-semibold capitalize">{a.archives.dayHeading(formatDayLong(day), items.length)}</span>
+        <span className="text-sm font-semibold first-letter:uppercase">{a.archives.dayHeading(formatDayLong(day), items.length)}</span>
         <span className={`text-tx3 transition ${open ? 'rotate-180' : ''}`}><Icon name="chevron" size={16} /></span>
       </button>
       {open && (
