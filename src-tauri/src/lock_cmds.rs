@@ -54,6 +54,8 @@ pub async fn unlock_database(app: AppHandle, password: String) -> Result<LockSta
         }
     }
     touch(&state);
+    // Lot 32: an automatic backup skipped while locked can run now.
+    crate::kick_auto_backup(&app);
     status_of(&state)
 }
 
@@ -77,7 +79,12 @@ pub(crate) async fn on_store<T: Send + 'static>(
 #[tauri::command]
 pub async fn enable_lock(app: AppHandle, password: String, confirmed: bool, encrypt_copies: bool) -> Result<LockStatus, String> {
     let password = Password::new(password);
-    on_store(&app, move |s| s.enable(&password, confirmed, encrypt_copies, KdfParams::RECOMMENDED)).await?;
+    // Lot 32: the screenshots are rewritten: never while a backup copies them (`backup:busy`).
+    on_store(&app, move |s| {
+        let _busy = pulse_core::backup_auto::exclusive(s.data_dir())?;
+        s.enable(&password, confirmed, encrypt_copies, KdfParams::RECOMMENDED)
+    })
+    .await?;
     let state = app.state::<AppState>();
     touch(&state);
     status_of(&state)
@@ -86,7 +93,11 @@ pub async fn enable_lock(app: AppHandle, password: String, confirmed: bool, encr
 #[tauri::command]
 pub async fn disable_lock(app: AppHandle, password: String) -> Result<LockStatus, String> {
     let password = Password::new(password);
-    on_store(&app, move |s| s.disable(&password, now_ms())).await?;
+    on_store(&app, move |s| {
+        let _busy = pulse_core::backup_auto::exclusive(s.data_dir())?;
+        s.disable(&password, now_ms())
+    })
+    .await?;
     status_of(&app.state::<AppState>())
 }
 
