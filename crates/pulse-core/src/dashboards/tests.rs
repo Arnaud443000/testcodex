@@ -780,6 +780,20 @@ fn the_default_dashboard_is_never_changed_by_an_import_or_a_copy() {
 }
 
 #[test]
+fn the_ideas_widget_is_in_the_library_without_period_or_account() {
+    // Lot 31: ideas to watch belong to no account and follow no period; no mode.
+    let d = catalog().into_iter().find(|d| d.kind == "ideas").expect("ideas widget");
+    assert_eq!((d.category.as_str(), d.period, d.account, d.default_w, d.default_h, d.min_w, d.min_h), ("tracking", false, false, 10, 14, 8, 8));
+    assert!(d.modes.is_empty());
+    let conn = db::open_in_memory().unwrap();
+    let mut w = widget("ideas", "ideas", 0, 0, d.default_w, d.default_h);
+    validate(&conn, std::slice::from_ref(&w)).unwrap();
+    w.mode = Some("all".into());
+    assert!(is_invalid(validate(&conn, std::slice::from_ref(&w))), "a widget without modes refuses one");
+    assert!(is_invalid(validate(&conn, &[widget("ideas", "ideas", 0, 0, d.min_w - 1, d.min_h)])));
+}
+
+#[test]
 fn the_upcoming_news_widget_is_in_the_library_without_period_or_account() {
     // Lot 25: the economic calendar belongs to no account and follows no period.
     let d = catalog().into_iter().find(|d| d.kind == "upcoming_news").expect("upcoming news widget");

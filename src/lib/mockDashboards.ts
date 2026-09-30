@@ -65,6 +65,8 @@ const LIBRARY: WidgetDefinition[] = [
   def('insights', 'behavior', [12, 20], [8, 10], [], false, true),
   // Prochaines news (lot 25) : ni compte ni période ; le mode choisit l'importance affichée.
   def('upcoming_news', 'temporal', [10, 16], [8, 10], ['medium', 'high', 'all'], false, false),
+  // Idées à surveiller (lot 31) : ni compte ni période (une idée dure plusieurs jours), pas de mode.
+  def('ideas', 'tracking', [10, 14], [8, 8], [], false, false),
 ]
 
 const w = (uid: string, kind: string, x: number, y: number, wd: number, h: number, mode: string | null = null): WidgetInstance => ({

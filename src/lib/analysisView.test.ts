@@ -234,3 +234,18 @@ describe('liens avec un trade', () => {
     expect(s.endsWith('…') && [...s].length <= 31 && !s.includes('mo…')).toBe(true)
   })
 })
+
+describe('widget « Idées à surveiller »', () => {
+  const v = (id: number, extra: Partial<IdeaView>): IdeaView => ({ id, status: 'active', snoozed: false, inReview: false, stale: false, updatedAt: id, ...extra }) as IdeaView
+  it('compte les actives, celles de la revue du matin et les reportées (une reportée n’est jamais « à revoir »)', async () => {
+    const { ideasCounts } = await import('./analysisView')
+    const list = [v(1, { inReview: true }), v(2, {}), v(3, { snoozed: true }), v(4, { status: 'closed' }), v(5, { inReview: true, stale: true })]
+    expect(ideasCounts(list)).toEqual({ active: 4, toReview: 2, snoozed: 1 })
+    expect(ideasCounts([])).toEqual({ active: 0, toReview: 0, snoozed: 0 })
+  })
+  it('montre d’abord les idées à revoir, puis les plus anciennes ; les reportées et clôturées en dernier ou pas du tout', async () => {
+    const { widgetIdeas } = await import('./analysisView')
+    const list = [v(1, { updatedAt: 50 }), v(2, { snoozed: true, updatedAt: 1 }), v(3, { stale: true, updatedAt: 90 }), v(4, { updatedAt: 10 }), v(5, { status: 'closed' })]
+    expect(widgetIdeas(list).map((x) => x.id)).toEqual([3, 4, 1, 2])
+  })
+})

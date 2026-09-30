@@ -300,3 +300,25 @@ export function snippet(text: string, max = 90): string {
   const at = cut.lastIndexOf(' ')
   return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()}…`
 }
+
+// --- Widget de tableau de bord ---------------------------------------------------------------------
+
+export interface IdeasCounts {
+  active: number
+  /** Attendues par la revue du matin d'aujourd'hui (les reportées n'y comptent pas). */
+  toReview: number
+  snoozed: number
+}
+
+export function ideasCounts(views: IdeaView[]): IdeasCounts {
+  const active = views.filter((v) => v.status === 'active')
+  return { active: active.length, toReview: active.filter((v) => v.inReview).length, snoozed: active.filter((v) => v.snoozed).length }
+}
+
+/** Les idées à montrer d'abord : celles de la revue du jour et les « à revoir », puis les plus anciennes ; les reportées à la fin. */
+export function widgetIdeas(views: IdeaView[]): IdeaView[] {
+  const rank = (v: IdeaView) => (v.snoozed ? 2 : v.inReview || v.stale ? 0 : 1)
+  return views
+    .filter((v) => v.status === 'active')
+    .sort((a, b) => rank(a) - rank(b) || a.updatedAt - b.updatedAt || a.id - b.id)
+}

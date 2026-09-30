@@ -15,6 +15,7 @@ import { StreaksCard } from '../behavior/StreaksCard'
 import { ImportanceMark, SimulationBadge } from '../news/ImportanceMark'
 import { countdown, widgetImportances } from '../../lib/newsView'
 import { OutcomeBadge, Pnl } from '../ui'
+import { ideasCounts, snippet, widgetIdeas } from '../../lib/analysisView'
 import { CalendarCard, CapitalCard, DailyCard, HeroCard, KPI_MODES, KpiCard, type KpiMode } from './DashboardCards'
 import { useT } from '../../i18n'
 import { api } from '../../lib/api'
@@ -379,6 +380,7 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   factors: Factors,
   insights: InsightsWidget,
   upcoming_news: UpcomingNewsWidget,
+  ideas: IdeasWidget,
 }
 
 /**
@@ -440,6 +442,54 @@ function UpcomingNewsWidget({ instance }: WidgetProps) {
         <span>{n.widget.parisShort}</span>
         {events.some((e) => e.source === 'simulation') && <SimulationBadge />}
         <Link to="/calendar/news" className="shrink-0 font-semibold text-[#B7AEF5] hover:underline">{n.widget.seeAll}</Link>
+      </div>
+    </Frame>
+  )
+}
+
+/**
+ * Idées à surveiller (lot 31) : ni compte ni période (une idée dure plusieurs jours). Les règles (revue du matin, ancienneté,
+ * report) viennent de pulse-core ; le widget ne fait que compter et afficher.
+ */
+function IdeasWidget({ scope }: WidgetProps) {
+  const t = useT()
+  const w = t.analysis.widget
+  const title = useTitle('ideas')
+  const minute = Math.floor(scope.nowMs / 60_000)
+  const { data, error } = useCached(`ideas|${scope.tzOffsetMin}|${minute}`, () => api.listIdeas('active', null, scope.tzOffsetMin))
+  if (error) return <Failed title={title} detail={error} />
+  if (!data) return <Pending title={title} />
+  const counts = ideasCounts(data)
+  if (counts.active === 0) {
+    return (
+      <Message title={title} action={<Link to="/analysis?tab=ideas&new=1" className="btn btn-secondary btn-sm">{t.analysis.ideas.newButton}</Link>}>
+        {w.emptyText}
+      </Message>
+    )
+  }
+  const shown = widgetIdeas(data)
+  return (
+    <Frame title={title}>
+      <p className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-tx2">
+        <span className="tabular-nums">{w.active(counts.active)}</span>
+        <span className="fit-optional tabular-nums">{w.toReview(counts.toReview)}</span>
+        {counts.snoozed > 0 && <span className="fit-optional tabular-nums">{w.snoozed(counts.snoozed)}</span>}
+      </p>
+      <FitList moreTo="/analysis?tab=ideas" className="flex flex-col divide-y">
+        {shown.map((i) => (
+          <li key={i.id} className="flex items-baseline gap-3 py-2 text-sm">
+            <span className="w-[72px] shrink-0 truncate font-semibold">{i.symbol}</span>
+            <span className="min-w-0 flex-1 truncate text-tx2">{snippet(i.note, 70)}</span>
+            {i.snoozed ? (
+              <span className="badge badge-neutral">{t.analysis.ideas.snoozedBadge}</span>
+            ) : i.stale ? (
+              <span className="badge badge-warn">{t.analysis.ideas.staleBadge}</span>
+            ) : null}
+          </li>
+        ))}
+      </FitList>
+      <div className="mt-auto pt-3 text-xs">
+        <Link to="/analysis?tab=ideas" className="font-semibold text-[#B7AEF5] hover:underline">{w.open}</Link>
       </div>
     </Frame>
   )
