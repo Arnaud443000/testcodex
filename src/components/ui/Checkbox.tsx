@@ -33,7 +33,8 @@ export function CheckMark({ visual, peer = false, disabled = false, className = 
 
 /**
  * Case à cocher unique de Pulse (lot 29) : remplace tout `<input type="checkbox">` natif. C'est toujours un vrai `<input>`
- * (clavier, lecteurs d'écran) dessiné par-dessus ; toute la ligne (case + libellé) est la cible du clic, 24 px de haut minimum.
+ * (clavier, lecteurs d'écran), transparent, posé sur le dessin de la case ; toute la ligne (case + libellé) est la cible du clic
+ * (le libellé active l'`<input>` par son `<label>`), 24 px de haut minimum.
  * `onChange` reçoit la nouvelle valeur. `indeterminate` : état « mixte » (aria-checked = mixed), un clic la coche.
  */
 export function Checkbox({
@@ -71,17 +72,19 @@ export function Checkbox({
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
       } ${className}`}
     >
-      <input
-        ref={input}
-        id={id}
-        type="checkbox"
-        className="peer sr-only"
-        checked={checked}
-        disabled={disabled}
-        data-testid={testId}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <CheckMark visual={checkVisual(checked, indeterminate)} peer disabled={disabled} className={align === 'start' ? 'mt-px' : ''} />
+      <span className={`relative grid shrink-0 ${align === 'start' ? 'mt-px' : ''}`}>
+        <input
+          ref={input}
+          id={id}
+          type="checkbox"
+          className="peer absolute inset-0 z-10 m-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+          checked={checked}
+          disabled={disabled}
+          data-testid={testId}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <CheckMark visual={checkVisual(checked, indeterminate)} peer disabled={disabled} />
+      </span>
       <span className="min-w-0">
         {label}
         {description && <span className="mt-0.5 block text-[13px] text-tx3">{description}</span>}
