@@ -2,8 +2,7 @@
 // (mêmes règles, mêmes messages). Fonctions pures sur les tableaux du faux backend.
 import type { EmotionUsage, Tag } from '../types/trade'
 
-/** Longueur maximale du nom d'une émotion (MAX_NAME_CHARS côté Rust). */
-export const EMOTION_NAME_MAX = 40
+import { EMOTION_NAME_MAX } from './emotionLimits'
 
 const invalid = (m: string) => new Error(`invalid input: ${m}`)
 const clean = (s: string) => s.split(/\s+/).filter(Boolean).join(' ')

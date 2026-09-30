@@ -8,11 +8,13 @@ import { BehaviorSettingsPanel } from '../components/BehaviorSettingsPanel'
 import { CashFlowsPanel } from '../components/CashFlowsPanel'
 import { DataPanel } from '../components/DataPanel'
 import { DisplayPanel } from '../components/DisplayPanel'
+import { EmotionListPanel } from '../components/EmotionListPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
 import { SecurityPanel } from '../components/SecurityPanel'
 import { useT, type Messages } from '../i18n'
+import { useReferenceData } from '../lib/referenceData'
 import { api } from '../lib/api'
 import { useAccounts } from '../lib/accounts'
 import { parseDecimalInput } from '../lib/decimal'
@@ -141,9 +143,23 @@ function ChecklistSection() {
   )
 }
 
+/** Ma liste d'émotions (lot 30) : la même logique que dans le formulaire de trade. */
+function EmotionsSection() {
+  const t = useT()
+  const ref = useReferenceData()
+  return (
+    <section className="glass-card p-6">
+      <h2 className="text-base font-semibold">{t.emotions.settingsTitle}</h2>
+      <p className="mb-4 mt-1 max-w-[80ch] text-sm text-tx2">{t.emotions.settingsIntro}</p>
+      {ref.error && <div className="nt nt-bad mb-3" role="alert">{t.settings.list.loadError(ref.error)}</div>}
+      {!ref.loading && <EmotionListPanel tags={ref.allTags} onAdd={ref.addEmotion} onRemove={ref.removeEmotion} onDelete={ref.deleteEmotion} />}
+    </section>
+  )
+}
+
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
-  ['accounts', 'comptes'], ['rules', 'regles'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
+  ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
   ['reminder', 'rappel'], ['display', 'affichage'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
@@ -214,6 +230,7 @@ export function SettingsPage() {
         <RulesSection />
         <ChecklistSection />
       </div>
+      <div id="emotions" className="scroll-mt-4"><EmotionsSection /></div>
       <div id="discipline" className="scroll-mt-4"><BehaviorSettingsPanel /></div>
       <div className="scroll-mt-4"><AlertSettingsPanel /></div>
       <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>
