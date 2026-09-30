@@ -1,0 +1,47 @@
+// Lot 30 : « Ma liste » d'émotions. Typographie française : espace insécable (U+00A0) avant : ; ? ! % » et après «.
+const NB = ' '
+
+export const frEmotions = {
+  myListTitle: 'Ma liste',
+  myListIntro:
+    'Les émotions proposées par défaut dans le formulaire de trade. Retirer une émotion ne touche ni à vos anciens trades ni à vos statistiques.',
+  empty: 'Ma liste est vide. Ajoutez les émotions qui vous parlent pour les retrouver dans le formulaire de trade.',
+  addButton: 'Ajouter une émotion',
+  closeCatalog: 'Fermer le catalogue',
+  hideManage: 'Masquer ma liste',
+  tradesCount: (n: number) => (n === 0 ? 'jamais utilisée' : `${n} ${n > 1 ? 'trades' : 'trade'}`),
+  remove: 'Retirer',
+  removeLabel: (name: string) => `Retirer ${name} de Ma liste`,
+  removeTitle: (name: string) => `Retirer «${NB}${name}${NB}» de Ma liste${NB}?`,
+  removeExplain: 'Les trades déjà saisis gardent cette émotion et vos statistiques ne changent pas. Vous pourrez la remettre depuis le catalogue.',
+  removeConfirm: 'Retirer de ma liste',
+  cancel: 'Annuler',
+  deleteForever: 'Supprimer définitivement',
+  deleteExplain: 'Cette émotion n’a jamais servi sur un trade : vous pouvez aussi la supprimer pour de bon.',
+  onlyRemove: (n: number) =>
+    `Cette émotion est utilisée sur ${n} ${n > 1 ? 'trades' : 'trade'} : elle ne peut pas être supprimée, seulement retirée de votre liste.`,
+  catalogTitle: 'Catalogue de suggestions',
+  catalogIntro: 'Un clic ajoute l’émotion à Ma liste.',
+  inList: 'Dans Ma liste',
+  restore: 'Retirée, remettre',
+  add: (name: string) => `Ajouter ${name} à Ma liste`,
+  restoreLabel: (name: string) => `Remettre ${name} dans Ma liste`,
+  otherTitle: 'Autre…',
+  otherLabel: 'Une émotion qui manque',
+  otherPlaceholder: 'Ex. Méfiance',
+  otherAdd: 'Ajouter',
+  errEmpty: 'Saisissez le nom de l’émotion.',
+  errTooLong: (max: number) => `Le nom est limité à ${max} caractères.`,
+  errInList: 'Cette émotion est déjà dans Ma liste.',
+  errServer: (m: string) => `L’opération a échoué${NB}: ${m}`,
+  addedStatus: (name: string) => `«${NB}${name}${NB}» ajoutée à Ma liste.`,
+  restoredStatus: (name: string) => `«${NB}${name}${NB}» remise dans Ma liste.`,
+  removedStatus: (name: string) => `«${NB}${name}${NB}» retirée de Ma liste.`,
+  deletedStatus: (name: string) => `«${NB}${name}${NB}» supprimée.`,
+  removedFromList: 'retirée de Ma liste',
+  removedHint: 'Cette émotion a été retirée de Ma liste mais reste cochée sur ce trade.',
+  loadError: (m: string) => `Impossible de charger le catalogue${NB}: ${m}`,
+  settingsTitle: 'Émotions',
+  settingsIntro:
+    'Composez votre liste d’émotions : c’est ce que le formulaire de trade propose avant, pendant et après un trade. Changez-la quand vous voulez.',
+}

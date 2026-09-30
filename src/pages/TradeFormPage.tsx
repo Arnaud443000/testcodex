@@ -8,14 +8,16 @@ import { PageHeader } from '../components/PageHeader'
 import { PreviewPanel } from '../components/PreviewPanel'
 import { RulesPanel } from '../components/RulesPanel'
 import { ScreenshotDrop } from '../components/ScreenshotDrop'
+import { EmotionListPanel } from '../components/EmotionListPanel'
 import { TagChips } from '../components/TagChips'
-import { Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
+import { ChipButton, Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
 import { isPositiveDecimal } from '../lib/decimal'
 import { formatDecimal } from '../lib/format'
 import { useReferenceData } from '../lib/referenceData'
+import { formEmotions } from '../lib/emotionList'
 import { buildTradeData, emptyForm, formFromTrade, toggleEmotion, type FormErrorCode, type TradeForm } from '../lib/tradeForm'
 import type { AssetClass, EmotionMoment, Instrument, Preview, TagKind } from '../types/trade'
 import { applyTradePrefill, type SizingSeed, type TradePrefill } from '../lib/sizingForm'
@@ -45,6 +47,7 @@ export function TradeFormPage() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewPending, setPreviewPending] = useState(false)
   const [newAsset, setNewAsset] = useState(false)
+  const [emotionPanelOpen, setEmotionPanelOpen] = useState(false)
   const slRef = useRef<HTMLInputElement>(null)
 
   const set = <K extends keyof TradeForm>(key: K, value: TradeForm[K]) => setForm((f) => (f ? { ...f, [key]: value } : f))
@@ -178,6 +181,8 @@ export function TradeFormPage() {
     onToggle: (id: number) => set(key, form[key] === id ? null : id),
   })
   const create = (kind: TagKind, name: string) => ref.addTag(kind, name)
+  // Ma liste + les émotions déjà cochées sur ce trade et retirées depuis (elles restent visibles).
+  const emotionChoices = formEmotions(ref.allTags, form.emotions.map((e) => e.tagId))
   const sessions = ref.tags.filter((g) => g.kind === 'session')
   const timeframes = ref.tags.filter((g) => g.kind === 'timeframe')
   const autoSession = !form.sessionManual && form.sessionTagId !== null
@@ -350,16 +355,33 @@ export function TradeFormPage() {
       </Field>
       {MOMENTS.map((m) => (
         <Field key={m} label={t.form.fields[m === 'before' ? 'emotionBefore' : m === 'during' ? 'emotionDuring' : 'emotionAfter']}>
-          <TagChips
-            kind="emotion"
-            label={t.common.moments[m]}
-            tags={ref.tags}
-            onCreate={create}
-            isOn={(id) => form.emotions.some((e) => e.moment === m && e.tagId === id)}
-            onToggle={(id) => set('emotions', toggleEmotion(form.emotions, m, id))}
-          />
+          <div role="group" aria-label={t.common.moments[m]} className="flex flex-wrap gap-2">
+            {emotionChoices.map(({ tag, removed }) => (
+              <ChipButton
+                key={tag.id}
+                on={form.emotions.some((e) => e.moment === m && e.tagId === tag.id)}
+                onClick={() => set('emotions', toggleEmotion(form.emotions, m, tag.id))}
+              >
+                {tag.name}
+                {removed && <span className="ml-1.5 text-[11px] text-tx3" title={t.emotions.removedHint}>({t.emotions.removedFromList})</span>}
+              </ChipButton>
+            ))}
+            {emotionChoices.length === 0 && <span className="text-[13px] text-tx3">{t.emotions.empty}</span>}
+          </div>
         </Field>
       ))}
+      <div className="flex flex-col gap-3">
+        <div>
+          <button type="button" className="btn btn-secondary btn-sm" aria-expanded={emotionPanelOpen} onClick={() => setEmotionPanelOpen((o) => !o)}>
+            {emotionPanelOpen ? t.emotions.hideManage : t.emotions.addButton}
+          </button>
+        </div>
+        {emotionPanelOpen && (
+          <div className="rounded-inner border p-4" style={{ borderColor: 'var(--glass-border)' }}>
+            <EmotionListPanel tags={ref.allTags} onAdd={ref.addEmotion} onRemove={ref.removeEmotion} onDelete={ref.deleteEmotion} catalogOpenAtStart />
+          </div>
+        )}
+      </div>
       <Field label={t.form.fields.planFollowed}>
         <div className="max-w-[420px]">
           <Segmented

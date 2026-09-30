@@ -448,6 +448,7 @@ export const fr = {
     sections: {
       accounts: 'Comptes',
       rules: 'Règles et checklist',
+      emotions: 'Émotions',
       discipline: 'Discipline',
       alerts: 'Alertes',
       cashflows: 'Dépôts et retraits',
@@ -1589,6 +1590,8 @@ export const fr = {
   sizing: frSizing,
   // Lot 25 : calendrier économique
   news: frNews,
+  // Lot 30 : Ma liste d'émotions
+  emotions: frEmotions,
 }
 
 export type Messages = typeof fr
@@ -1600,3 +1603,4 @@ import { frPdf } from './fr.pdf'
 import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
+import { frEmotions } from './fr.emotions'

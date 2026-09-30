@@ -11,6 +11,8 @@ import type {
   Preview,
   Rule,
   Tag,
+  EmotionCatalogGroup,
+  EmotionUsage,
   TagKind,
   TradeData,
   TradeFilter,
@@ -24,6 +26,8 @@ import * as analyses from './mockAnalyses'
 import type { FeeGranularity, YearComparisonQuery } from '../types/stats'
 import * as comparisons from './mockComparisons'
 import { ASSET_CATALOG } from './assetCatalog'
+import { EMOTION_CATALOG } from './emotionCatalog'
+import { addEmotionToList, deleteUnusedEmotion, emotionUsage, removeEmotionFromList } from './mockEmotions'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
 import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
 import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
@@ -103,6 +107,7 @@ const trades = new Map<number, TradeData & { id: number; createdAt: string; upda
 let behaviorSettings: BehaviorSettings = { ...behavior.DEFAULT_BEHAVIOR_SETTINGS }
 const screenshots = new Map<string, string>()
 
+const emotionCtx = () => ({ tags, trades: trades.values(), nextId: id })
 const key = (s: string) => s.split(/\s+/).filter(Boolean).join(' ').toLowerCase()
 const invalid = (m: string) => new Error(`invalid input: ${m}`)
 const need = (v: string, what: string) => {
@@ -352,6 +357,11 @@ export const mock = {
     tags.push(tag)
     return tag
   },
+  getEmotionCatalog: async (): Promise<EmotionCatalogGroup[]> => EMOTION_CATALOG.map((g) => ({ ...g, emotions: [...g.emotions] })),
+  getEmotionUsage: async (): Promise<EmotionUsage[]> => emotionUsage(emotionCtx()),
+  addEmotionToList: async (name: string): Promise<Tag> => addEmotionToList(emotionCtx(), name),
+  removeEmotionFromList: async (tagId: number): Promise<Tag> => removeEmotionFromList(emotionCtx(), tagId),
+  deleteUnusedEmotion: async (tagId: number): Promise<void> => deleteUnusedEmotion(emotionCtx(), tagId),
   listRules: async (includeArchived = false): Promise<Rule[]> => rules.filter((r) => includeArchived || !r.archived),
   createRule: async (text: string): Promise<Rule> => {
     const r = { id: id(), text: need(text, 'rule'), archived: false, position: rules.length }

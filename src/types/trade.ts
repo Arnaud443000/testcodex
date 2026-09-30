@@ -18,6 +18,19 @@ export interface Tag {
   archived: boolean
 }
 
+/** Famille du catalogue de suggestions d'émotions (lot 30). */
+export interface EmotionCatalogGroup {
+  key: string
+  label: string
+  emotions: string[]
+}
+
+/** Nombre de trades portant une émotion (jamais utilisée = 0 : suppression possible). */
+export interface EmotionUsage {
+  tagId: number
+  tradeCount: number
+}
+
 export interface Instrument {
   id: number
   symbol: string

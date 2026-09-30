@@ -20,6 +20,7 @@ pub mod rules;
 pub mod screenshots;
 pub mod settings;
 pub mod stats;
+pub mod emotions;
 pub mod tags;
 pub mod trade_view;
 pub mod trades;

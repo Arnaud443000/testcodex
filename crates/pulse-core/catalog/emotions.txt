@@ -1,0 +1,53 @@
+# Catalogue de suggestions d'émotions (lot 30). Format : « # groupe : clé | libellé » puis une émotion par ligne.
+# Source unique : lue par pulse-core (emotions.rs) ; copie dans src/lib/emotionCatalog.ts, vérifiée par emotionCatalog.test.ts.
+@calm | Confiance, calme et concentration
+Calme
+Confiance
+Concentration
+Sérénité
+Patience
+Lucidité
+Discipline
+Détermination
+Sang-froid
+@fear | Peur, anxiété et hésitation
+Peur
+Anxiété
+Hésitation
+Doute
+Nervosité
+Stress
+Appréhension
+Peur de perdre
+@euphoria | Euphorie, excès de confiance et avidité
+Euphorie
+Excès de confiance
+Avidité
+Toute-puissance
+Excitation
+Peur de rater (FOMO)
+@anger | Frustration, colère et revanche
+Frustration
+Colère
+Revanche
+Irritation
+Besoin de se refaire
+Rancœur
+@tired | Ennui, fatigue et impatience
+Ennui
+Fatigue
+Impatience
+Distraction
+Lassitude
+@regret | Regret, culpabilité et déception
+Regret
+Culpabilité
+Déception
+Honte
+Découragement
+@relief | Soulagement et satisfaction
+Soulagement
+Satisfaction
+Fierté
+Gratitude
+Indifférence

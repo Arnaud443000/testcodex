@@ -249,3 +249,16 @@ Liste complète des défauts trouvés et de leur sort : `docs/audit-visuel-lot26
 - **Sélecteur d'actif (calculateur, formulaire de trade)** : le symbole et le nom ne se superposent plus : le champ affiche « XAUUSD — Or (once) / Dollar améri… » sur une ligne, aussi après avoir ouvert puis fermé la liste.
 - **Non testé** : rendu dans WebView2 sous Windows (polices, mise à l'échelle 125 / 150 %, barre de défilement fine), lecteur d'écran, écran tactile, liste de plus de 100 options en conditions réelles.
 
+
+## Lot 30 (émotions : catalogue élargi et « Ma liste ») — points à vérifier
+**Votre demande** : « plus de choix d'émotions, en ajouter à la main s'il en manque, et retirer de la liste ce que j'ai mis, sans vider toute la liste ». **Aucune migration.**
+
+- **Ma liste** = les émotions proposées dans le formulaire de trade (avant / pendant / après). Au départ : vos 9 émotions habituelles (Calme, Confiance, Discipline, Doute, Impatience, Peur de rater, Revanche, Soulagement, Stress).
+- **Ajouter** : dans le formulaire de trade, bouton « Ajouter une émotion » sous les trois rangées ; même gestion dans Paramètres > Émotions. Le catalogue propose 44 émotions en 7 familles (confiance / calme, peur / anxiété, euphorie / avidité, frustration / colère, ennui / fatigue, regret / culpabilité, soulagement / satisfaction). Un clic ajoute ; celles déjà dans votre liste sont grisées avec un ✓. Le champ « Autre… » ajoute une émotion qui manque (40 caractères au plus, pas de doublon).
+- **Retirer** : bouton « Retirer » sur chaque émotion, avec une confirmation. **C'est un archivage, pas une suppression** : vos anciens trades gardent l'émotion et vos statistiques par émotion ne bougent pas. Elle reste dans le catalogue pour la remettre.
+- **Supprimer pour de bon** : proposé seulement pour une émotion qui n'a jamais servi sur un trade. Sinon, Pulse explique qu'on ne peut que la retirer.
+- **Trade en modification** : une émotion cochée sur ce trade puis retirée de votre liste reste visible (marquée « retirée de Ma liste »), pour ne pas la faire disparaître par surprise.
+- **À vérifier** : la liste de 44 émotions vous convient-elle (il en manque ? certaines sont inutiles ?) ; le catalogue se change dans `crates/pulse-core/catalog/emotions.txt` (et sa copie `src/lib/emotionCatalog.ts`), à nous demander.
+- **Constat en route** : pendant le développement, un bouton placé dans le formulaire du trade soumettait le trade par erreur (formulaire imbriqué) ; corrigé avant livraison et verrouillé par une note dans `CLAUDE.md`.
+- **Non testé** : l'application installée sous Windows (WebView2, rendu réel, lecteur d'écran) ; seulement le cœur Rust (tests), le faux backend et Chromium sous Linux (captures 1440×900 et 1920×1080 dans `docs/captures/lot30-*.png`). Le lot 29 (menus déroulants, info-bulles, cases à cocher) n'a pas été touché : ce lot n'utilise aucun menu déroulant, donc rien à remplacer.
+

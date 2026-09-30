@@ -6,6 +6,8 @@ import type {
   Preview,
   Rule,
   Tag,
+  EmotionCatalogGroup,
+  EmotionUsage,
   TagKind,
   TradeData,
   TradeFilter,
@@ -100,6 +102,15 @@ export const api = {
     inTauri ? invoke('list_tags', { kind: kind ?? null, includeArchived }) : mock.listTags(kind, includeArchived),
   createTag: (kind: TagKind, name: string): Promise<Tag> =>
     inTauri ? invoke('create_tag', { kind, name }) : mock.createTag(kind, name),
+  /** « Ma liste » d'émotions (lot 30) : retirer = archiver, supprimer seulement si jamais utilisée. */
+  getEmotionCatalog: (): Promise<EmotionCatalogGroup[]> => (inTauri ? invoke('get_emotion_catalog') : mock.getEmotionCatalog()),
+  getEmotionUsage: (): Promise<EmotionUsage[]> => (inTauri ? invoke('get_emotion_usage') : mock.getEmotionUsage()),
+  addEmotionToList: (name: string): Promise<Tag> =>
+    inTauri ? invoke('add_emotion_to_list', { name }) : mock.addEmotionToList(name),
+  removeEmotionFromList: (tagId: number): Promise<Tag> =>
+    inTauri ? invoke('remove_emotion_from_list', { tagId }) : mock.removeEmotionFromList(tagId),
+  deleteUnusedEmotion: (tagId: number): Promise<void> =>
+    inTauri ? invoke('delete_unused_emotion', { tagId }) : mock.deleteUnusedEmotion(tagId),
 
   listRules: (includeArchived = false): Promise<Rule[]> =>
     inTauri ? invoke('list_rules', { includeArchived }) : mock.listRules(includeArchived),
