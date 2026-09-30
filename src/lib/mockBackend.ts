@@ -980,3 +980,16 @@ export const mockAnalysis = createAnalysisMock({
   comparison: (q, linked) => behavior.mockLinkedComparison(behaviorInput(q.accountIds), q, linked),
   now: () => Date.now(),
 })
+// --- Lot 32 : sauvegarde automatique planifiée (simulation, aucun fichier ; voir mockBackupAuto.ts) ---
+import { createBackupAutoMock } from './mockBackupAuto'
+export const mockBackupAuto = createBackupAutoMock({
+  hasTrades: () => trades.size > 0,
+  encrypted: () => mockLock.currentSeal() !== null,
+  snapshot: (path) => {
+    const s = snapshot()
+    backups.set(path, s)
+    const seal = mockLock.currentSeal()
+    if (seal) backupSeals.set(path, seal)
+    return infoOf(path, s)
+  },
+})

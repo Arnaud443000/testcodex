@@ -5,6 +5,8 @@ mod util;
 
 pub mod accounts;
 pub mod backup;
+// Lot 32 (sauvegarde automatique planifiée).
+pub mod backup_auto;
 pub mod behavior;
 pub mod cash_flows;
 pub mod checklist;

@@ -109,6 +109,8 @@ impl Store {
     /// file if the lock is active. See `backup::restore_with`.
     pub fn restore_backup(&mut self, folder: &Path, confirmed: bool, password: Option<&Password>, now_ms: i64) -> Result<RestoreResult> {
         let dir = self.data_dir().to_path_buf();
+        // Lot 32: never while an automatic backup copies the screenshots (`backup:busy`).
+        let _busy = crate::backup_auto::exclusive(&dir)?;
         let result = if password.is_some() {
             with_attempts(&dir, now_ms, || backup::restore_with(self.conn_mut(), &dir, folder, confirmed, password, now_ms))?
         } else {
@@ -120,6 +122,7 @@ impl Store {
     }
 
     pub fn create_backup(&self, dest_dir: &Path, now_ms: i64) -> Result<BackupInfo> {
+        let _busy = crate::backup_auto::exclusive(self.data_dir())?;
         backup::create(self.conn(), self.data_dir(), dest_dir, now_ms)
     }
 }

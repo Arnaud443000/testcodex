@@ -456,6 +456,7 @@ export const fr = {
       cashflows: 'Dépôts et retraits',
       reminder: 'Rappel',
       display: 'Affichage',
+      autoBackup: 'Sauvegarde auto',
       data: 'Données',
       security: 'Sécurité',
       ai: 'IA',
@@ -1599,6 +1600,7 @@ export const fr = {
   emotions: frEmotions,
   // Lot 31 : analyse avant trading, idées à surveiller
   analysis: frAnalysis,
+  backupAuto: frBackupAuto,
 }
 
 export type Messages = typeof fr
@@ -1612,3 +1614,4 @@ import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
 import { frAnalysis } from './fr.analysis'
+import { frBackupAuto } from './fr.backupAuto'

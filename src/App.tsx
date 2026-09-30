@@ -7,6 +7,7 @@ import { ReminderBanner } from './components/ReminderBanner'
 import { AlertBanner } from './components/AlertBanner'
 import { ReviewBanner } from './components/ReviewBanner'
 import { AnalysisPage } from './pages/AnalysisPage'
+import { AutoBackupBanner } from './components/AutoBackupBanner'
 import { InsightsProvider } from './lib/insights'
 import { InsightsPage } from './pages/InsightsPage'
 import { DisciplinePage } from './pages/DisciplinePage'
@@ -87,6 +88,7 @@ export default function App() {
               <AlertBanner />
               <ReminderBanner />
               <ReviewBanner />
+              <AutoBackupBanner />
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />

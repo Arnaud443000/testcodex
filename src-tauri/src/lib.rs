@@ -652,6 +652,9 @@ pub fn run() {
             app.manage(NewsPreviewState::default());
             spawn_reminder_loop(app.handle().clone());
             lock_cmds::spawn_idle_loop(app.handle().clone());
+            // Lot 32: scheduled automatic backup (checks at startup, then every 30 minutes).
+            app.manage(AutoBackupState::default());
+            spawn_auto_backup_loop(app.handle().clone());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -847,7 +850,14 @@ pub fn run() {
             get_upcoming_news,
             clear_news_events,
             test_news_source,
-            keep_tested_news
+            keep_tested_news,
+            get_auto_backup_status,
+            set_auto_backup_settings,
+            check_auto_backup_folder,
+            run_auto_backup_now,
+            list_auto_backups,
+            answer_auto_backup_invite,
+            open_auto_backup_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -1808,4 +1818,179 @@ fn set_trade_links(state: State<AppState>, trade_id: i64, idea_ids: Vec<i64>, an
 fn get_analysis_report(state: State<AppState>, query: StatsQuery) -> Result<AnalysisReport, String> {
     let conn = state.conn()?;
     analysis::report::report(&conn, &query).map_err(err)
+}
+// --- Lot 32 : sauvegarde automatique planifiée ---
+//
+// Every rule lives in `pulse_core::backup_auto`; the shell reads the clock, holds the database for
+// the database copy only (the screenshots are copied, read back and renamed without it), and tells
+// the interface that something changed.
+
+use pulse_core::backup_auto::{self, AutoBackupEntry, AutoBackupSettings, AutoBackupStatus, BackupError, Copied, Decision, Done, FolderCheck};
+
+/// Event sent to the interface after every automatic backup attempt (success or failure).
+const AUTO_BACKUP_EVENT: &str = "pulse://auto-backup";
+
+/// Wakes the background loop at once (settings saved, database unlocked).
+#[derive(Default)]
+struct AutoBackupState {
+    kick: Mutex<Option<std::sync::mpsc::Sender<()>>>,
+}
+
+pub(crate) fn kick_auto_backup(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AutoBackupState>() {
+        if let Ok(Some(tx)) = state.kick.lock().as_deref() {
+            let _ = tx.send(());
+        }
+    }
+}
+
+/// One backup, in the five phases of `pulse_core::backup_auto`. `Ok(None)`: nothing to do
+/// (locked, disabled, not due, another backup or a restore running).
+fn run_auto_backup(app: &tauri::AppHandle, manual: bool) -> Result<Option<Result<Done, BackupError>>, String> {
+    let state = app.state::<AppState>();
+    let tz = local_tz_offset_min();
+    let plan = {
+        // Locked: the turn is skipped, nothing is read or written.
+        let conn = match state.conn() {
+            Ok(conn) => conn,
+            Err(e) if manual => return Err(e),
+            Err(_) => return Ok(None),
+        };
+        match backup_auto::plan(Some(&conn), &state.data_dir, now_ms(), tz, manual).map_err(err)? {
+            Decision::Run(plan) => plan,
+            _ => return Ok(None),
+        }
+    };
+    let started = plan.started_at();
+    let result = plan
+        .stage(&state.data_dir)
+        .and_then(|staged| {
+            // The database is held for its copy only.
+            let conn = state.conn().map_err(|_| BackupError::Locked)?;
+            staged.copy_database(&conn, &state.data_dir)
+        })
+        .and_then(Copied::finish);
+    if let Ok(conn) = state.conn() {
+        if let Err(e) = backup_auto::record(&conn, started, &result) {
+            eprintln!("Pulse: could not record the automatic backup result: {e}");
+        }
+    }
+    if let Err(e) = &result {
+        eprintln!("Pulse: automatic backup failed: {e}");
+    }
+    let _ = app.emit(AUTO_BACKUP_EVENT, ());
+    Ok(Some(result))
+}
+
+/// Checks shortly after startup, then every 30 minutes while the application is open. Locked: the
+/// turn is skipped and the loop looks again every minute, so the check happens soon after unlock.
+fn spawn_auto_backup_loop(app: tauri::AppHandle) {
+    let (tx, rx) = std::sync::mpsc::channel::<()>();
+    if let Ok(mut slot) = app.state::<AutoBackupState>().kick.lock() {
+        *slot = Some(tx);
+    }
+    std::thread::spawn(move || {
+        let interval = std::time::Duration::from_millis(backup_auto::CHECK_INTERVAL_MS as u64);
+        // First check a few seconds after startup (the window opens first).
+        let mut next = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let wait = next.saturating_duration_since(std::time::Instant::now()).min(std::time::Duration::from_secs(60));
+            let kicked = matches!(rx.recv_timeout(wait), Ok(()));
+            if !kicked && std::time::Instant::now() < next {
+                continue;
+            }
+            if app.state::<AppState>().conn().is_err() {
+                // Locked (or the database is unavailable): try again in a minute, without a record.
+                next = std::time::Instant::now() + std::time::Duration::from_secs(60);
+                continue;
+            }
+            let _ = run_auto_backup(&app, false);
+            next = std::time::Instant::now() + interval;
+        }
+    });
+}
+
+#[tauri::command]
+fn get_auto_backup_status(state: State<AppState>, tz_offset_min: i32) -> Result<AutoBackupStatus, String> {
+    let conn = state.conn()?;
+    backup_auto::status(&conn, &state.data_dir, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AutoBackupSaved {
+    status: AutoBackupStatus,
+    folder_check: Option<FolderCheck>,
+}
+
+/// Off the main thread: the folder is checked (a disconnected drive can be slow to answer).
+#[tauri::command]
+async fn set_auto_backup_settings(app: tauri::AppHandle, settings: AutoBackupSettings, tz_offset_min: i32) -> Result<AutoBackupSaved, String> {
+    let handle = app.clone();
+    let saved = tauri::async_runtime::spawn_blocking(move || -> Result<AutoBackupSaved, String> {
+        let state = handle.state::<AppState>();
+        let conn = state.conn()?;
+        let (_, folder_check) = backup_auto::set_settings(&conn, &state.data_dir, &settings).map_err(err)?;
+        let status = backup_auto::status(&conn, &state.data_dir, now_ms(), tz_offset_min).map_err(err)?;
+        Ok(AutoBackupSaved { status, folder_check })
+    })
+    .await
+    .map_err(err)??;
+    kick_auto_backup(&app);
+    Ok(saved)
+}
+
+/// Checks a folder chosen in the dialog before saving it (inside the data folder, writable, same drive).
+#[tauri::command]
+async fn check_auto_backup_folder(app: tauri::AppHandle, folder: String) -> Result<FolderCheck, String> {
+    let data_dir = app.state::<AppState>().data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || backup_auto::check_folder(&data_dir, &folder).map_err(err)).await.map_err(err)?
+}
+
+/// « Sauvegarder maintenant »: same atomic path, no schedule and no delay.
+#[tauri::command]
+async fn run_auto_backup_now(app: tauri::AppHandle) -> Result<Done, String> {
+    let handle = app.clone();
+    match tauri::async_runtime::spawn_blocking(move || run_auto_backup(&handle, true)).await.map_err(err)?? {
+        Some(result) => result.map_err(err),
+        None => Err(BackupError::Busy.to_string()),
+    }
+}
+
+/// The automatic backups present in the chosen folder (off the main thread: sizes are computed).
+#[tauri::command]
+async fn list_auto_backups(app: tauri::AppHandle) -> Result<Vec<AutoBackupEntry>, String> {
+    let folder = {
+        let state = app.state::<AppState>();
+        let conn = state.conn()?;
+        backup_auto::get_settings(&conn).map_err(err)?.folder
+    };
+    let Some(folder) = folder else { return Ok(Vec::new()) };
+    tauri::async_runtime::spawn_blocking(move || backup_auto::list(std::path::Path::new(&folder))).await.map_err(err)
+}
+
+/// « Activer » (the interface then opens the settings; nothing is enabled here) or « Plus tard ».
+#[tauri::command]
+fn answer_auto_backup_invite(state: State<AppState>, accept: bool) -> Result<(), String> {
+    let conn = state.conn()?;
+    backup_auto::answer_invite(&conn, now_ms(), accept).map_err(err)
+}
+
+/// Opens the chosen folder in the file explorer (only this folder, never a path sent by the interface).
+#[tauri::command]
+fn open_auto_backup_folder(state: State<AppState>) -> Result<(), String> {
+    let folder = {
+        let conn = state.conn()?;
+        backup_auto::get_settings(&conn).map_err(err)?.folder.ok_or_else(|| BackupError::NoFolder.to_string())?
+    };
+    if !std::path::Path::new(&folder).is_dir() {
+        return Err(BackupError::FolderNotFound.to_string());
+    }
+    #[cfg(target_os = "windows")]
+    let program = "explorer";
+    #[cfg(target_os = "macos")]
+    let program = "open";
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let program = "xdg-open";
+    std::process::Command::new(program).arg(&folder).spawn().map(|_| ()).map_err(|_| BackupError::Io.to_string())
 }

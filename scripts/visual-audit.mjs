@@ -236,6 +236,25 @@ export const SCENARIOS = [
     await page.evaluate(() => document.getElementById('trade-links-title')?.scrollIntoView({ block: 'center' }))
     await page.waitForTimeout(400)
   }],
+  // Lot 32 : sauvegarde automatique (faux backend : simulation, aucun fichier écrit).
+  ['sauvegarde-auto-desactivee', async (page) => {
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('sauvegarde')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
+  ['sauvegarde-auto-activee-erreur', async (page) => {
+    await page.evaluate(async () => {
+      const { api } = await import('/src/lib/api.ts')
+      const { mockBackupAuto } = await import('/src/lib/mockBackend.ts')
+      const tz = -new Date().getTimezoneOffset()
+      await api.setAutoBackupSettings({ enabled: true, folder: 'C:\\Users\\Trader\\OneDrive - Société\\Documents\\Trading\\Pulse\\Sauvegardes automatiques', frequency: 'weekly', keep: 60 }, tz)
+      mockBackupAuto.simulate({ seedBackups: { at: [Date.now() - 86_400_000 * 9, Date.now() - 86_400_000 * 2], tz }, lastSuccessAt: Date.now() - 86_400_000 * 2, lastAttemptAt: Date.now() - 60_000, lastError: 'diskFull' })
+    })
+    await go(page, '/')
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('sauvegarde')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')

@@ -467,6 +467,28 @@ export const api = {
     const offs = await Promise.all([listen('pulse://locked', onLocked), listen('pulse://persist-failed', onPersistFailed)])
     return () => offs.forEach((off) => off())
   },
+  // --- Lot 32 : sauvegarde automatique planifiée (simulation dans le navigateur : aucun fichier écrit) ---
+  getAutoBackupStatus: (tzOffsetMin: number): Promise<AutoBackupStatus> =>
+    inTauri ? invoke('get_auto_backup_status', { tzOffsetMin }) : mockBackupAuto.getStatus(tzOffsetMin),
+  /** Activer exige un dossier valide (`backup:noFolder`, `backup:insideDataFolder`…), vérifié par pulse-core. */
+  setAutoBackupSettings: (settings: AutoBackupSettings, tzOffsetMin: number): Promise<AutoBackupSaved> =>
+    inTauri ? invoke('set_auto_backup_settings', { settings, tzOffsetMin }) : mockBackupAuto.setSettings(settings, tzOffsetMin),
+  checkAutoBackupFolder: (folder: string): Promise<FolderCheck> =>
+    inTauri ? invoke('check_auto_backup_folder', { folder }) : mockBackupAuto.checkFolder(folder),
+  /** « Sauvegarder maintenant » : même chemin atomique, sans attendre la fréquence. */
+  runAutoBackupNow: (tzOffsetMin: number): Promise<AutoBackupDone> =>
+    inTauri ? invoke('run_auto_backup_now') : mockBackupAuto.runNow(tzOffsetMin),
+  listAutoBackups: (): Promise<AutoBackupEntry[]> => (inTauri ? invoke('list_auto_backups') : mockBackupAuto.list()),
+  /** `accept` : « Activer » (n'active rien : l'interface ouvre les réglages) ; sinon « Plus tard ». */
+  answerAutoBackupInvite: (accept: boolean): Promise<void> =>
+    inTauri ? invoke('answer_auto_backup_invite', { accept }) : mockBackupAuto.answerInvite(accept),
+  openAutoBackupFolder: (): Promise<void> => (inTauri ? invoke('open_auto_backup_folder') : mockBackupAuto.openFolder()),
+  /** Après chaque sauvegarde automatique de la coque (réussie ou non). Rien dans le navigateur. */
+  onAutoBackupEvent: async (listener: () => void): Promise<() => void> => {
+    if (!inTauri) return () => {}
+    const { listen } = await import('@tauri-apps/api/event')
+    return listen('pulse://auto-backup', listener)
+  },
   // --- Lot 23 : export PDF d'un bilan de période (simulation dans le navigateur : aucun fichier) ---
   /** Boîte de dialogue « enregistrer sous » pour un fichier PDF. */
   pickPdfPath: async (title: string, defaultName: string): Promise<string | null> => {
@@ -650,3 +672,5 @@ import type {
   TradeLinks,
 } from '../types/analysis'
 import { mockAnalysis } from './mockBackend'
+import type { AutoBackupDone, AutoBackupEntry, AutoBackupSaved, AutoBackupSettings, AutoBackupStatus, FolderCheck } from '../types/backupAuto'
+import { mockBackupAuto } from './mockBackend'

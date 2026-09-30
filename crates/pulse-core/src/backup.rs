@@ -72,26 +72,88 @@ pub fn create(conn: &Connection, data_dir: &Path, dest_dir: &Path, now_ms: i64) 
         return invalid("a backup with this name already exists, try again in a moment");
     }
     fs::create_dir(&target)?;
-    let keys = lock::current_keys(data_dir);
-    let result = (|| match &keys {
-        // Encrypted database: encrypted copy, screenshots encrypted with the same data key.
-        Some(keys) => {
-            lock::write_encrypted_copy(conn, keys, &target.join(ENC_FILE))?;
-            copy_screenshots_with(&data_dir.join(screenshots::DIR), &target.join(screenshots::DIR), Some(keys.data_key()), Some(keys.data_key()))?;
-            let (copy, _) = open_backup_db(&target, OpenWith::Key(keys.data_key()))?;
-            describe(&copy, &target, true)
-        }
-        None => {
-            conn.execute("VACUUM INTO ?1", [target.join(DB_FILE).to_string_lossy().as_ref()])?;
-            copy_screenshots(&data_dir.join(screenshots::DIR), &target.join(screenshots::DIR))?;
-            inspect(&target)
-        }
+    let result = (|| {
+        let keys = write_database(conn, data_dir, &target)?;
+        copy_screenshot_files(&screenshot_files(data_dir)?, &target, keys.as_deref())?;
+        verify_copy(&target, keys.as_deref())
     })();
     if result.is_err() {
         // Do not leave a half-written backup that looks like a good one.
         let _ = fs::remove_dir_all(&target);
     }
     result
+}
+
+// The three steps of a backup, shared by the manual backup above and the automatic one (lot 32,
+// `backup_auto`), which runs the first step with the database held and the others without it.
+
+/// Step 1: the database copy in `target` (an existing, empty folder): `VACUUM INTO pulse.db`, or an
+/// encrypted image `pulse.db.enc` when the lock is active. Returns the keys of an encrypted folder
+/// (the screenshots must be encrypted with them).
+pub(crate) fn write_database(conn: &Connection, data_dir: &Path, target: &Path) -> Result<Option<std::sync::Arc<pulse_lock::Unlocked>>> {
+    let keys = lock::current_keys(data_dir);
+    match &keys {
+        // Encrypted database: encrypted copy, never a plaintext one.
+        Some(keys) => lock::write_encrypted_copy(conn, keys, &target.join(ENC_FILE))?,
+        None => {
+            conn.execute("VACUUM INTO ?1", [target.join(DB_FILE).to_string_lossy().as_ref()])?;
+        }
+    }
+    Ok(keys)
+}
+
+/// The screenshot files of the data folder (temporary files excluded).
+pub(crate) fn screenshot_files(data_dir: &Path) -> Result<Vec<PathBuf>> {
+    let Ok(entries) = fs::read_dir(data_dir.join(screenshots::DIR)) else { return Ok(Vec::new()) };
+    let mut out = Vec::new();
+    for e in entries {
+        let path = e?.path();
+        if path.is_file() && path.extension().is_none_or(|x| x != "tmp") {
+            out.push(path);
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+/// Step 2: copies `files` into `target/screenshots`. Plain folder: byte for byte, as in lot 6.
+/// Encrypted folder: decrypted and sealed again with the same data key (a plaintext file left by
+/// an interrupted activation is encrypted on the way: nothing in plaintext in an encrypted backup).
+pub(crate) fn copy_screenshot_files(files: &[PathBuf], target: &Path, keys: Option<&pulse_lock::Unlocked>) -> Result<()> {
+    if files.is_empty() {
+        return Ok(());
+    }
+    let to = target.join(screenshots::DIR);
+    fs::create_dir_all(&to)?;
+    for path in files {
+        let name = path.file_name().expect("file has a name");
+        match keys {
+            None => {
+                fs::copy(path, to.join(name))?;
+            }
+            Some(k) => {
+                let bytes = fs::read(path)?;
+                let plain = if FileKind::of(&bytes) == FileKind::EncryptedBlob {
+                    envelope::open_blob(k.data_key(), &bytes)?
+                } else {
+                    pulse_lock::Zeroizing::new(bytes)
+                };
+                fs::write(to.join(name), envelope::seal_blob(k.data_key(), &plain)?)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Step 3: reads the copy back (with the data key when encrypted): integrity, known schema, tables.
+pub(crate) fn verify_copy(target: &Path, keys: Option<&pulse_lock::Unlocked>) -> Result<BackupInfo> {
+    match keys {
+        Some(k) => {
+            let (copy, _) = open_backup_db(target, OpenWith::Key(k.data_key()))?;
+            describe(&copy, target, true)
+        }
+        None => inspect(target),
+    }
 }
 
 /// Checks that `folder` is a usable backup and describes it. Read-only. An encrypted backup
