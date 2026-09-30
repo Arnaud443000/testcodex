@@ -8,6 +8,9 @@ import { useAlertRules } from '../lib/alertRules'
 import { localTzOffsetMin } from '../lib/period'
 import type { Alert } from '../types/alerts'
 import { AlertRules } from './AlertRules'
+import { PausePicker } from './pause/PausePicker'
+import { usePause } from '../lib/pause'
+import { pauseReasonForAlert } from '../lib/pauseView'
 import { Notice } from './ui'
 
 /** Alertes affichées d'emblée ; les suivantes sont repliées. */
@@ -27,6 +30,8 @@ export function AlertBanner() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [expanded, setExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { current: pauseRunning } = usePause()
+  const [pausingFor, setPausingFor] = useState<string | null>(null)
 
   useEffect(() => {
     let live = true
@@ -107,8 +112,16 @@ export function AlertBanner() {
                   {tradePath && location.pathname !== tradePath && (
                     <Link to={tradePath} className="btn btn-secondary btn-sm">{a.viewTrade}</Link>
                   )}
+                  {pauseReasonForAlert(x) !== null && !pauseRunning && pausingFor !== x.id && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPausingFor(x.id)}>{t.pause.alert.button}</button>
+                  )}
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => void dismiss([x.id])}>{a.dismiss}</button>
                 </span>
+                {pausingFor === x.id && !pauseRunning && (
+                  <div className="basis-full">
+                    <PausePicker reason={pauseReasonForAlert(x)} focusOnOpen onDone={() => setPausingFor(null)} onCancel={() => setPausingFor(null)} />
+                  </div>
+                )}
               </li>
             )
           })}

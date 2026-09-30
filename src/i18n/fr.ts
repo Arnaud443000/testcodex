@@ -451,6 +451,7 @@ export const fr = {
       emotions: 'Émotions',
       discipline: 'Discipline',
       alerts: 'Alertes',
+      pause: 'Pause',
       cashflows: 'Dépôts et retraits',
       reminder: 'Rappel',
       display: 'Affichage',
@@ -1592,6 +1593,8 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  // Lot 35 : pause volontaire
+  pause: frPause,
 }
 
 export type Messages = typeof fr
@@ -1604,3 +1607,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frPause } from './fr.pause'

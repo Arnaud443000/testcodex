@@ -10,6 +10,7 @@ import { RulesPanel } from '../components/RulesPanel'
 import { ScreenshotDrop } from '../components/ScreenshotDrop'
 import { EmotionListPanel } from '../components/EmotionListPanel'
 import { TagChips } from '../components/TagChips'
+import { PauseFormPanel } from '../components/pause/PauseFormPanel'
 import { ChipButton, Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -479,6 +480,7 @@ export function TradeFormPage() {
         </div>
 
         <aside className="flex flex-col gap-4">
+          {editId === null && <PauseFormPanel />}
           <PreviewPanel preview={preview} currency={currency} pending={previewPending} error={previewError} />
 
           {preview?.stopLoss === 'invalid' && <Notice level="bad">{t.form.notices.badStop}</Notice>}

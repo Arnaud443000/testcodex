@@ -165,6 +165,100 @@ export const SCENARIOS = [
     await page.evaluate(() => document.getElementById('emotions')?.scrollIntoView())
     await page.waitForTimeout(400)
   }],
+  // Lot 35 : pause volontaire, dans l'ordre d'un usage réel (choix, repère de la barre, formulaire, bannières, constat, réglages).
+  ['pause-choix', async (page) => {
+    await go(page, '/')
+    await page.getByRole('button', { name: 'Pause', exact: true }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['pause-active-barre', async (page) => {
+    await page.getByRole('button', { name: '30 min', exact: true }).click().catch(() => {})
+    await page.getByRole('button', { name: 'Commencer la pause' }).click().catch(() => {})
+    await page.waitForTimeout(600)
+  }],
+  ['pause-formulaire', async (page) => {
+    await go(page, '/trades/new')
+    await page.getByText('Êtes-vous sûr', { exact: false }).first().scrollIntoViewIfNeeded().catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['pause-formulaire-continuer', async (page) => {
+    await page.getByRole('button', { name: 'Je continue quand même' }).click().catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['pause-banniere-choix', async (page) => {
+    // Fin de la pause, puis trois pertes aujourd'hui : la bannière des pertes consécutives propose « Faire une pause ».
+    await page.getByRole('button', { name: 'Terminer la pause' }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.evaluate(async () => {
+      const { api } = await import('/src/lib/api.ts')
+      const [account] = await api.listAccounts()
+      const eur = (await api.listInstruments()).find((i) => i.symbol === 'EURUSD')
+      const now = Date.now()
+      for (let i = 0; i < 3; i++) {
+        const entryTime = now - (40 - i * 12) * 60_000
+        await api.createTrade({
+          accountId: account.id, instrumentId: eur.id, direction: 'long', size: '0.1', entryPrice: '1.0800', exitPrice: '1.0780',
+          entryTime, exitTime: entryTime + 8 * 60_000, tzOffsetMin: 0, plannedSl: '1.0780', fees: '0', thesis: '', postMortem: '',
+          tagIds: [], emotions: [], ruleChecks: [], checklist: [],
+        })
+      }
+    })
+    await go(page, '/alerts')
+    await go(page, '/')
+    await page.waitForTimeout(800)
+    await page.getByRole('button', { name: 'Faire une pause' }).first().click().catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['pause-banniere-suggestion', async (page) => {
+    await page.evaluate(async () => {
+      const { api } = await import('/src/lib/api.ts')
+      await api.setPauseSettings({ suggestAfterLosses: 2, defaultMinutes: 30 })
+    })
+    await go(page, '/alerts')
+    await go(page, '/trades')
+    await page.waitForTimeout(800)
+  }],
+  ['pause-comportement-avec', async (page) => {
+    // Une douzaine de trades pris « pendant une pause » (pauses passées, construites chronologiquement).
+    await page.evaluate(async () => {
+      const { api } = await import('/src/lib/api.ts')
+      const { mockPause } = await import('/src/lib/mockBackend.ts')
+      await api.setPauseSettings({ suggestAfterLosses: null, defaultMinutes: 30 })
+      mockPause.reset()
+      const trades = (await api.listTrades()).filter((t) => t.exitTime != null).sort((a, b) => a.entryTime - b.entryTime)
+      const reasons = ['loss', 'lossStreak', 'fatigue', 'emotion', 'other', null]
+      for (const [i, t] of trades.filter((_, k) => k % 3 === 0).slice(0, 12).entries()) {
+        const n = await mockPause.startPause({ length: { kind: 'minutes', minutes: 30 }, reason: reasons[i % reasons.length], note: i === 1 ? 'Je respire avant de revenir.' : null, tzOffsetMin: 0 }, t.entryTime - 60_000)
+        if (i % 4 === 3) await mockPause.endPause(t.entryTime + 10 * 60_000)
+        void n
+      }
+    })
+    await go(page, '/behavior')
+    await page.waitForTimeout(800)
+    await page.getByRole('heading', { name: 'Pauses', exact: true }).evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['pause-discipline-repere', async (page) => {
+    await go(page, '/discipline')
+    await page.waitForTimeout(800)
+    await page.getByTestId('pause-hint').evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['pause-comportement-sans', async (page) => {
+    await page.evaluate(async () => {
+      const { mockPause } = await import('/src/lib/mockBackend.ts')
+      mockPause.reset()
+    })
+    await go(page, '/behavior')
+    await page.waitForTimeout(800)
+    await page.getByRole('heading', { name: 'Pauses', exact: true }).evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(400)
+  }],
+  ['pause-parametres', async (page) => {
+    await go(page, '/settings')
+    await page.evaluate(() => document.getElementById('pause')?.scrollIntoView())
+    await page.waitForTimeout(400)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')
