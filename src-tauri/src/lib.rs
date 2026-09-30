@@ -24,6 +24,7 @@ use pulse_core::stats::StatsQuery;
 use pulse_core::stats::dashboard::{self, Calendar, CalendarQuery, Dashboard, DashboardQuery, DayTrade};
 use pulse_core::stats::distribution::{self, Heatmap, LongShort, RDistribution};
 use pulse_core::stats::risk::{self, RiskReport};
+use pulse_core::emotions::{self, CatalogGroup, EmotionUsage};
 use pulse_core::tags::{self, Tag, TagKind};
 use pulse_core::trade_view::{self, Preview, TradeView};
 use pulse_core::trades::{self, TradeData, TradeFilter};
@@ -166,6 +167,36 @@ fn create_tag(state: State<AppState>, kind: TagKind, name: String) -> Result<Tag
     tags::create(&conn, kind, &name).map_err(err)
 }
 
+// --- Lot 30 : « Ma liste » d'émotions (retirer = archiver) ---
+
+#[tauri::command]
+fn get_emotion_catalog() -> Vec<CatalogGroup> {
+    emotions::catalog()
+}
+
+#[tauri::command]
+fn get_emotion_usage(state: State<AppState>) -> Result<Vec<EmotionUsage>, String> {
+    let conn = state.conn()?;
+    emotions::usage(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn add_emotion_to_list(state: State<AppState>, name: String) -> Result<Tag, String> {
+    let conn = state.conn()?;
+    emotions::add_to_list(&conn, &name).map_err(err)
+}
+
+#[tauri::command]
+fn remove_emotion_from_list(state: State<AppState>, tag_id: i64) -> Result<Tag, String> {
+    let conn = state.conn()?;
+    emotions::remove_from_list(&conn, tag_id).map_err(err)
+}
+
+#[tauri::command]
+fn delete_unused_emotion(state: State<AppState>, tag_id: i64) -> Result<(), String> {
+    let conn = state.conn()?;
+    emotions::delete_unused(&conn, tag_id).map_err(err)
+}
 #[tauri::command]
 fn list_rules(state: State<AppState>, include_archived: Option<bool>) -> Result<Vec<Rule>, String> {
     let conn = state.conn()?;
@@ -640,6 +671,11 @@ pub fn run() {
             create_instrument,
             list_tags,
             create_tag,
+            get_emotion_catalog,
+            get_emotion_usage,
+            add_emotion_to_list,
+            remove_emotion_from_list,
+            delete_unused_emotion,
             list_rules,
             create_rule,
             rename_rule,
