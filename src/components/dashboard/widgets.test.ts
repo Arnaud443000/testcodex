@@ -88,3 +88,15 @@ describe('widget « Prochaines news » (lot 25)', () => {
   })
 })
 
+
+describe('widget « Objectifs de comportement » (lot 34)', () => {
+  it('suit le compte, a pour mode la semaine ou le mois, et bloque sur des devises mélangées', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'process_goals')!
+    expect([d.category, d.period, d.account, d.modes]).toEqual(['tracking', false, true, ['week', 'month']])
+    expect(fr.dashboardBuilder.modes.process_goals).toEqual({ week: 'Semaine en cours', month: 'Mois en cours' })
+    const out = html(instance('process_goals', { mode: 'month' }), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.process_goals.title)
+  })
+})

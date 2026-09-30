@@ -40,6 +40,21 @@ fn the_insights_widget_is_in_the_library_without_a_period_of_its_own() {
 }
 
 #[test]
+fn the_process_goals_widget_is_in_the_library_with_a_week_or_month_mode() {
+    // Lot 34: the widget shows the goals of the current week or month (its mode), for its account.
+    let d = catalog().into_iter().find(|d| d.kind == "process_goals").expect("process goals widget");
+    assert_eq!((d.category.as_str(), d.period, d.account), ("tracking", false, true));
+    assert_eq!(d.modes, vec!["week".to_string(), "month".to_string()], "week by default");
+    let conn = db::open_in_memory().unwrap();
+    let mut w = widget("pg", "process_goals", 0, 0, d.default_w, d.default_h);
+    w.mode = Some("month".into());
+    validate(&conn, &[w.clone()]).unwrap();
+    w.mode = Some("day".into());
+    assert!(is_invalid(validate(&conn, &[w])), "an unknown mode is refused");
+    assert!(is_invalid(validate(&conn, &[widget("pg", "process_goals", 0, 0, d.min_w, d.min_h - 1)])));
+}
+
+#[test]
 fn every_preset_is_a_valid_layout_using_known_widgets() {
     let conn = db::open_in_memory().unwrap();
     for key in PRESET_KEYS {

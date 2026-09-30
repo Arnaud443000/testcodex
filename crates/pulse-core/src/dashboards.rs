@@ -105,6 +105,7 @@ const KPI_MODES: &[&str] = &["win_rate", "profit_factor", "expectancy", "risk_re
 const EMOTION_MODES: &[&str] = &["before", "during", "after", "any"];
 const RECENT_MODES: &[&str] = &["5", "10", "15"];
 const NEWS_MODES: &[&str] = &["medium", "high", "all"];
+const PROCESS_GOAL_MODES: &[&str] = &["week", "month"];
 
 const LIBRARY: &[Def] = &[
     // Performance
@@ -137,6 +138,8 @@ const LIBRARY: &[Def] = &[
     // Upcoming economic news (lot 25): the calendar is neither per account nor per period; the mode
     // chooses the importance shown (medium and high by default).
     def("upcoming_news", "temporal", (10, 16), (8, 10), NEWS_MODES, false, false),
+    // Behaviour goals (lot 34): the mode is the goal period (this week or this month), so no period of its own.
+    def("process_goals", "tracking", (10, 14), (8, 10), PROCESS_GOAL_MODES, false, true),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

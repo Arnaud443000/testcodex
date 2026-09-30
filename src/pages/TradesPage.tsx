@@ -12,6 +12,7 @@ import { api } from '../lib/api'
 import { formatDateTime, formatDuration, formatR } from '../lib/format'
 import { INSTRUMENT_PARAM, SETUP_PARAM, parseIdParam } from '../lib/analysesView'
 import { MISTAKE_PARAM, parseMistakeParam } from '../lib/mistakeFilter'
+import { IDS_PARAM, parseIdsParam } from '../lib/idsFilter'
 import { useReferenceData } from '../lib/referenceData'
 import { NO_FILTERS, applyFilters, hasActiveFilters, isIncomplete, sortTrades, tagOfKind, type ListFilters, type SortDir, type SortKey } from '../lib/tradeList'
 import type { Outcome, TradeView } from '../types/trade'
@@ -31,6 +32,8 @@ export function TradesPage() {
     setupTagId: parseIdParam(params.get(SETUP_PARAM)),
   }))
   const mistake = useMemo(() => parseMistakeParam(params.get(MISTAKE_PARAM)), [params])
+  // Lot 34 : « Voir les trades » d'un objectif de comportement → « /trades?ids=1,2,3 » (filtre d'affichage).
+  const ids = useMemo(() => parseIdsParam(params.get(IDS_PARAM)), [params])
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'date', dir: 'desc' })
 
   useEffect(() => {
@@ -45,7 +48,10 @@ export function TradesPage() {
     }
   }, [selectedId, mistake])
 
-  const visible = useMemo(() => (trades ? sortTrades(applyFilters(trades, filters), sort.key, sort.dir) : []), [trades, filters, sort])
+  const visible = useMemo(
+    () => (trades ? sortTrades(applyFilters(ids ? trades.filter((tr) => ids.includes(tr.id)) : trades, filters), sort.key, sort.dir) : []),
+    [trades, filters, sort, ids],
+  )
 
   const header = (
     <PageHeader
@@ -123,6 +129,20 @@ export function TradesPage() {
             onClick={() => setParams((p) => { const n = new URLSearchParams(p); n.delete(MISTAKE_PARAM); return n })}
           >
             {t.trades.mistakeFilter.remove}
+          </button>
+        </div>
+      )}
+      {ids && (
+        <div className="nt nt-warn items-center justify-between" role="status">
+          <span>
+            <strong>{t.trades.idsFilter.label(ids.length)}</strong> — {t.trades.idsFilter.allPeriods}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setParams((p) => { const n = new URLSearchParams(p); n.delete(IDS_PARAM); return n })}
+          >
+            {t.trades.idsFilter.remove}
           </button>
         </div>
       )}

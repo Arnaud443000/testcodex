@@ -198,6 +198,12 @@ export const fr = {
       allPeriods: 'Toutes périodes confondues (la période choisie en haut ne s’applique pas ici).',
       remove: 'Retirer ce filtre',
     },
+    // Lot 34 : trades en cause d'un objectif de comportement (« /trades?ids=… »).
+    idsFilter: {
+      label: (n: number) => (n === 1 ? 'Le trade en cause d’un objectif de comportement' : `Les ${n}\u00a0trades en cause d’un objectif de comportement`),
+      allPeriods: 'La période choisie en haut ne s’applique pas ici.',
+      remove: 'Retirer ce filtre',
+    },
     resetFilters: 'Réinitialiser les filtres',
     filters: {
       asset: 'Actif',
@@ -1592,6 +1598,8 @@ export const fr = {
   news: frNews,
   // Lot 30 : Ma liste d'émotions
   emotions: frEmotions,
+  // Lot 34 : objectifs de comportement (processus)
+  processGoals: frProcessGoals,
 }
 
 export type Messages = typeof fr
@@ -1604,3 +1612,4 @@ import { frTradeCard } from './fr.tradeCard'
 import { frSizing } from './fr.sizing'
 import { frNews } from './fr.news'
 import { frEmotions } from './fr.emotions'
+import { frProcessGoals } from './fr.processGoals'
