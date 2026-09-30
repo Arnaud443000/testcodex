@@ -1,5 +1,9 @@
 import type { Messages } from '../i18n'
 import type { PropLevel } from '../types/prop'
+import type { Account } from '../types/account'
+import type { Decimal } from '../types/money'
+import { signOf } from './decimal'
+import { formatMoney } from './format'
 
 /**
  * Suivi prop firm (lot 33) : affichage pur, aucun calcul métier. Les niveaux, montants, pourcentages
@@ -75,4 +79,22 @@ export function propErrorText(t: Messages, e: unknown): string {
   if (!p || !text) return String(e instanceof Error ? e.message : e)
   const field = p.field ? x.fields[p.field] : undefined
   return field ? x.withField(text, field) : text
+}
+
+/** « Reste 1 500,00 $ », « Dépassée de 500,00 $ » (montant arrondi au centime à l'affichage seulement), « — » sans limite. */
+export function remainingText(t: Messages, remaining: Decimal | null, currency: string): string {
+  if (remaining === null) return '—'
+  return signOf(remaining) < 0 ? t.prop.exceededBy(formatMoney(remaining.replace(/^-/, ''), currency)) : t.prop.remaining(formatMoney(remaining, currency))
+}
+
+/**
+ * Compte lu par le widget « Prop firm » parmi les comptes de sa portée (widget, puis dashboard, puis barre du haut) :
+ * le seul compte prop de la portée ; `notProp` si la portée est un seul compte qui n'est pas prop ; `none` sinon
+ * (aucun ou plusieurs comptes prop : rien n'est deviné).
+ */
+export function widgetPropAccount(chosen: Pick<Account, 'id' | 'kind'>[]): number | 'none' | 'notProp' {
+  const props = chosen.filter((a) => a.kind === 'prop')
+  if (props.length === 1) return props[0].id
+  if (chosen.length === 1) return 'notProp'
+  return 'none'
 }

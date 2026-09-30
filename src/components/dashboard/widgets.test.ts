@@ -47,8 +47,8 @@ describe('bibliothèque de widgets', () => {
     const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
     const mixed = env([account(1, 'USD'), account(2, 'EUR')])
     // Les insights évaluent chaque compte seul (chacun avec sa devise) : aucune somme, donc aucun blocage.
-    // Les prochaines news (lot 25) ne lisent aucun compte.
-    for (const d of catalog.filter((c) => c.kind !== 'insights' && c.account)) {
+    // Les prochaines news (lot 25) ne lisent aucun compte. Le widget prop firm (lot 33) lit UN compte prop.
+    for (const d of catalog.filter((c) => c.kind !== 'insights' && c.kind !== 'prop_firm' && c.account)) {
       const out = html(instance(d.kind), mixed)
       expect(out, d.kind).toContain(fr.dashboardBuilder.mixedCurrencies)
       expect(out, d.kind).toContain(fr.dashboardBuilder.widgets[d.kind].title)
@@ -88,3 +88,18 @@ describe('widget « Prochaines news » (lot 25)', () => {
   })
 })
 
+
+describe('widget « Prop firm » (lot 33)', () => {
+  const prop = (id: number, currency: string): Account => ({ ...account(id, currency), kind: 'prop' }) as Account
+  it('lit le seul compte prop de la portée : pas de blocage sur des devises mélangées (aucune somme)', () => {
+    const out = html(instance('prop_firm'), env([account(1, 'USD'), prop(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.prop_firm.title)
+    expect(out).not.toContain(fr.prop.widget.noAccount)
+  })
+  it('aucun ou plusieurs comptes prop : rien n’est deviné ; un compte non prop est expliqué', () => {
+    expect(html(instance('prop_firm'), env([account(1, 'USD'), account(2, 'USD')]))).toContain(fr.prop.widget.noAccount)
+    expect(html(instance('prop_firm'), env([prop(1, 'USD'), prop(2, 'USD')]))).toContain(fr.prop.widget.noAccount)
+    expect(html(instance('prop_firm'), env([account(1, 'USD')]))).toContain(fr.prop.widget.notProp)
+  })
+})

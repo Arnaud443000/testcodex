@@ -40,6 +40,16 @@ fn the_insights_widget_is_in_the_library_without_a_period_of_its_own() {
 }
 
 #[test]
+fn the_prop_firm_widget_follows_an_account_without_a_period() {
+    // Lot 33: the rules have their own trading day and challenge start, so the widget has no period.
+    let d = catalog().into_iter().find(|d| d.kind == "prop_firm").expect("prop firm widget");
+    assert_eq!((d.category.as_str(), d.period, d.account, d.modes.len(), d.default_w, d.default_h), ("tracking", false, true, 0, 10, 16));
+    let conn = db::open_in_memory().unwrap();
+    validate(&conn, &[widget("prop", "prop_firm", 0, 0, d.default_w, d.default_h)]).unwrap();
+    assert!(is_invalid(validate(&conn, &[widget("prop", "prop_firm", 0, 0, d.min_w, d.min_h - 1)])));
+}
+
+#[test]
 fn every_preset_is_a_valid_layout_using_known_widgets() {
     let conn = db::open_in_memory().unwrap();
     for key in PRESET_KEYS {

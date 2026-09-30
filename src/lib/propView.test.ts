@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fr } from '../i18n/fr'
 import { alertMessage } from './alertFormat'
 import { computeProp, evaluatePropAlerts, validatePropRules } from './mockProp'
+import { widgetPropAccount } from './propView'
 import { formatCountdown, formatDayKey, formatUsedPercent, gaugeWidth, levelIcon, levelLabel, levelTone, parsePropError, propErrorText } from './propView'
 
 const NBSP = ' '
@@ -66,5 +67,15 @@ describe('texte des alertes prop (constat, jamais un ordre)', () => {
     expect(text).toContain('00:00, heure de Paris')
     expect(text).toContain('trades clôturés seulement')
     expect(text).not.toMatch(/ne tradez pas|arrêtez/i)
+  })
+})
+
+describe('compte lu par le widget Prop firm', () => {
+  it('le seul compte prop de la portée, jamais deviné parmi plusieurs', () => {
+    expect(widgetPropAccount([{ id: 3, kind: 'prop' }])).toBe(3)
+    expect(widgetPropAccount([{ id: 1, kind: 'personal' }, { id: 3, kind: 'prop' }])).toBe(3)
+    expect(widgetPropAccount([{ id: 1, kind: 'personal' }])).toBe('notProp')
+    expect(widgetPropAccount([{ id: 3, kind: 'prop' }, { id: 4, kind: 'prop' }])).toBe('none')
+    expect(widgetPropAccount([])).toBe('none')
   })
 })

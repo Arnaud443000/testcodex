@@ -4,13 +4,15 @@ import { isNavActive, NAV, NAV_GROUPS, SETTINGS_ITEM } from './navigation'
 
 /** Les 14 adresses de la barre latérale avant le lot 26 : le regroupement ne doit en perdre aucune (liens existants). */
 const BEFORE = ['/', '/trades', '/calendar', '/analytics', '/comparisons', '/behavior', '/discipline', '/insights', '/journal', '/goals', '/replay', '/coach', '/sizing', '/settings']
+/** Ajoutées depuis (une par lot) : lot 33 = suivi prop firm, dans le groupe « Outils ». */
+const ADDED = ['/prop']
 const active = (path: string) => NAV.filter((i) => isNavActive(i, path)).map((i) => i.to)
 
 describe('navigation regroupée (lot 26)', () => {
   it('garde exactement les mêmes destinations qu\'avant, chacune une seule fois', () => {
     const tos = NAV.map((i) => i.to)
     expect(new Set(tos).size).toBe(tos.length)
-    expect([...tos].sort()).toEqual([...BEFORE].sort())
+    expect([...tos].sort()).toEqual([...BEFORE, ...ADDED].sort())
   })
   it('chaque entrée et chaque groupe a un libellé français', () => {
     for (const i of NAV) expect(fr.nav[i.key], i.to).toBeTruthy()
@@ -20,6 +22,11 @@ describe('navigation regroupée (lot 26)', () => {
     expect(NAV_GROUPS.map((g) => g.key)).toEqual([null, 'capture', 'analyse', 'understand', 'tools'])
     expect(NAV[NAV.length - 1]).toBe(SETTINGS_ITEM)
     expect(NAV_GROUPS.flatMap((g) => g.items)).not.toContain(SETTINGS_ITEM)
+  })
+  it('le suivi prop firm est dans « Outils », avec son libellé', () => {
+    expect(NAV_GROUPS.find((g) => g.key === 'tools')!.items.map((i) => i.to)).toContain('/prop')
+    expect(fr.nav.prop).toBe('Prop firm')
+    expect(active('/prop')).toEqual(['/prop'])
   })
   it('aucun groupe n\'est vide', () => {
     for (const g of NAV_GROUPS) expect(g.items.length).toBeGreaterThan(0)

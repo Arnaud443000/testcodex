@@ -13,6 +13,8 @@ import { RulesCard } from '../behavior/RulesCard'
 import { HeatmapCard, LongShortCard, RDistributionCard, RiskCard } from '../behavior/StatsCards'
 import { StreaksCard } from '../behavior/StreaksCard'
 import { ImportanceMark, SimulationBadge } from '../news/ImportanceMark'
+import { PropWidgetCard } from '../prop/PropWidget'
+import { propErrorText, widgetPropAccount } from '../../lib/propView'
 import { countdown, widgetImportances } from '../../lib/newsView'
 import { OutcomeBadge, Pnl } from '../ui'
 import { CalendarCard, CapitalCard, DailyCard, HeroCard, KPI_MODES, KpiCard, type KpiMode } from './DashboardCards'
@@ -379,6 +381,33 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   factors: Factors,
   insights: InsightsWidget,
   upcoming_news: UpcomingNewsWidget,
+  prop_firm: PropFirmWidget,
+}
+
+/**
+ * Prop firm (lot 33) : le seul compte prop de la portée (widget, puis dashboard, puis barre du haut), jamais deviné
+ * parmi plusieurs. Relu chaque minute (jour de trading et compte à rebours) ; trades clôturés seulement.
+ */
+function PropFirmWidget({ scope }: WidgetProps) {
+  const t = useT()
+  const title = useTitle('prop_firm')
+  const [tick, setTick] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setTick(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
+  const target = scope.accountMissing ? 'none' : widgetPropAccount(scope.chosen)
+  const minute = Math.floor(tick / 60_000)
+  // Enveloppé : `data === null` veut dire « en chargement » pour `useCached`, alors qu'un statut `null` = aucune règle.
+  const { data, error } = useCached(typeof target === 'number' ? `prop|${target}|${minute}` : null, () => api.getPropStatus(target as number).then((status) => ({ status })))
+  if (scope.accountMissing) return <Message title={title}>{t.dashboardBuilder.accountGone}</Message>
+  if (target === 'notProp') return <Message title={title} action={<Link to="/prop" className="btn btn-secondary btn-sm">{t.prop.widget.open}</Link>}>{t.prop.widget.notProp}</Message>
+  if (target === 'none') return <Message title={title} action={<Link to="/prop" className="btn btn-secondary btn-sm">{t.prop.widget.open}</Link>}>{t.prop.widget.noAccount}</Message>
+  if (error) return <Failed title={title} detail={propErrorText(t, error)} />
+  if (!data) return <Pending title={title} />
+  if (data.status === null) return <Message title={title} action={<Link to="/prop" className="btn btn-secondary btn-sm">{t.prop.empty.noRulesAction}</Link>}>{t.prop.widget.noRules}</Message>
+  const name = scope.chosen.find((a) => a.id === target)?.name ?? ''
+  return <PropWidgetCard title={title} accountName={name} status={data.status} />
 }
 
 /**

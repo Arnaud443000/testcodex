@@ -26,6 +26,13 @@ describe('faux backend des dashboards (miroir de pulse-core::dashboards)', () =>
     expect((await m.listDashboardLayouts()).map((d) => d.name)).toEqual(['Essentiel', 'Comportement', 'Analyse'])
   })
 
+  it('widget Prop firm (lot 33) : même ligne que la bibliothèque de pulse-core, sans période', async () => {
+    const d = (await m.listWidgetCatalog()).find((x) => x.kind === 'prop_firm')!
+    expect([d.category, d.period, d.account, d.modes.length, d.defaultW, d.defaultH, d.minW, d.minH]).toEqual(['tracking', false, true, 0, 10, 16, 8, 12])
+    validateLayout([widget({ uid: 'p', kind: 'prop_firm', w: 10, h: 16 })], ids)
+    expect(() => validateLayout([widget({ uid: 'p', kind: 'prop_firm', w: 8, h: 11 })], ids)).toThrow()
+  })
+
   it('tous les presets sont valides', async () => {
     for (const d of await m.listDashboardLayouts()) validateLayout((await m.getDashboardLayout(d.key)).widgets, ids)
   })

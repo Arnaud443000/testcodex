@@ -48,7 +48,7 @@ export const frProp = {
   day: {
     current: (day: string, time: string) => `Jour de trading en cours depuis le ${day} à ${time} (heure de Paris)`,
     reset: (countdown: string, day: string, time: string) => `Remise à zéro dans ${countdown} (le ${day} à ${time}, heure de Paris)`,
-    resetShort: (countdown: string) => `remise à zéro dans ${countdown}`,
+    resetShort: (countdown: string, time: string) => `Remise à zéro dans ${countdown} (${time}, heure de Paris)`,
   },
 
   levels: {
@@ -60,6 +60,7 @@ export const frProp = {
   consistencyReached: 'Règle dépassée',
   undefinedLevel: 'Non calculable',
   used: (pct: string) => `${pct} utilisé`,
+  gaugeAria: (label: string, used: string, status: string) => `${label} : ${used}, ${status}`,
   remaining: (amount: string) => `Reste ${amount}`,
   exceededBy: (amount: string) => `Dépassée de ${amount}`,
   notSet: 'Règle non paramétrée',
@@ -153,7 +154,7 @@ export const frProp = {
     locksHelp: 'Une fois le plancher monté jusqu’au capital initial, il ne monte plus.',
     profitTarget: 'Objectif de profit',
     profitTargetHelp: 'Gain à atteindre depuis le début du défi, en pourcentage du capital initial ou en montant.',
-    minTradingDays: 'Jours de trading minimum (facultatif)',
+    minTradingDays: 'Jours minimum (facultatif)',
     minTradingDaysHelp: 'Nombre de jours de trading distincts ayant au moins un trade clôturé.',
     consistency: 'Règle de cohérence (facultatif)',
     consistencySuffix: '% du profit',

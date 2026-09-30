@@ -137,6 +137,8 @@ const LIBRARY: &[Def] = &[
     // Upcoming economic news (lot 25): the calendar is neither per account nor per period; the mode
     // chooses the importance shown (medium and high by default).
     def("upcoming_news", "temporal", (10, 16), (8, 10), NEWS_MODES, false, false),
+    // Prop firm (lot 33): the rules of one prop account, at the current trading day; no period of its own.
+    def("prop_firm", "tracking", (10, 16), (8, 12), &[], false, true),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

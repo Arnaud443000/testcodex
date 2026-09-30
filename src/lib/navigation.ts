@@ -55,6 +55,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/goals', key: 'goals', icon: 'goals' },
       { to: '/replay', key: 'replay', icon: 'replay' },
       { to: '/sizing', key: 'sizing', icon: 'calculator' },
+      // Lot 33 : suivi d'un compte prop firm.
+      { to: '/prop', key: 'prop', icon: 'shield' },
     ],
   },
 ]
