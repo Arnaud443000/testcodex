@@ -50,6 +50,8 @@ pub mod lock;
 pub mod sizing;
 // Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
 pub mod news;
+// Lot 31 (analyse avant trading, idées à surveiller, revue du lendemain ; sans réseau ni IA).
+pub mod analysis;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

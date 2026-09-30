@@ -44,11 +44,14 @@ pub fn active_alerts(conn: &Connection, account_ids: &[i64], now: i64, tz_offset
     } else {
         Vec::new()
     };
+    let no_analysis_on = crate::analysis::review::settings(conn)?.no_analysis_alert;
+    let today_analyses = if no_analysis_on { super::no_analysis::stamps_of_day(conn, &crate::stats::time::day_key(now, tz_offset_min))? } else { Vec::new() };
     let mut alerts = Vec::new();
     for account in chosen_accounts(conn, account_ids)? {
         let ledger = load(conn, &[account.id])?;
         alerts.extend(evaluate(&ledger, now, tz_offset_min, &behavior, &thresholds)?);
         alerts.extend(super::news::evaluate(&ledger, &news_events, now, tz_offset_min, &news_settings)?);
+        alerts.extend(super::no_analysis::evaluate(&ledger, &today_analyses, now, tz_offset_min, no_analysis_on));
     }
     super::sort(&mut alerts);
 

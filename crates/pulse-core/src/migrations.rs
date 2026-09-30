@@ -436,6 +436,90 @@ pub const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX economic_events_by_day ON economic_events (day);
     CREATE INDEX economic_events_by_start ON economic_events (importance, starts_at);",
+    // v15 — pre-trade analysis and ideas to watch (lot 31). Text to read only, nothing computes money from it.
+    // Questions are never deleted (answers keep pointing to them): `archived` hides them, like tags. A NULL
+    // `label` = the original wording, which the interface translates from `key`. `value` of an answer is JSON
+    // whose shape depends on the question `kind` (validated by `analysis::sessions`). Prices of an idea are exact
+    // decimals in TEXT. Deleting a trade removes its links, never the idea or the analysis; an instrument used
+    // by an idea cannot be deleted (no cascade).
+    "CREATE TABLE analysis_questions (
+        id       INTEGER PRIMARY KEY,
+        key      TEXT NOT NULL UNIQUE CHECK (length(key) BETWEEN 1 AND 60),
+        label    TEXT CHECK (label IS NULL OR length(label) BETWEEN 1 AND 200),
+        kind     TEXT NOT NULL CHECK (kind IN ('shortText','longText','choice','trend','conviction','setups','emotions','news')),
+        position INTEGER NOT NULL,
+        archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+        options  TEXT NOT NULL DEFAULT '{}'
+    );
+    INSERT INTO analysis_questions (key, kind, position, options) VALUES
+        ('trend',           'trend',      1, '{\"timeframes\":[\"monthly\",\"weekly\",\"daily\",\"h4\",\"h1\"]}'),
+        ('levels',          'longText',   2, '{}'),
+        ('news',            'news',       3, '{}'),
+        ('alts',            'longText',   4, '{}'),
+        ('scenarioMain',    'longText',   5, '{}'),
+        ('scenarioAlt',     'longText',   6, '{}'),
+        ('invalidation',    'longText',   7, '{}'),
+        ('assets',          'shortText',  8, '{}'),
+        ('setups',          'setups',     9, '{}'),
+        ('conviction',      'conviction', 10, '{}'),
+        ('riskLimits',      'shortText',  11, '{}'),
+        ('state',           'emotions',   12, '{}'),
+        ('mistakeToAvoid',  'shortText',  13, '{}');
+    CREATE TABLE analyses (
+        id            INTEGER PRIMARY KEY,
+        created_at    INTEGER NOT NULL,
+        tz_offset_min INTEGER NOT NULL,
+        day           TEXT NOT NULL CHECK (length(day) = 10),
+        updated_at    INTEGER NOT NULL,
+        note          TEXT CHECK (note IS NULL OR length(note) <= 2000)
+    );
+    CREATE INDEX analyses_by_day ON analyses (day, created_at);
+    CREATE TABLE analysis_answers (
+        analysis_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+        question_id INTEGER NOT NULL REFERENCES analysis_questions(id),
+        value       TEXT NOT NULL CHECK (length(value) >= 1),
+        PRIMARY KEY (analysis_id, question_id)
+    );
+    CREATE TABLE ideas (
+        id                INTEGER PRIMARY KEY,
+        instrument_id     INTEGER NOT NULL REFERENCES instruments(id),
+        timeframes        TEXT NOT NULL DEFAULT '[]',
+        note              TEXT NOT NULL CHECK (length(trim(note)) BETWEEN 1 AND 4000),
+        level_low         TEXT CHECK (level_low IS NULL OR (level_low GLOB '[0-9]*' AND level_low NOT GLOB '*[^0-9.]*')),
+        level_high        TEXT CHECK (level_high IS NULL OR (level_high GLOB '[0-9]*' AND level_high NOT GLOB '*[^0-9.]*')),
+        invalidation      TEXT CHECK (invalidation IS NULL OR length(invalidation) <= 2000),
+        created_at        INTEGER NOT NULL,
+        updated_at        INTEGER NOT NULL,
+        last_reviewed_at  INTEGER,
+        status            TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
+        outcome           TEXT CHECK (outcome IS NULL OR outcome IN ('worked', 'invalidated', 'noFollowUp')),
+        closed_at         INTEGER,
+        snoozed_until_day TEXT CHECK (snoozed_until_day IS NULL OR length(snoozed_until_day) = 10),
+        snooze_count      INTEGER NOT NULL DEFAULT 0 CHECK (snooze_count >= 0),
+        CHECK ((status = 'closed') = (outcome IS NOT NULL AND closed_at IS NOT NULL))
+    );
+    CREATE INDEX ideas_by_status ON ideas (status, instrument_id);
+    CREATE TABLE idea_notes (
+        id         INTEGER PRIMARY KEY,
+        idea_id    INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        kind       TEXT NOT NULL CHECK (kind IN ('created', 'edit', 'complement', 'snooze', 'closed')),
+        body       TEXT NOT NULL DEFAULT '' CHECK (length(body) <= 4000),
+        data       TEXT
+    );
+    CREATE INDEX idea_notes_by_idea ON idea_notes (idea_id, created_at, id);
+    CREATE TABLE trade_ideas (
+        trade_id INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        idea_id  INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+        PRIMARY KEY (trade_id, idea_id)
+    );
+    CREATE INDEX trade_ideas_by_idea ON trade_ideas (idea_id);
+    CREATE TABLE trade_analyses (
+        trade_id    INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        analysis_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+        PRIMARY KEY (trade_id, analysis_id)
+    );
+    CREATE INDEX trade_analyses_by_analysis ON trade_analyses (analysis_id);",
 ];
 
 pub fn latest_version() -> u32 {
