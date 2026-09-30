@@ -111,6 +111,68 @@ async function newPage(w = 1440, h = 900) {
   await page.context().close()
 }
 
+// ───────────────────────── Infobulle ─────────────────────────
+{
+  const page = await newPage()
+  await go(page, '/')
+  const info = page.locator('.cursor-help').first()
+  await info.scrollIntoViewIfNeeded()
+  await info.hover()
+  check((await page.getByRole('tooltip').count()) === 0, 'infobulle : pas d’apparition immédiate au survol')
+  await page.waitForTimeout(450)
+  const tip = page.getByRole('tooltip')
+  check((await tip.count()) === 1, 'infobulle : apparaît après le délai (~250 ms) au survol')
+  check(await tip.evaluate((el) => el.parentElement === document.body), 'infobulle : rendue dans un portail')
+  check((await tip.evaluate((el) => getComputedStyle(el).fontFamily)).includes('Inter'), 'infobulle : police Inter')
+  const id = await tip.getAttribute('id')
+  check((await info.getAttribute('aria-describedby'))?.includes(id), 'infobulle : aria-describedby relie l’élément à l’infobulle')
+  const r = await tip.boundingBox()
+  check(r && r.x >= 0 && r.y >= 0 && r.x + r.width <= 1440 && r.y + r.height <= 900, 'infobulle : entièrement dans la fenêtre')
+  await shot(page, 'lot29-apres-infobulle-1440x900')
+  await page.keyboard.press('Escape')
+  check((await page.getByRole('tooltip').count()) === 0, 'infobulle : Échap la ferme')
+  await page.mouse.move(700, 450)
+
+  // Focus clavier : Tab jusqu'à l'icône « i » (focusable)
+  await page.mouse.move(5, 5)
+  await page.evaluate(() => document.activeElement && document.activeElement.blur())
+  let reached = false
+  for (let i = 0; i < 80 && !reached; i++) {
+    await page.keyboard.press('Tab')
+    reached = await page.evaluate(() => document.activeElement?.classList.contains('cursor-help'))
+  }
+  check(reached, 'infobulle : l’icône « i » est atteinte au clavier (Tab)')
+  await page.waitForTimeout(450)
+  check((await page.getByRole('tooltip').count()) === 1, 'infobulle : apparaît aussi au focus clavier')
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => document.activeElement && document.activeElement.blur())
+
+  // Bord de fenêtre : la cloche, tout en haut à droite
+  await page.getByRole('link', { name: 'Notifications' }).hover().catch(() => {})
+  await page.waitForTimeout(450)
+  const bell = page.getByRole('tooltip')
+  if (await bell.count()) {
+    const b = await bell.boundingBox()
+    check(b.x >= 0 && b.x + b.width <= 1440 && b.y >= 0, 'infobulle : près du bord droit, elle se replace dans la fenêtre')
+  }
+  // Plus aucun title= natif à l'écran
+  for (const route of ['/', '/trades', '/calendar', '/analytics', '/behavior', '/discipline', '/settings', '/sizing', '/journal']) {
+    await go(page, route)
+    const n = await page.locator('[title]:not(svg *)').count()
+    check(n === 0, `infobulle : aucun attribut title natif sur ${route}${n ? ` (${n})` : ''}`)
+  }
+  // Calendrier : survol d'un jour
+  await go(page, '/calendar')
+  const day = page.locator('[role=gridcell][aria-pressed]').first()
+  if (await day.count()) {
+    await day.hover()
+    await page.waitForTimeout(450)
+    check((await page.getByRole('tooltip').count()) === 1, 'infobulle : un jour du calendrier affiche son résultat au survol')
+    await shot(page, 'lot29-apres-infobulle-calendrier-1440x900')
+  }
+  await page.context().close()
+}
+
 await browser.close()
 if (server) server.kill()
 console.log(failures.length ? `\n${failures.length} échec(s)` : '\nTout est bon.')

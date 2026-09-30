@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Select } from '../components/ui/Select'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
@@ -260,7 +261,7 @@ export function ReplayPage() {
                         <span>{formatDateTime(x.entryTime)}</span>
                         <span className="flex items-center gap-2">
                           {x.rating !== null && <span aria-label={t.form.star(x.rating)} className="text-warn">{'★'.repeat(x.rating)}</span>}
-                          {x.hasScreenshot && <span title={r.chartTitle}>▣</span>}
+                          {x.hasScreenshot && <Tooltip content={r.chartTitle}><span>▣</span></Tooltip>}
                         </span>
                       </span>
                     </button>

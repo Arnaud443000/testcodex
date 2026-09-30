@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { signOf } from '../../lib/decimal'
@@ -45,9 +46,11 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                   {m.tradeCount}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block break-words text-sm font-medium leading-snug" title={m.source === 'rule' ? t.ruleBroken(m.label) : m.label}>
-                    {m.source === 'rule' ? t.ruleBroken(m.label) : m.label}
-                  </span>
+                  <Tooltip content={m.source === 'rule' ? t.ruleBroken(m.label) : m.label}>
+                    <span className="block break-words text-sm font-medium leading-snug">
+                      {m.source === 'rule' ? t.ruleBroken(m.label) : m.label}
+                    </span>
+                  </Tooltip>
                   <span className="block text-xs text-tx3 tabular-nums">
                     {t.detail(m.tradeCount, formatRatioPercent(m.share, 0))}
                     {' · '}

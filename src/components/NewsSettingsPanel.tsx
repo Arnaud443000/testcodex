@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { Select } from './ui/Select'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
@@ -302,7 +303,7 @@ export function NewsSettingsPanel() {
                                 <span className="tabular-nums text-tx">
                                   <span className="first-letter:uppercase">{formatDayLong(e.day)}</span>
                                   {' · '}
-                                  {e.parisTime ?? <span title={n.allDayHint}>{n.allDay}</span>}
+                                  {e.parisTime ?? <Tooltip content={n.allDayHint}><span>{n.allDay}</span></Tooltip>}
                                 </span>
                                 <CurrencyTag currency={e.currency} />
                                 <span className="font-medium text-tx">{e.title}</span>

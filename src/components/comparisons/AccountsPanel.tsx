@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { formatFeeRounded, formatProfitFactor } from '../../lib/analysesView'
 import { hintText } from '../../lib/comparisonsView'
@@ -108,10 +109,12 @@ export function AccountsPanel({
                 const grey = m.money && mixedCurrencies
                 return (
                   <tr key={m.key} className="h-[48px] border-t" style={{ borderColor: 'var(--hairline)' }}>
-                    <th scope="row" className="px-3 text-left font-medium text-tx2" title={m.hint ? s.rowHints[m.hint] : undefined}>
-                      {s.rows[m.key]}
-                      {grey && <span className="ml-2 text-xs font-normal text-warn">{s.moneyRow}</span>}
-                    </th>
+                    <Tooltip content={m.hint ? s.rowHints[m.hint] : undefined}>
+                      <th scope="row" className="px-3 text-left font-medium text-tx2">
+                        {s.rows[m.key]}
+                        {grey && <span className="ml-2 text-xs font-normal text-warn">{s.moneyRow}</span>}
+                      </th>
+                    </Tooltip>
                     {rows.map((r) => (
                       <td key={r.accountId} className={`px-3 text-right tabular-nums ${grey ? 'text-tx3' : ''}`}>
                         {r.summary.tradeCount === 0 && m.key !== 'trades' ? '—' : m.cell(r)}

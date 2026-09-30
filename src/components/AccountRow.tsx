@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { Select } from './ui/Select'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
@@ -173,7 +174,9 @@ export function AccountRow({ account: a }: { account: Account }) {
           ) : (
             <>
               <button className={link} onClick={() => setEditing((v) => !v)}>{t.accountAdmin.edit}</button>
-              <button className={link} onClick={doArchive} title={t.accountAdmin.archiveHelp}>{t.accountAdmin.archive}</button>
+              <Tooltip content={t.accountAdmin.archiveHelp}>
+                <button className={link} onClick={doArchive}>{t.accountAdmin.archive}</button>
+              </Tooltip>
               {!a.hasHistory && (
                 <button className={link} onClick={() => setConfirming(true)}>{t.settings.delete}</button>
               )}

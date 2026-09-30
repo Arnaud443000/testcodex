@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Select } from '../components/ui/Select'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
@@ -73,10 +74,12 @@ export function EconomicCalendarPage() {
           <div className="flex items-center gap-3">
             {simulation && <SimulationBadge />}
             {status?.onlineReady && (
-              <button type="button" className="btn btn-secondary" onClick={refresh} disabled={busy} title={n.page.refreshHint}>
-                <Icon name="reset" size={16} />
-                {busy ? n.page.refreshing : n.page.refresh}
-              </button>
+              <Tooltip content={n.page.refreshHint}>
+                <button type="button" className="btn btn-secondary" onClick={refresh} disabled={busy}>
+                  <Icon name="reset" size={16} />
+                  {busy ? n.page.refreshing : n.page.refresh}
+                </button>
+              </Tooltip>
             )}
           </div>
         }
@@ -205,17 +208,23 @@ export function EconomicCalendarPage() {
                   return (
                     <tr key={e.id} className="border-t" style={{ borderColor: 'var(--hairline)' }}>
                       <td className="py-3 tabular-nums">
-                        {e.parisTime ?? <span className="text-tx3" title={n.allDayHint}>{n.allDay}</span>}
+                        {e.parisTime ?? <Tooltip content={n.allDayHint}><span className="text-tx3">{n.allDay}</span></Tooltip>}
                       </td>
                       <td className="py-3"><CurrencyTag currency={e.currency} /></td>
                       <td className="py-3 pr-4 font-medium">{e.title}</td>
                       <td className="py-3"><ImportanceMark importance={e.importance} /></td>
                       <td className="py-3 text-right tabular-nums text-tx2">
-                        <span title={n.values.forecast}>{forecast}</span>
+                        <Tooltip content={n.values.forecast}>
+                          <span>{forecast}</span>
+                        </Tooltip>
                         <span className="px-1.5 text-tx3">·</span>
-                        <span title={n.values.previous}>{previous}</span>
+                        <Tooltip content={n.values.previous}>
+                          <span>{previous}</span>
+                        </Tooltip>
                         <span className="px-1.5 text-tx3">·</span>
-                        <span title={n.values.actual} className={e.actual ? 'font-semibold text-tx' : ''}>{actual}</span>
+                        <Tooltip content={n.values.actual}>
+                          <span className={e.actual ? 'font-semibold text-tx' : ''}>{actual}</span>
+                        </Tooltip>
                       </td>
                     </tr>
                   )

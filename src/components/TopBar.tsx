@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { Tooltip } from './ui/Tooltip'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { PERIOD_KEYS, usePeriod } from '../lib/period'
@@ -53,9 +54,11 @@ export function TopBar() {
 
       <div className="flex-1" />
       {/* La cloche ouvre l'historique des alertes (avant le lot 26 : bouton sans action). */}
-      <Link to="/alerts" className="btn-icon !h-11 !w-11" aria-label={t.topbar.notifications} title={t.topbar.notifications}>
-        <Icon name="bell" />
-      </Link>
+      <Tooltip content={t.topbar.notifications}>
+        <Link to="/alerts" className="btn-icon !h-11 !w-11" aria-label={t.topbar.notifications}>
+          <Icon name="bell" />
+        </Link>
+      </Tooltip>
       <button type="button" className="btn btn-primary" onClick={() => navigate('/trades/new')}>
         <Icon name="plus" size={18} /> {t.topbar.newTrade}
       </button>

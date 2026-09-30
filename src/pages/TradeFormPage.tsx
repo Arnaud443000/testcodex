@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { AssetPicker } from '../components/AssetPicker'
@@ -218,20 +219,22 @@ export function TradeFormPage() {
           <input id="f-entry-time" type="datetime-local" className={`input !px-2 text-[12.5px] ${errorText('entryTime') ? 'input-error' : ''}`} value={form.entryTime} onChange={(e) => set('entryTime', e.target.value)} />
         </Field>
         <Field label={t.form.fields.session} htmlFor="f-session">
-          <div className="relative" title={t.form.autoHint}>
-            <Select
-              id="f-session"
-              className={autoSession ? 'input-auto !pr-16' : ''}
-              value={form.sessionTagId === null ? '' : String(form.sessionTagId)}
-              onChange={(v) => setForm({ ...form, sessionTagId: v === '' ? null : Number(v), sessionManual: v !== '' })}
-              options={[{ value: '', label: t.form.placeholders.select }, ...sessions.map((g) => ({ value: String(g.id), label: g.name }))]}
-            />
-            {autoSession && (
-              <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
-                {t.form.auto}
-              </span>
-            )}
-          </div>
+          <Tooltip content={t.form.autoHint}>
+            <div className="relative">
+              <Select
+                id="f-session"
+                className={autoSession ? 'input-auto !pr-16' : ''}
+                value={form.sessionTagId === null ? '' : String(form.sessionTagId)}
+                onChange={(v) => setForm({ ...form, sessionTagId: v === '' ? null : Number(v), sessionManual: v !== '' })}
+                options={[{ value: '', label: t.form.placeholders.select }, ...sessions.map((g) => ({ value: String(g.id), label: g.name }))]}
+              />
+              {autoSession && (
+                <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
+                  {t.form.auto}
+                </span>
+              )}
+            </div>
+          </Tooltip>
         </Field>
         <Field label={t.form.fields.timeframe} htmlFor="f-timeframe">
           <Select
@@ -282,14 +285,15 @@ export function TradeFormPage() {
         <p className="text-xs text-tx3 sm:col-span-2 sm:self-end sm:pb-3">{t.form.multiplierHelp}</p>
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <Link
-          to="/sizing"
-          state={{ sizingSeed: { accountId: form.accountId, instrumentId: form.instrumentId, direction: form.direction, entry: form.entryPrice, stop: form.plannedSl, takeProfit: form.plannedTp, multiplier: form.multiplier } satisfies SizingSeed }}
-          className="btn-link"
-          title={t.sizing.linkHint}
-        >
-          {t.sizing.link}
-        </Link>
+        <Tooltip content={t.sizing.linkHint}>
+          <Link
+            to="/sizing"
+            state={{ sizingSeed: { accountId: form.accountId, instrumentId: form.instrumentId, direction: form.direction, entry: form.entryPrice, stop: form.plannedSl, takeProfit: form.plannedTp, multiplier: form.multiplier } satisfies SizingSeed }}
+            className="btn-link"
+          >
+            {t.sizing.link}
+          </Link>
+        </Tooltip>
         {prefilled && <span className="text-xs text-tx-accent">{t.sizing.prefilled}</span>}
       </div>
     </StepCard>

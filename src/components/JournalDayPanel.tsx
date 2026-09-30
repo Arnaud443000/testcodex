@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -175,9 +176,11 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
                   <span className="flex items-center gap-2">
                     {l.netPnl !== null && l.outcome ? <Pnl value={l.netPnl} currency={l.currency} className="text-sm font-semibold" /> : <OutcomeBadge outcome="open" />}
                     {l.incomplete && (
-                      <Link to={`/trades/${l.tradeId}/edit`} className="badge badge-warn" title={t.trades.incompleteHint}>
-                        {d.incomplete}
-                      </Link>
+                      <Tooltip content={t.trades.incompleteHint}>
+                        <Link to={`/trades/${l.tradeId}/edit`} className="badge badge-warn">
+                          {d.incomplete}
+                        </Link>
+                      </Tooltip>
                     )}
                   </span>
                 </li>

@@ -1,4 +1,5 @@
 import { useT } from '../i18n'
+import { Tooltip } from './ui/Tooltip'
 import { formatDayLong, heatTier } from '../lib/calendarFormat'
 import { signOf } from '../lib/decimal'
 import { formatSignedAmount, formatSignedMoney } from '../lib/format'
@@ -51,12 +52,16 @@ export function CalendarGrid({
             <b>{formatSignedAmount(r.netPnl)}</b>
           </>
         )
-        return onSelect ? (
-          <button key={n} type="button" className={`${cls} block w-full`} role="gridcell" aria-label={label} aria-pressed={selectedDay === date} onClick={() => onSelect(date)}>
-            {inner}
-          </button>
-        ) : (
-          <div key={n} className={cls} role="gridcell" aria-label={label}>{inner}</div>
+        return (
+          <Tooltip key={n} content={label}>
+            {onSelect ? (
+              <button type="button" className={`${cls} block w-full`} role="gridcell" aria-label={label} aria-pressed={selectedDay === date} onClick={() => onSelect(date)}>
+                {inner}
+              </button>
+            ) : (
+              <div className={cls} role="gridcell" aria-label={label}>{inner}</div>
+            )}
+          </Tooltip>
         )
       })}
     </div>

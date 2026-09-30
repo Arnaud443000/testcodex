@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { CalendarGrid } from '../CalendarGrid'
 import { EquityChart, Sparkline } from '../charts'
 import { EmptyState } from '../EmptyState'
@@ -199,14 +200,15 @@ function Kpi({
       <div className="px-[22px]">
         <div className="flex items-center gap-1.5 text-[13px] font-medium text-tx2">
           {label}
-          <span
-            className="grid h-[15px] w-[15px] cursor-help place-items-center rounded-full border border-tx3 text-[9px] leading-none text-tx3"
-            title={info}
-            aria-label={info}
-            role="img"
-          >
-            i
-          </span>
+          <Tooltip content={info} focusable>
+            <span
+              className="grid h-[15px] w-[15px] cursor-help place-items-center rounded-full border border-tx3 text-[9px] leading-none text-tx3"
+              aria-label={info}
+              role="img"
+            >
+              i
+            </span>
+          </Tooltip>
         </div>
         <div className="mt-1.5 text-[28px] font-semibold tracking-[-0.01em]">{value}</div>
         <div className="min-h-[18px] text-xs text-tx2">{sub}</div>
@@ -244,15 +246,17 @@ export function DailyCard({ data }: { data: Dashboard }) {
               const sign = signOf(d.netPnl)
               const h = `${Math.max((magnitudes[i] / max) * 100, sign === 0 ? 0 : 3)}%`
               return (
-                <div key={d.day} className="flex flex-1 flex-col" title={t.dashboard.daily.bar(d.day, formatSignedMoney(d.netPnl, currency), d.tradeCount)}>
-                  <div className="flex flex-1 items-end">
-                    {sign > 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-gain" style={{ height: h }} />}
+                <Tooltip key={d.day} content={t.dashboard.daily.bar(d.day, formatSignedMoney(d.netPnl, currency), d.tradeCount)}>
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex flex-1 items-end">
+                      {sign > 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-gain" style={{ height: h }} />}
+                    </div>
+                    <div className="h-px bg-white/10" />
+                    <div className="flex flex-1 items-start">
+                      {sign < 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-loss" style={{ height: h }} />}
+                    </div>
                   </div>
-                  <div className="h-px bg-white/10" />
-                  <div className="flex flex-1 items-start">
-                    {sign < 0 && <div className="mx-auto w-full max-w-[40px] rounded-[5px] bg-loss" style={{ height: h }} />}
-                  </div>
-                </div>
+                </Tooltip>
               )
             })}
           </div>

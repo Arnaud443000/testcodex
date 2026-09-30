@@ -1,4 +1,5 @@
 import { useT } from '../../i18n'
+import { Tooltip } from '../ui/Tooltip'
 import { Fragment } from 'react'
 import { roundDecimal } from '../../lib/decimal'
 import { formatPercentValue, heatTier, isLossBin, rBinLabel } from '../../lib/behaviorFormat'
@@ -21,15 +22,17 @@ export function RDistributionCard({ report }: { report: RDistribution }) {
             {report.bins.map((b) => {
               const label = rBinLabel(b)
               return (
-                <div key={label} className="flex h-full flex-1 flex-col justify-end" role="listitem" title={t.barLabel(label, b.count)} aria-label={t.barLabel(label, b.count)}>
-                  <span className="mb-1 text-center text-[11px] tabular-nums text-tx2">{b.count > 0 ? b.count : ''}</span>
-                  {b.count > 0 && (
-                    <div
-                      className={`w-full rounded-t-[6px] ${isLossBin(b) ? 'bg-loss' : 'bg-gain'}`}
-                      style={{ height: `${Math.max((b.count / max) * 82, 3)}%` }}
-                    />
-                  )}
-                </div>
+                <Tooltip key={label} content={t.barLabel(label, b.count)}>
+                  <div className="flex h-full flex-1 flex-col justify-end" role="listitem" aria-label={t.barLabel(label, b.count)}>
+                    <span className="mb-1 text-center text-[11px] tabular-nums text-tx2">{b.count > 0 ? b.count : ''}</span>
+                    {b.count > 0 && (
+                      <div
+                        className={`w-full rounded-t-[6px] ${isLossBin(b) ? 'bg-loss' : 'bg-gain'}`}
+                        style={{ height: `${Math.max((b.count / max) * 82, 3)}%` }}
+                      />
+                    )}
+                  </div>
+                </Tooltip>
               )
             })}
           </div>
@@ -83,15 +86,15 @@ export function HeatmapCard({ report, currency }: { report: Heatmap; currency: s
                 const net = formatSignedMoney(c.netPnl, currency)
                 const text = t.cell(day, h, net, c.tradeCount, formatRatioPercent(c.winRate, 0))
                 return (
-                  <span
-                    key={h}
-                    className={`grid h-[42px] place-items-center rounded-sm text-[10.5px] font-semibold tabular-nums ${tone === 'gain' ? `cal-g${tier}` : tone === 'loss' ? `cal-l${tier}` : ''}`}
-                    style={tone === 'none' ? { background: 'rgba(255,255,255,.08)' } : undefined}
-                    title={text}
-                    aria-label={text}
-                  >
-                    {formatSignedAmount(c.netPnl)}
-                  </span>
+                  <Tooltip key={h} content={text}>
+                    <span
+                      className={`grid h-[42px] place-items-center rounded-sm text-[10.5px] font-semibold tabular-nums ${tone === 'gain' ? `cal-g${tier}` : tone === 'loss' ? `cal-l${tier}` : ''}`}
+                      style={tone === 'none' ? { background: 'rgba(255,255,255,.08)' } : undefined}
+                      aria-label={text}
+                    >
+                      {formatSignedAmount(c.netPnl)}
+                    </span>
+                  </Tooltip>
                 )
               })}
             </Fragment>

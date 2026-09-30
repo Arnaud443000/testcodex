@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Icon } from '../Icon'
 import { Select } from '../ui/Select'
 import { ConfigMenu } from './ConfigMenu'
@@ -55,16 +56,24 @@ export function DashboardSwitcher({
           ...custom.map((s) => ({ value: s.key, label: label(s), group: t.customGroup })),
         ]}
       />
-      <button type="button" className={iconBtn} aria-pressed={current.isDefault} disabled={current.isDefault} title={current.isDefault ? t.isDefault : t.makeDefault} aria-label={current.isDefault ? t.isDefault : t.makeDefault} onClick={onSetDefault}>
-        <span className={current.isDefault ? 'text-violet' : ''}><Icon name="star" size={18} /></span>
-      </button>
+      <Tooltip content={current.isDefault ? t.isDefault : t.makeDefault}>
+        <button type="button" className={iconBtn} aria-pressed={current.isDefault} disabled={current.isDefault} aria-label={current.isDefault ? t.isDefault : t.makeDefault} onClick={onSetDefault}>
+          <span className={current.isDefault ? 'text-violet' : ''}><Icon name="star" size={18} /></span>
+        </button>
+      </Tooltip>
       {!current.builtin && (
         <>
-          <button type="button" className={iconBtn} title={t.rename} aria-label={t.rename} onClick={onRename}><Icon name="edit" size={18} /></button>
-          <button type="button" className={iconBtn} title={t.delete} aria-label={t.delete} onClick={() => setConfirmDelete(true)}><Icon name="cross" size={18} /></button>
+          <Tooltip content={t.rename}>
+            <button type="button" className={iconBtn} aria-label={t.rename} onClick={onRename}><Icon name="edit" size={18} /></button>
+          </Tooltip>
+          <Tooltip content={t.delete}>
+            <button type="button" className={iconBtn} aria-label={t.delete} onClick={() => setConfirmDelete(true)}><Icon name="cross" size={18} /></button>
+          </Tooltip>
         </>
       )}
-      <button type="button" className={iconBtn} title={t.newDashboard} aria-label={t.newDashboard} onClick={onNew}><Icon name="plus" size={18} /></button>
+      <Tooltip content={t.newDashboard}>
+        <button type="button" className={iconBtn} aria-label={t.newDashboard} onClick={onNew}><Icon name="plus" size={18} /></button>
+      </Tooltip>
       <ConfigMenu onDuplicate={onDuplicate} onExport={onExport} onImport={onImport} busy={transferBusy} />
       {confirmDelete && (
         <Modal title={t.delete} onClose={() => setConfirmDelete(false)}>

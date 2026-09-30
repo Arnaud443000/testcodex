@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
@@ -209,19 +210,20 @@ export function AlertSettingsPanel() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn btn-primary" type="submit" disabled={busy}>{s.save}</button>
-            <button
-              className="btn btn-secondary"
-              type="button"
-              disabled={busy}
-              title={s.resetHint}
-              onClick={() => {
-                setForm(DEFAULT_ALERT_FORM)
-                setErrors({})
-                setMessage(null)
-              }}
-            >
-              {s.reset}
-            </button>
+            <Tooltip content={s.resetHint}>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setForm(DEFAULT_ALERT_FORM)
+                  setErrors({})
+                  setMessage(null)
+                }}
+              >
+                {s.reset}
+              </button>
+            </Tooltip>
             {Object.keys(errors).length > 0 && <span role="alert" className="text-sm text-[#F5A198]">{s.fixErrors}</span>}
             {message && <span role="status" className="text-sm text-[#9BE3C4]">{message}</span>}
           </div>

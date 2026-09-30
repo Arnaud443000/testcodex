@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { DayBars } from '../components/behavior/DayBars'
 import { Card, EmptyLine, Note, toneOfDecimal } from '../components/behavior/parts'
@@ -119,7 +120,9 @@ export function DisciplinePage() {
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-medium">{b.components[c.key]}</span>
                 {c.average === null ? (
-                  <span className="text-tx3" title={b.componentEmpty}>—</span>
+                  <Tooltip content={b.componentEmpty}>
+                    <span className="text-tx3">—</span>
+                  </Tooltip>
                 ) : (
                   <b className="tabular-nums">{formatRatioPercent(c.average, 0)}</b>
                 )}
@@ -172,7 +175,9 @@ export function DisciplinePage() {
                   </span>
                   {x.outcome && <OutcomeBadge outcome={x.outcome} />}
                   {x.netPnl !== null && <b className={`tabular-nums ${toneOfDecimal(x.netPnl)}`}>{formatSignedMoney(x.netPnl, currency)}</b>}
-                  <b className="w-16 text-right tabular-nums" title={x.score === null ? d.tradeScoreEmpty : undefined}>{formatScore(x.score)}</b>
+                  <Tooltip content={x.score === null ? d.tradeScoreEmpty : undefined}>
+                    <b className="w-16 text-right tabular-nums">{formatScore(x.score)}</b>
+                  </Tooltip>
                   <Link to={`/trades/${x.tradeId}`} className="btn btn-secondary btn-sm">{d.openTrade}</Link>
                 </li>
               ))}

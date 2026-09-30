@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { formatFeeRounded } from '../../lib/analysesView'
 import { formatRatioPercent } from '../../lib/format'
@@ -83,9 +84,11 @@ export function ExposurePanel({ report, currency }: { report: ExposureReport; cu
                   <td className="px-3 font-semibold">{label(r.assetClass)}</td>
                   <td className="px-3 text-right tabular-nums">{r.tradeCount}</td>
                   {r.riskTradeCount === 0 ? (
-                    <td colSpan={4} className="px-3 text-right text-tx3" title={s.unknownHint}>
-                      {s.unknown}
-                    </td>
+                    <Tooltip content={s.unknownHint}>
+                      <td colSpan={4} className="px-3 text-right text-tx3">
+                        {s.unknown}
+                      </td>
+                    </Tooltip>
                   ) : (
                     <>
                       <td className="px-3 text-right tabular-nums">{formatFeeRounded(r.riskAmount, currency)}</td>

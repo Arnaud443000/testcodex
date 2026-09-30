@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { MIN_CHECKS_FOR_TREND, formatMonthKey } from '../../lib/behaviorFormat'
 import { formatPoints, formatRatioPercent } from '../../lib/format'
@@ -11,14 +12,14 @@ function MonthBars({ months }: { months: MonthAdherence[] }) {
   return (
     <div className="flex h-8 items-end gap-1" role="group" aria-label={t.monthAria}>
       {months.map((m) => (
-        <span
-          key={m.month}
-          className="block w-[14px] rounded-t-[3px]"
-          style={{ height: m.rate === null ? '2px' : `${Math.max(m.rate * 100, 4)}%`, background: m.rate === null ? 'rgba(255,255,255,.18)' : 'var(--grad)', opacity: 0.85 }}
-          role="img"
-          aria-label={t.monthBar(formatMonthKey(m.month), formatRatioPercent(m.rate, 0), m.respected, m.checks)}
-          title={t.monthBar(formatMonthKey(m.month), formatRatioPercent(m.rate, 0), m.respected, m.checks)}
-        />
+        <Tooltip key={m.month} content={t.monthBar(formatMonthKey(m.month), formatRatioPercent(m.rate, 0), m.respected, m.checks)}>
+          <span
+            className="block w-[14px] rounded-t-[3px]"
+            style={{ height: m.rate === null ? '2px' : `${Math.max(m.rate * 100, 4)}%`, background: m.rate === null ? 'rgba(255,255,255,.18)' : 'var(--grad)', opacity: 0.85 }}
+            role="img"
+            aria-label={t.monthBar(formatMonthKey(m.month), formatRatioPercent(m.rate, 0), m.respected, m.checks)}
+          />
+        </Tooltip>
       ))}
     </div>
   )
@@ -27,7 +28,7 @@ function MonthBars({ months }: { months: MonthAdherence[] }) {
 /** Tendance = écart de taux entre la moitié récente et la moitié ancienne ; le sens est écrit (▲ ▼ ■) et signé, jamais la couleur seule. */
 function Trend({ trend }: { trend: number | null }) {
   const t = useT().behavior.rules
-  if (trend === null) return <span className="text-tx3" title={t.trendNoneHint(MIN_CHECKS_FOR_TREND)}>{t.trendNone}</span>
+  if (trend === null) return <Tooltip content={t.trendNoneHint(MIN_CHECKS_FOR_TREND)}><span className="text-tx3">{t.trendNone}</span></Tooltip>
   const text = formatPoints(trend, 0)
   if (text.startsWith('+')) return <span className="text-gain">{t.trendUp(text)}</span>
   if (text.startsWith('−')) return <span className="text-loss">{t.trendDown(text)}</span>

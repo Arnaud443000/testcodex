@@ -1,4 +1,5 @@
 import { useT } from '../../i18n'
+import { Tooltip } from '../ui/Tooltip'
 import type { Account } from '../../types/account'
 import type { ResolvedDashboard } from '../../types/dashboardLayout'
 
@@ -31,10 +32,12 @@ export function ScopeBar({
   return (
     <div className="flex flex-col gap-2" data-testid="dashboard-scope">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-        <span className="badge" title={t.title}>
-          <span className="text-tx3">{t.label} :</span> {label}
-          {archived && <span className="ml-1 text-tx3">({t.archivedTag})</span>}
-        </span>
+        <Tooltip content={t.title}>
+          <span className="badge">
+            <span className="text-tx3">{t.label} :</span> {label}
+            {archived && <span className="ml-1 text-tx3">({t.archivedTag})</span>}
+          </span>
+        </Tooltip>
         {scope.effective !== 'follow' && <span className="text-xs text-tx3">{t.ignoresTopBar}</span>}
         {own > 0 && <span className="text-xs text-tx3">{t.widgetOwnAccount(own)}</span>}
         {onChange && !isPreset && (

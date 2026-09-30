@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AssetPicker } from '../components/AssetPicker'
 import { EmptyState } from '../components/EmptyState'
@@ -346,9 +347,11 @@ function Result({ result, currency, direction, stale, copied, onCopy, onUse }: {
           <button type="button" className="btn btn-ghost" onClick={onCopy}>
             {r.copy}
           </button>
-          <button type="button" className="btn btn-primary" onClick={onUse} title={r.useInTradeHint}>
-            {r.useInTrade}
-          </button>
+          <Tooltip content={r.useInTradeHint}>
+            <button type="button" className="btn btn-primary" onClick={onUse}>
+              {r.useInTrade}
+            </button>
+          </Tooltip>
           {copied === 'ok' && <span role="status" className="text-sm text-tx2">{r.copied}</span>}
           {copied === 'fail' && <span role="status" className="text-sm text-[#F5A198]">{r.copyFailed}</span>}
         </div>
@@ -396,9 +399,11 @@ function Result({ result, currency, direction, stale, copied, onCopy, onUse }: {
 
 function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b py-2 text-sm" style={{ borderColor: 'var(--hairline)' }} title={hint}>
-      <dt className="text-tx2">{label}</dt>
-      <dd className="text-right font-medium tabular-nums">{value}</dd>
-    </div>
+    <Tooltip content={hint}>
+      <div className="flex items-baseline justify-between gap-4 border-b py-2 text-sm" style={{ borderColor: 'var(--hairline)' }}>
+        <dt className="text-tx2">{label}</dt>
+        <dd className="text-right font-medium tabular-nums">{value}</dd>
+      </div>
+    </Tooltip>
   )
 }

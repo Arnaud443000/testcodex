@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { Tooltip } from './ui/Tooltip'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { useInsights } from '../lib/insights'
@@ -22,7 +23,9 @@ function NavEntry({ item, active, children }: { item: NavItem; active: boolean; 
       }`}
     >
       <Icon name={item.icon} />
-      <span className="min-w-0 flex-1 truncate" title={t.nav[item.key]}>{t.nav[item.key]}</span>
+      <Tooltip content={t.nav[item.key]}>
+        <span className="min-w-0 flex-1 truncate">{t.nav[item.key]}</span>
+      </Tooltip>
       {children}
     </Link>
   )
@@ -79,16 +82,17 @@ export function Sidebar() {
           </span>
         </div>
         {status?.enabled && (
-          <button
-            type="button"
-            className="btn-icon ml-auto"
-            aria-label={t.lock.sidebar.lockHint}
-            title={t.lock.sidebar.lockHint}
-            data-testid="sidebar-lock"
-            onClick={() => void api.lockNow().then(setStatus).catch(() => {})}
-          >
-            <Icon name="lock" size={17} />
-          </button>
+          <Tooltip content={t.lock.sidebar.lockHint}>
+            <button
+              type="button"
+              className="btn-icon ml-auto"
+              aria-label={t.lock.sidebar.lockHint}
+              data-testid="sidebar-lock"
+              onClick={() => void api.lockNow().then(setStatus).catch(() => {})}
+            >
+              <Icon name="lock" size={17} />
+            </button>
+          </Tooltip>
         )}
       </div>
     </aside>

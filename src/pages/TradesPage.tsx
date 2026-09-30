@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
@@ -198,15 +199,16 @@ export function TradesPage() {
                             className={`caption px-3 py-3 font-semibold ${c.align === 'right' ? 'text-right' : 'text-left'}`}
                           >
                             {c.key ? (
-                              <button
-                                type="button"
-                                title={t.trades.sortBy(c.label)}
-                                onClick={() => setSortKey(c.key!)}
-                                className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
-                              >
-                                {c.label}
-                                {active && <Icon name={sort.dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
-                              </button>
+                              <Tooltip content={t.trades.sortBy(c.label)}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSortKey(c.key!)}
+                                  className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
+                                >
+                                  {c.label}
+                                  {active && <Icon name={sort.dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
+                                </button>
+                              </Tooltip>
                             ) : (
                               c.label
                             )}
@@ -245,7 +247,9 @@ export function TradesPage() {
                             <span className="flex flex-wrap items-center gap-1.5">
                               <OutcomeBadge outcome={tr.figures?.outcome ?? 'open'} />
                               {isIncomplete(tr) && (
-                                <span className="badge badge-warn" title={t.trades.incompleteHint}>{t.trades.incomplete}</span>
+                                <Tooltip content={t.trades.incompleteHint}>
+                                  <span className="badge badge-warn">{t.trades.incomplete}</span>
+                                </Tooltip>
                               )}
                             </span>
                           </td>

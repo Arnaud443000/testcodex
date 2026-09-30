@@ -1,4 +1,5 @@
 import { useT } from '../../i18n'
+import { Tooltip } from '../ui/Tooltip'
 import { importanceBars } from '../../lib/newsView'
 import type { Importance } from '../../types/news'
 
@@ -9,18 +10,20 @@ export function ImportanceMark({ importance }: { importance: Importance }) {
   const label = t.importance[importance]
   const tone = importance === 'high' ? 'text-[#F0CE8E]' : importance === 'medium' ? 'text-tx' : 'text-tx2'
   return (
-    <span className={`inline-flex items-center gap-2 whitespace-nowrap text-[12.5px] font-semibold ${tone}`} title={t.importanceLabel(label)}>
-      <span aria-hidden="true" className="flex items-end gap-[2px]">
-        {[1, 2, 3].map((i) => (
-          <span
-            key={i}
-            className={`w-[4px] rounded-[1px] ${i > filled ? 'bg-white/15' : importance === 'high' ? 'bg-warn' : 'bg-violet'}`}
-            style={{ height: 4 + i * 3 }}
-          />
-        ))}
+    <Tooltip content={t.importanceLabel(label)}>
+      <span className={`inline-flex items-center gap-2 whitespace-nowrap text-[12.5px] font-semibold ${tone}`}>
+        <span aria-hidden="true" className="flex items-end gap-[2px]">
+          {[1, 2, 3].map((i) => (
+            <span
+              key={i}
+              className={`w-[4px] rounded-[1px] ${i > filled ? 'bg-white/15' : importance === 'high' ? 'bg-warn' : 'bg-violet'}`}
+              style={{ height: 4 + i * 3 }}
+            />
+          ))}
+        </span>
+        <span>{label}</span>
       </span>
-      <span>{label}</span>
-    </span>
+    </Tooltip>
   )
 }
 
@@ -28,17 +31,21 @@ export function ImportanceMark({ importance }: { importance: Importance }) {
 export function CurrencyTag({ currency }: { currency: string }) {
   const t = useT().news
   return (
-    <span className="badge badge-neutral !px-2 tabular-nums" title={currency ? undefined : t.noCurrencyHint}>
-      {currency || t.noCurrency}
-    </span>
+    <Tooltip content={currency ? undefined : t.noCurrencyHint}>
+      <span className="badge badge-neutral !px-2 tabular-nums">
+        {currency || t.noCurrency}
+      </span>
+    </Tooltip>
   )
 }
 
 export function SimulationBadge() {
   const t = useT().news
   return (
-    <span className="badge badge-warn" title={t.simulationHint}>
-      {t.simulation}
-    </span>
+    <Tooltip content={t.simulationHint}>
+      <span className="badge badge-warn">
+        {t.simulation}
+      </span>
+    </Tooltip>
   )
 }

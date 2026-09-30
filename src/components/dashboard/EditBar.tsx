@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Icon } from '../Icon'
 import { useT } from '../../i18n'
 
@@ -60,10 +61,12 @@ export function EditBar({
               <Icon name="library" size={16} />
               {t.toolbar.addWidget}
             </button>
-            <button type="button" className="btn btn-secondary btn-sm" title={t.toolbar.resetPresetHint} onClick={() => ask('reset', onReset)}>
-              <Icon name="reset" size={16} />
-              {t.toolbar.reset}
-            </button>
+            <Tooltip content={t.toolbar.resetPresetHint}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => ask('reset', onReset)}>
+                <Icon name="reset" size={16} />
+                {t.toolbar.reset}
+              </button>
+            </Tooltip>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => ask('cancel', onCancel)}>{t.toolbar.cancel}</button>
             <button type="button" className="btn btn-primary btn-sm" onClick={onSave}>
               <Icon name="check" size={16} />

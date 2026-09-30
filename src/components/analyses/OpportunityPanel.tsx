@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { roundDecimal } from '../../lib/decimal'
 import { formatDecimal, formatMoney, formatSignedMoneyRounded } from '../../lib/format'
@@ -57,7 +58,9 @@ export function OpportunityPanel({ report, currency }: { report: OpportunityRepo
                 <Th label={t.columns.exit} align="right" />
                 <Th label={t.columns.target} align="right" />
                 <Th label={t.columns.after} align="right" />
-                <th scope="col" title={t.moveHint} className="caption px-3 py-3 text-right font-semibold uppercase tracking-[0.06em]">{t.columns.move}</th>
+                <Tooltip content={t.moveHint}>
+                  <th scope="col" className="caption px-3 py-3 text-right font-semibold uppercase tracking-[0.06em]">{t.columns.move}</th>
+                </Tooltip>
                 <Th label={t.columns.left} align="right" />
                 <Th label={t.columns.net} align="right" />
               </tr>

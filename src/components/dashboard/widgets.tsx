@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { DisciplineCard } from '../behavior/DisciplineCard'
 import { EmotionsCard, type Moment } from '../behavior/EmotionsCard'
@@ -418,9 +419,13 @@ function UpcomingNewsWidget({ instance }: WidgetProps) {
             <li key={e.id} className="flex items-center gap-3 py-2.5 text-sm">
               <span className="w-[44px] shrink-0 self-start pt-px tabular-nums text-tx2">{e.parisTime ?? n.allDay}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium" title={e.title}>{e.title}</span>
+                <Tooltip content={e.title}>
+                  <span className="block truncate font-medium">{e.title}</span>
+                </Tooltip>
                 <span className="block truncate text-xs text-tx3">
-                  <span className="font-semibold text-tx2" title={e.currency ? undefined : n.noCurrencyHint}>{e.currency || n.noCurrency}</span>
+                  <Tooltip content={e.currency ? undefined : n.noCurrencyHint}>
+                    <span className="font-semibold text-tx2">{e.currency || n.noCurrency}</span>
+                  </Tooltip>
                   {' · '}
                   {countdown(e, tick, n)}
                 </span>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { formatRatioPercent } from '../../lib/format'
 import type { DisciplineReport } from '../../types/behavior'
@@ -27,7 +28,9 @@ export function DisciplineCard({ report }: { report: DisciplineReport }) {
           <div key={c.key} className="hairline-row">
             <span className="text-tx2">{t.components[c.key]}</span>
             {c.average === null ? (
-              <span className="text-tx3" title={t.componentEmpty}>—</span>
+              <Tooltip content={t.componentEmpty}>
+                <span className="text-tx3">—</span>
+              </Tooltip>
             ) : (
               <b className="tabular-nums">{formatRatioPercent(c.average, 0)}</b>
             )}

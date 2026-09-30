@@ -1,4 +1,5 @@
 import { Icon } from '../Icon'
+import { Tooltip } from '../ui/Tooltip'
 import { Pnl } from '../ui'
 import { roundDecimal } from '../../lib/decimal'
 import type { Decimal } from '../../types/money'
@@ -29,15 +30,16 @@ export function SortTh<K extends string>({
   const on = active === sortKey
   return (
     <th scope="col" aria-sort={on ? (dir === 'asc' ? 'ascending' : 'descending') : undefined} className={`caption px-3 py-3 font-semibold ${align === 'right' ? 'text-right' : 'text-left'}`}>
-      <button
-        type="button"
-        title={hint ?? t.sortBy(label)}
-        onClick={() => onSort(sortKey)}
-        className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${on ? 'text-tx' : ''}`}
-      >
-        {label}
-        {on && <Icon name={dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
-      </button>
+      <Tooltip content={hint ?? t.sortBy(label)}>
+        <button
+          type="button"
+          onClick={() => onSort(sortKey)}
+          className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${on ? 'text-tx' : ''}`}
+        >
+          {label}
+          {on && <Icon name={dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
+        </button>
+      </Tooltip>
     </th>
   )
 }
@@ -55,9 +57,11 @@ export function Th({ label, align }: { label: string; align?: 'right' }) {
 export function LowSampleBadge() {
   const t = useT().analyses
   return (
-    <span className="badge badge-warn whitespace-nowrap" title={t.lowSampleHint}>
-      {t.lowSample}
-    </span>
+    <Tooltip content={t.lowSampleHint}>
+      <span className="badge badge-warn whitespace-nowrap">
+        {t.lowSample}
+      </span>
+    </Tooltip>
   )
 }
 

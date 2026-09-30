@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
@@ -150,7 +151,7 @@ export function CoachPage() {
       <PageHeader
         title={c.title}
         subtitle={c.subtitle}
-        actions={status.provider === 'simulation' ? <span className="badge badge-warn" title={c.simulationHint}>{c.simulation}</span> : undefined}
+        actions={status.provider === 'simulation' ? <Tooltip content={c.simulationHint}><span className="badge badge-warn">{c.simulation}</span></Tooltip> : undefined}
       />
 
       {/* Rappel permanent de ce qui part (et ne part jamais). */}

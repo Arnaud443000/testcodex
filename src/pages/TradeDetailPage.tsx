@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
 import { TradeCardDialog } from '../components/TradeCardDialog'
@@ -126,7 +127,9 @@ export function TradeDetailPage() {
           <>
             <NavBtn to={neighbours.prev}>‹ {d.previous}</NavBtn>
             <NavBtn to={neighbours.next}>{d.next} ›</NavBtn>
-            <button type="button" className="btn btn-secondary" onClick={() => setCardOpen(true)} title={t.tradeCard.openHint}>{t.tradeCard.open}</button>
+            <Tooltip content={t.tradeCard.openHint}>
+              <button type="button" className="btn btn-secondary" onClick={() => setCardOpen(true)}>{t.tradeCard.open}</button>
+            </Tooltip>
             <Link to={`/trades/${trade.id}/edit`} className="btn btn-secondary">{d.edit}</Link>
             <button type="button" className="btn btn-danger" onClick={() => setConfirmDelete(true)}>{d.delete}</button>
           </>
@@ -273,10 +276,12 @@ export function TradeDetailPage() {
                       <li key={i} className="flex flex-wrap items-center gap-2">
                         {i > 0 && emotionsByMoment.slice(0, i).some((l) => l.length > 0) && <span aria-hidden="true" className="text-tx3">→</span>}
                         {list.map((e) => (
-                          <span key={`${e.moment}-${e.tagId}`} className="chip chip-on chip-static" title={t.common.moments[e.moment]}>
-                            <span className="mr-1.5 text-[11px] uppercase text-tx2">{t.common.moments[e.moment]}</span>
-                            {tagName(e.tagId)}
-                          </span>
+                          <Tooltip key={`${e.moment}-${e.tagId}`} content={t.common.moments[e.moment]}>
+                            <span className="chip chip-on chip-static">
+                              <span className="mr-1.5 text-[11px] uppercase text-tx2">{t.common.moments[e.moment]}</span>
+                              {tagName(e.tagId)}
+                            </span>
+                          </Tooltip>
                         ))}
                       </li>
                     ),

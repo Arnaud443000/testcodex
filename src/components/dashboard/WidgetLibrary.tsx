@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Icon } from '../Icon'
 import { WidgetHost } from './WidgetHost'
 import { useT } from '../../i18n'
@@ -65,9 +66,11 @@ export function WidgetLibrary({
           <h2 id="widget-library-title" className="text-base font-semibold">{t.library.title}</h2>
           <p className="mt-1 text-xs leading-relaxed text-tx3">{t.library.intro}</p>
         </div>
-        <button type="button" className="btn-icon !h-8 !w-8 !border-transparent !bg-transparent" aria-label={t.library.close} title={t.library.close} onClick={onClose}>
-          <Icon name="cross" size={16} />
-        </button>
+        <Tooltip content={t.library.close}>
+          <button type="button" className="btn-icon !h-8 !w-8 !border-transparent !bg-transparent" aria-label={t.library.close} onClick={onClose}>
+            <Icon name="cross" size={16} />
+          </button>
+        </Tooltip>
       </div>
       <div className="flex flex-wrap gap-2 px-5 pt-4" role="group" aria-label={t.library.title}>
         {['all', ...categories].map((c) => (
