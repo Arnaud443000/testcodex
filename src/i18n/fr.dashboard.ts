@@ -34,6 +34,7 @@ export const frDashboardBuilder = {
     factors: widget('Facteurs externes', 'Sommeil, fatigue, humeur du journal contre qualité des trades.'),
     insights: widget('Insights', 'Les tendances, points forts et suggestions à retenir (20 derniers trades, 90 derniers jours).'),
     ideas: widget('Idées à surveiller', 'Combien d’idées sont actives, combien attendent votre revue du matin, et les plus anciennes.'),
+    process_goals: widget('Objectifs de comportement', 'Vos objectifs de processus de la semaine ou du mois : valeur, cible, statut et série.'),
     upcoming_news: widget('Prochaines news', 'Les prochaines annonces du calendrier économique, en heure de Paris, avec le temps restant.'),
     prop_firm: widget('Prop firm', 'Ce qu’il reste avant la perte du jour, la perte maximale et l’objectif d’un compte prop (trades clôturés seulement).'),
   } as Record<string, { title: string; description: string }>,
@@ -49,6 +50,7 @@ export const frDashboardBuilder = {
     emotions: { before: 'Avant le trade', during: 'Pendant le trade', after: 'Après le trade', any: 'Toutes' },
     recent_trades: { '5': '5 derniers', '10': '10 derniers', '15': '15 derniers' },
     upcoming_news: { medium: 'Importance moyenne et forte', high: 'Importance forte', all: 'Toutes' },
+    process_goals: { week: 'Semaine en cours', month: 'Mois en cours' },
   } as Record<string, Record<string, string>>,
 
   unknownWidget: 'Widget indisponible dans cette version',

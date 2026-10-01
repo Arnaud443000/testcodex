@@ -105,6 +105,7 @@ const KPI_MODES: &[&str] = &["win_rate", "profit_factor", "expectancy", "risk_re
 const EMOTION_MODES: &[&str] = &["before", "during", "after", "any"];
 const RECENT_MODES: &[&str] = &["5", "10", "15"];
 const NEWS_MODES: &[&str] = &["medium", "high", "all"];
+const PROCESS_GOAL_MODES: &[&str] = &["week", "month"];
 
 const LIBRARY: &[Def] = &[
     // Performance
@@ -142,6 +143,8 @@ const LIBRARY: &[Def] = &[
     def("ideas", "tracking", (10, 14), (8, 8), &[], false, false),
     // Prop firm (lot 33): the rules of one prop account, at the current trading day; no period of its own.
     def("prop_firm", "tracking", (10, 16), (8, 12), &[], false, true),
+    // Behaviour goals (lot 34): the mode is the goal period (this week or this month), so no period of its own.
+    def("process_goals", "tracking", (10, 14), (8, 10), PROCESS_GOAL_MODES, false, true),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

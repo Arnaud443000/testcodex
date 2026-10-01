@@ -569,3 +569,33 @@ fn idle_setting_is_validated() {
     assert_eq!(idle_minutes(&conn).unwrap(), Some(15), "a refused value changes nothing");
     assert_eq!(set_idle_minutes(&conn, None).unwrap(), None);
 }
+
+#[test]
+fn the_process_goals_migration_runs_on_an_encrypted_database_and_keeps_the_result_goals() {
+    // Lot 34: the database is encrypted one version before `process_goals`, with a result goal in it.
+    let before = migrations::process_goals_version() - 1;
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::migrate_to(&mut conn, before).unwrap();
+    conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'discipline_score', '80')", []).unwrap();
+    let image = conn.serialize(rusqlite::MAIN_DB).unwrap().to_vec();
+    let keys = pulse_lock::Unlocked::create(&pw("phrase de test jetable"), FAST).unwrap();
+    fs::write(dir.path().join(ENC_FILE), keys.seal(&image).unwrap()).unwrap();
+
+    let mut store = Store::unlock(dir.path(), &pw("phrase de test jetable"), NOW).unwrap();
+    assert_eq!(migrations::current_version(store.conn()).unwrap(), migrations::latest_version());
+    let goals = crate::goals::list(store.conn(), "2026-09").unwrap();
+    assert_eq!((goals.len(), goals[0].target.to_string().as_str()), (1, "80"));
+    let new = crate::process_goals::NewProcessGoal {
+        period_kind: crate::process_goals::PeriodKind::Week,
+        period_key: "2026-W38".into(),
+        metric: crate::process_goals::ProcessMetric::NoStopTrades,
+        target: dec("0"),
+    };
+    crate::process_goals::set(store.conn(), &new).unwrap();
+    store.flush().unwrap();
+    drop(store);
+    let again = Store::unlock(dir.path(), &pw("phrase de test jetable"), NOW).unwrap();
+    let kept = crate::process_goals::list(again.conn(), crate::process_goals::PeriodKind::Week, "2026-W38").unwrap();
+    assert_eq!(kept.len(), 1, "written back encrypted");
+}

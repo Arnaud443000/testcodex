@@ -870,7 +870,12 @@ pub fn run() {
             get_pause_report,
             get_pause_suggestion,
             get_pause_settings,
-            set_pause_settings
+            set_pause_settings,
+            set_process_goal,
+            list_process_goals,
+            delete_process_goal,
+            copy_process_goals,
+            get_process_goal_progress
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -2096,4 +2101,39 @@ fn get_pause_settings(state: State<AppState>) -> Result<pulse_core::pause::Setti
 fn set_pause_settings(state: State<AppState>, settings: pulse_core::pause::Settings) -> Result<pulse_core::pause::Settings, String> {
     let conn = state.conn()?;
     pulse_core::pause::set_settings(&conn, &settings).map_err(err)
+}
+// --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ---
+
+use pulse_core::process_goals::{self, NewProcessGoal, PeriodKind, ProcessGoal, ProcessProgress};
+
+/// Creates the goal of a period and metric, or changes its target (refused whole when a value is invalid).
+#[tauri::command]
+fn set_process_goal(state: State<AppState>, goal: NewProcessGoal) -> Result<ProcessGoal, String> {
+    let conn = state.conn()?;
+    process_goals::set(&conn, &goal).map_err(err)
+}
+
+#[tauri::command]
+fn list_process_goals(state: State<AppState>, period_kind: PeriodKind, period_key: String) -> Result<Vec<ProcessGoal>, String> {
+    let conn = state.conn()?;
+    process_goals::list(&conn, period_kind, &period_key).map_err(err)
+}
+
+#[tauri::command]
+fn delete_process_goal(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.conn()?;
+    process_goals::delete(&conn, id).map_err(err)
+}
+
+/// Copies the goals of the previous period of the same kind, without overwriting.
+#[tauri::command]
+fn copy_process_goals(state: State<AppState>, period_kind: PeriodKind, period_key: String) -> Result<Vec<ProcessGoal>, String> {
+    let conn = state.conn()?;
+    process_goals::copy_from_previous(&conn, period_kind, &period_key).map_err(err)
+}
+
+#[tauri::command]
+fn get_process_goal_progress(state: State<AppState>, query: process_goals::ProgressQuery) -> Result<ProcessProgress, String> {
+    let conn = state.conn()?;
+    process_goals::progress(&conn, &query).map_err(err)
 }

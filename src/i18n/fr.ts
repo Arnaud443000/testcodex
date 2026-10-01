@@ -200,6 +200,12 @@ export const fr = {
       allPeriods: 'Toutes périodes confondues (la période choisie en haut ne s’applique pas ici).',
       remove: 'Retirer ce filtre',
     },
+    // Lot 34 : trades en cause d'un objectif de comportement (« /trades?ids=… »).
+    idsFilter: {
+      label: (n: number) => (n === 1 ? 'Le trade en cause d’un objectif de comportement' : `Les ${n}\u00a0trades en cause d’un objectif de comportement`),
+      allPeriods: 'La période choisie en haut ne s’applique pas ici.',
+      remove: 'Retirer ce filtre',
+    },
     resetFilters: 'Réinitialiser les filtres',
     filters: {
       asset: 'Actif',
@@ -1608,6 +1614,8 @@ export const fr = {
   prop: frProp,
   // Lot 35 : pause volontaire
   pause: frPause,
+  // Lot 34 : objectifs de comportement (processus)
+  processGoals: frProcessGoals,
 }
 
 export type Messages = typeof fr
@@ -1624,3 +1632,4 @@ import { frAnalysis } from './fr.analysis'
 import { frBackupAuto } from './fr.backupAuto'
 import { frProp } from './fr.prop'
 import { frPause } from './fr.pause'
+import { frProcessGoals } from './fr.processGoals'

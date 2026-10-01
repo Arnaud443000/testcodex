@@ -58,6 +58,8 @@ pub mod analysis;
 pub mod prop;
 // Lot 35 (pause volontaire : un rappel, jamais un blocage).
 pub mod pause;
+// Lot 34 (objectifs de comportement, par semaine et par mois).
+pub mod process_goals;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

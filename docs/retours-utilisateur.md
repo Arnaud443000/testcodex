@@ -319,3 +319,19 @@ Liste complète des défauts trouvés et de leur sort : `docs/audit-visuel-lot26
 - **À essayer** : la barre du haut (bouton « Pause », puis la puce), une bannière de pertes d'affilée (bouton « Faire une pause »), le formulaire de trade pendant une pause (encadré, « Je continue quand même », enregistrement possible), la carte « Pauses » de Comportement, Paramètres > Pause volontaire.
 - **Non testé** : application installée sous Windows et WebView2 (rendu réel, polices, mise à l'échelle) ; le **passage réel du temps** (une pause qui se termine pendant que vous travaillez, après une veille de l'ordinateur) : seuls les horodatages sont testés ; lecteur d'écran ; notification système (il n'y en a pas : seulement le repère dans l'application) ; le verrouillage réel avec une pause en cours. Captures : `docs/captures/lot35-*.png` (1440×900 et 1920×1080, Chromium sous Linux).
 
+
+## Lot 34 (objectifs de comportement) — points à vérifier
+**Votre demande** : des objectifs de **processus**, qui ne dépendent que de vous, par **semaine** et par **mois** : « 0 trade sans stop cette semaine », « au plus N jours de surtrading », « respecter mes règles à 90 % ». Les objectifs de résultat (P&L, taux de réussite…) ne changent pas. Une migration (v17 : une nouvelle table, rien d'autre ne bouge ; sauvegarde automatique avant la migration, comme toujours).
+
+- **Où** : page Objectifs, nouveau sélecteur « Résultats / Comportement » en haut. Bascule Semaine / Mois, flèches pour la période précédente ou suivante.
+- **Sept mesures**, chacune reprise telle quelle d'une page existante (aucun nouveau calcul) : trades sans stop, jours de surtrading, trades de revanche, dépassements du risque max (page Comparaisons), règles respectées (en %), plan suivi (en %, au moins 5 trades au plan renseigné), jours de journal.
+- **Statuts** écrits en toutes lettres avec une icône : « Respecté jusqu'ici », « Dépassé » (définitif dès que le plafond est franchi, même en cours de semaine), « Respecté » (période finie), « Atteint », « En cours », « Manqué », « Pas de données », « Réglage requis ». Une égalité exacte compte comme respecté / atteint.
+- **Pas de données ≠ réussite** : une semaine sans trade clôturé ne compte pas comme « 0 trade sans stop » réussi ; elle interrompt aussi la série.
+- **Série** : « 3 semaines de suite » = périodes précédentes terminées et réussies avec le même objectif (52 au plus).
+- **Réglage requis** : « jours de surtrading » a besoin de votre limite de trades par jour, « dépassements du risque » de votre risque max par trade (Paramètres > Seuils de discipline ; lien sur la carte). Attention : ces seuils s'appliquent aussi aux semaines passées.
+- **Un trade compte dans la période où il est clôturé** (jour et heure locaux), comme partout dans Pulse ; c'est écrit sous les cartes.
+- **Pour commencer** : sans objectif, trois objectifs types à créer en un clic ; « Reprendre les objectifs de la semaine précédente » ; « Voir les trades » ouvre la liste des trades en cause.
+- **Widget** « Objectifs de comportement » (catégorie Suivi du tableau de bord), semaine ou mois en cours selon son réglage.
+- **Changement d'heure** : les semaines à cheval sur un changement d'heure utilisent le bon décalage à chaque bout (testé avec des décalages simulés, pas sur un vrai passage à l'heure d'hiver).
+- **Ce que ces objectifs ne font pas** : ils mesurent votre façon de trader ; ils ne disent ni quoi trader ni quand.
+- **Non testé** : l'application installée sous Windows (WebView2, rendu réel), votre vraie base de données, un lecteur d'écran. Captures (Chromium sous Linux, faux backend) : `docs/captures/lot34-*.png`.

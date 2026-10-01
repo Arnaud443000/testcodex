@@ -14,6 +14,7 @@
 import { spawn, execSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
 import { installSeed, readSeed } from './seed-demo.mjs'
 
 const args = process.argv.slice(2)
@@ -64,6 +65,7 @@ export const ROUTES = [
   ['coach', '/coach'],
   ['calculateur', '/sizing'],
   ['objectifs', '/goals'],
+  ['objectifs-comportement', '/goals?type=process'],
   ['replay', '/replay'],
   ['alertes', '/alerts'],
   // Lot 33 : état vide = aucun compte prop ; chargé = compte prop sans règles (le jeu de démonstration n'en a pas).
@@ -393,6 +395,44 @@ export const SCENARIOS = [
     await page.evaluate(() => document.getElementById('pause')?.scrollIntoView())
     await page.waitForTimeout(400)
   }],
+  // Lot 34 : objectifs de comportement, dans l'ordre d'un usage réel (vide, création, rempli, semaine passée, widget).
+  ['objectifs-comportement-vide', async (page) => { await go(page, '/goals?type=process&kind=week'); await page.waitForTimeout(300) }],
+  ['objectifs-comportement-creation', async (page) => {
+    await go(page, '/goals?type=process&kind=week')
+    await page.getByRole('button', { name: 'Autre objectif…' }).click().catch(() => {})
+    await page.waitForTimeout(300)
+    await page.getByLabel(/Cible \(au moins\)|Plafond \(au plus\)/).fill('1,5').catch(() => {})
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click().catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['objectifs-comportement-rempli', async (page) => {
+    await page.keyboard.press('Escape')
+    await page.evaluate(seedProcessGoals)
+    await go(page, '/goals?type=process&kind=month')
+    await go(page, '/goals?type=process&kind=week')
+    await page.waitForTimeout(500)
+  }],
+  ['objectifs-comportement-precedente', async (page) => {
+    await page.getByRole('button', { name: 'Semaine précédente' }).click().catch(() => {})
+    await page.waitForTimeout(500)
+  }],
+  ['objectifs-comportement-widget', async (page) => {
+    // Widget « Objectifs de comportement » ajouté en mode édition (il n'est dans aucun modèle), puis enregistré en copie.
+    await go(page, '/')
+    const button = (name) => page.getByRole('button', { name, exact: true }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: /^Modifier/ }).first().click({ timeout: 3000 }).catch(() => {})
+    await button('Ajouter un widget')
+    await button('Suivi')
+    await button('Ajouter Objectifs de comportement')
+    await page.waitForTimeout(400)
+    await button('Fermer la bibliothèque')
+    await button('Enregistrer comme copie')
+    await page.waitForTimeout(300)
+    await page.getByRole('dialog').getByRole('button', { name: 'Enregistrer', exact: true }).click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(800)
+    await page.getByText('Objectifs de comportement', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(600)
+  }],
   ['ecran-verrouillage', async (page) => {
     await go(page, '/settings')
     await clickText(page, 'Activer le verrouillage…')
@@ -444,6 +484,42 @@ async function propSeed(page, step) {
   await go(page, '/')
   await go(page, '/prop')
   await page.waitForTimeout(300)
+}
+/**
+ * Lot 34 : objectifs de comportement qui montrent chaque statut sur la semaine en cours et la précédente (faux backend).
+ * Deux trades clôturés aujourd'hui (dont un sans stop), limite de 1 trade par jour (surtrading), pas de risque max
+ * (« Réglage requis »), une entrée de journal aujourd'hui, et des objectifs sur les semaines précédentes pour les séries.
+ */
+async function seedProcessGoals() {
+  const { api } = await import('/src/lib/api.ts')
+  const { currentPeriodKey, shiftPeriod } = await import('/src/lib/processPeriods.ts')
+  const tz = -new Date().getTimezoneOffset()
+  const now = Date.now()
+  const [account] = await api.listAccounts()
+  const eur = (await api.listInstruments()).find((i) => i.symbol === 'EURUSD')
+  const rules = await api.listRules()
+  const trade = (entry, sl, respected) => api.createTrade({
+    accountId: account.id, instrumentId: eur.id, direction: 'long', size: '0.1', entryPrice: '1.0850', exitPrice: '1.0870',
+    entryTime: entry, exitTime: entry + 20 * 60_000, tzOffsetMin: tz, plannedSl: sl, fees: '0.8', thesis: '', postMortem: '',
+    tagIds: [], emotions: [], checklist: [], planFollowed: 'yes', ruleChecks: rules.map((r, k) => ({ ruleId: r.id, respected: respected || k > 0 })),
+  })
+  const start = new Date(now)
+  start.setHours(0, 5, 0, 0)
+  await trade(start.getTime(), '1.0830', true)
+  await trade(start.getTime() + 25 * 60_000, null, false)
+  const s = await api.getBehaviorSettings()
+  await api.setBehaviorSettings({ ...s, maxTradesPerDay: 1, maxRiskPercent: null })
+  const today = new Date(now - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
+  await api.saveJournalEntry({ day: today, mood: 4, sleepQuality: 4, fatigue: 2, lateHours: false, wentWell: 'Stops posés.', toImprove: '', notes: '' })
+  const week = currentPeriodKey('week', now, tz)
+  const goals = [['no_stop_trades', '5'], ['overtrading_days', '0'], ['revenge_trades', '1'], ['risk_breaches', '0'], ['rules_respect_rate', '90'], ['plan_follow_rate', '80'], ['journal_days', '1']]
+  for (const [metric, target] of goals) await api.setProcessGoal({ periodKind: 'week', periodKey: week, metric, target })
+  for (let k = 1; k <= 3; k++) {
+    const key = shiftPeriod('week', week, -k)
+    for (const [metric, target] of [['no_stop_trades', '10'], ['journal_days', '1'], ['rules_respect_rate', '100'], ['revenge_trades', '0']]) {
+      await api.setProcessGoal({ periodKind: 'week', periodKey: key, metric, target }).catch(() => {})
+    }
+  }
 }
 
 async function scenario(page, run, tradeId) {
@@ -612,7 +688,10 @@ async function main() {
   process.exit(overflowFail > 0 ? 1 : 0)
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(2)
-})
+// Lancé directement seulement : scripts/capture-lot34.mjs importe SCENARIOS sans lancer l'audit.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => {
+    console.error(e)
+    process.exit(2)
+  })
+}

@@ -30,6 +30,10 @@ import { statsQueryOf, type Scope } from '../../lib/widgetScope'
 import { useCached, type Loaded } from '../../lib/widgetData'
 import type { WidgetInstance } from '../../types/dashboardLayout'
 import type { Dashboard, StatsQuery } from '../../types/stats'
+import type { ProcessPeriodKind } from '../../types/processGoals'
+import { ProcessStatusBadge } from '../goals/ProcessGoals'
+import { goalSentence, valueText } from '../../lib/processGoalsView'
+import { boundaryOffsets, currentPeriodKey } from '../../lib/processPeriods'
 
 /**
  * La bibliothèque de widgets (cahier 3.8.3). Un widget ne calcule rien : il choisit une commande qui existe déjà
@@ -358,6 +362,63 @@ function InsightsWidget({ scope }: WidgetProps) {
   return <InsightsWidgetCard title={title} insights={data} />
 }
 
+/**
+ * Objectifs de comportement (lot 34) : la semaine ou le mois en cours (le mode du widget), pour le compte du widget.
+ * Valeurs, statuts et séries viennent de pulse-core ; le widget n'affiche que ce qui tient (FitList).
+ */
+function ProcessGoalsWidget({ scope, instance }: WidgetProps) {
+  const t = useT()
+  const p = t.processGoals
+  const title = useTitle('process_goals')
+  const gate = useGate(scope, title)
+  const kind: ProcessPeriodKind = instance.mode === 'month' ? 'month' : 'week'
+  const key = currentPeriodKey(kind, scope.nowMs, scope.tzOffsetMin)
+  const query = {
+    accountIds: scope.accountIds, periodKind: kind, periodKey: key, nowMs: scope.nowMs, tzOffsetMin: scope.tzOffsetMin,
+    boundaryOffsets: boundaryOffsets(kind, key, scope.tzOffsetMin),
+  }
+  const { data, error } = useCached(gate === null ? `process-goals|${JSON.stringify(query)}` : null, () => api.getProcessGoalProgress(query))
+  const manage = `/goals?type=process&kind=${kind}`
+  if (gate) return gate
+  if (error) return <Failed title={title} detail={error} />
+  if (!data) return <Pending title={title} />
+  if (data.goals.length === 0) {
+    return (
+      <Message title={title} action={<Link to={manage} className="btn btn-secondary btn-sm">{p.widget.emptyAction}</Link>}>
+        {p.widget.empty[kind]}
+      </Message>
+    )
+  }
+  return (
+    <FitCard>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
+          <p className="fit-optional text-xs text-tx3">{p.widget.period[kind]}</p>
+        </div>
+        <Link to={manage} className="btn-link whitespace-nowrap">{p.widget.manage}</Link>
+      </div>
+      <FitList moreTo={manage} className="flex flex-col gap-3">
+        {data.goals.map((g) => {
+          const sentence = goalSentence(p, g.goal.metric, g.goal.target)
+          return (
+            <li key={g.goal.id} className="flex flex-col gap-1" aria-label={sentence}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{sentence}</span>
+                <ProcessStatusBadge p={g} />
+              </div>
+              <div className="flex flex-wrap items-baseline gap-x-4 text-[13px] text-tx2">
+                <span>{p.actual}{'\u00a0'}: <b className="text-tx tabular-nums">{valueText(p, g)}</b></span>
+                {g.streak > 0 && <span className="fit-optional font-semibold text-tx-accent">{p.streak(g.streak, kind)}</span>}
+              </div>
+            </li>
+          )
+        })}
+      </FitList>
+    </FitCard>
+  )
+}
+
 /** Correspondance `kind` → composant. La bibliothèque de pulse-core décide de ce qui peut être enregistré. */
 export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   net_pnl_equity: NetPnlEquity,
@@ -384,6 +445,7 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   upcoming_news: UpcomingNewsWidget,
   ideas: IdeasWidget,
   prop_firm: PropFirmWidget,
+  process_goals: ProcessGoalsWidget,
 }
 
 /**

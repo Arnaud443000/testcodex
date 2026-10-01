@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 17, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 18, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -1026,4 +1026,16 @@ export const mockPause = createPauseMock({
       .filter((t) => (accountIds.length ? accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
       .map((t) => t.entryTime),
   activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+})
+
+// --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ---
+import { createProcessGoalsMock } from './mockProcessGoals'
+export const mockProcessGoals = createProcessGoalsMock({
+  // Comme pulse-core : liste vide = comptes actifs ; devises mélangées refusées par behaviorInput.
+  input: (accountIds) => {
+    const ids = accountIds.length ? accountIds : accounts.filter((a) => !a.archived).map((a) => a.id)
+    const input = behaviorInput(ids)
+    return { ...input, currency: input.accounts[0]?.currency ?? null }
+  },
+  journal: () => [...journalEntries.values()],
 })

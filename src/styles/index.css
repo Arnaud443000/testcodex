@@ -234,6 +234,10 @@ body {
     content: '';
     @apply h-1.5 w-1.5 rounded-full bg-current;
   }
+  /* Badge qui porte une icône (lot 34) : l'icône remplace la pastille. */
+  .badge-icon::before {
+    content: none;
+  }
   .badge-gain {
     background: #16302a;
     @apply text-gain;

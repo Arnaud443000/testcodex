@@ -565,7 +565,30 @@ pub const MIGRATIONS: &[&str] = &[
         CHECK (ended_at IS NULL OR ended_at >= started_at)
     );
     CREATE INDEX pauses_by_start ON pauses (started_at);",
+    // v17 in the numbering of the lots run in parallel (lot 34, process goals; v15 and v16 belong to other
+    // lots: move this entry after them at the merge, the SQL does not change and the tests find its
+    // position by themselves). Weekly / monthly targets on the trader's process; the result goals of
+    // `goals` are not touched. `target` is the text of a decimal: a whole number for counts and journal
+    // days, a percentage for rates (validated in `process_goals`, the CHECKs are only a coarse guard).
+    "CREATE TABLE process_goals (
+        id          INTEGER PRIMARY KEY,
+        period_kind TEXT NOT NULL CHECK (period_kind IN ('week','month')),
+        period_key  TEXT NOT NULL CHECK (
+                        (period_kind = 'week' AND period_key GLOB '[0-9][0-9][0-9][0-9]-W[0-5][0-9]')
+                        OR (period_kind = 'month' AND period_key GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]')),
+        metric      TEXT NOT NULL CHECK (metric IN ('no_stop_trades','overtrading_days','revenge_trades','risk_breaches',
+                        'rules_respect_rate','plan_follow_rate','journal_days')),
+        target      TEXT NOT NULL CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*'),
+        created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (period_kind, period_key, metric)
+    );",
 ];
+
+/// Position (= schema version on this branch) of the process-goals migration (lot 34).
+#[cfg(test)]
+pub(crate) fn process_goals_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE process_goals")).expect("process goals migration") as u32 + 1
+}
 
 pub fn latest_version() -> u32 {
     MIGRATIONS.len() as u32
@@ -1068,7 +1091,7 @@ mod tests {
     fn the_pause_table_is_added_and_existing_data_is_kept() {
         let mut conn = Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
-        let before = latest_version() - 1; // the pause migration is the last one
+        let before = MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE pauses")).expect("pause migration") as u32; // just before the pause migration
         migrate_to(&mut conn, before).unwrap();
         let a = account(&conn, "10000");
         let eu = instrument(&conn, "EURUSD", "100000");

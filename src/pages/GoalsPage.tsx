@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Select } from '../components/ui/Select'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
-import { Field } from '../components/ui'
+import { Field, Segmented } from '../components/ui'
+import { ProcessGoals } from '../components/goals/ProcessGoals'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
@@ -70,8 +71,47 @@ function GoalCard({ p, currency, onDelete }: { p: GoalProgress; currency: string
   )
 }
 
-/** Objectifs mensuels (cahier 3.7.2) : tout est calculé par pulse-core, l'écran formate et dessine. */
+type GoalsType = 'results' | 'process'
+
+/**
+ * Page Objectifs : objectifs de résultat mensuels (lot 11, inchangés) et objectifs de comportement par semaine ou par
+ * mois (lot 34). `?type=process&kind=week|month` ouvre directement la vue « Comportement » (lien du widget).
+ */
 export function GoalsPage() {
+  const t = useT()
+  const p = t.processGoals
+  const [params, setParams] = useSearchParams()
+  const type: GoalsType = params.get('type') === 'process' ? 'process' : 'results'
+  const kind = params.get('kind') === 'month' ? 'month' : 'week'
+  const setType = (v: GoalsType) =>
+    setParams((old) => {
+      const n = new URLSearchParams(old)
+      if (v === 'process') n.set('type', 'process')
+      else {
+        n.delete('type')
+        n.delete('kind')
+      }
+      return n
+    })
+  const switcher = (
+    <div className="w-[300px]">
+      <Segmented<GoalsType> label={p.typeLabel} value={type} onChange={(v) => v && setType(v)} options={[{ value: 'results', label: p.types.results }, { value: 'process', label: p.types.process }]} />
+    </div>
+  )
+  if (type === 'process') {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHeader title={t.pages.goals.title} subtitle={p.subtitle} />
+        {switcher}
+        <ProcessGoals key={kind} initialKind={kind} />
+      </div>
+    )
+  }
+  return <ResultGoals switcher={switcher} />
+}
+
+/** Objectifs mensuels (cahier 3.7.2) : tout est calculé par pulse-core, l'écran formate et dessine. */
+function ResultGoals({ switcher }: { switcher: ReactNode }) {
   const t = useT()
   const g = t.goalsPage
   const { accounts, loading, selectedId } = useAccounts()
@@ -159,6 +199,7 @@ export function GoalsPage() {
   return (
     <div className="flex flex-col gap-5">
       {header}
+      {switcher}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="control grid h-10 w-10 place-items-center !rounded-full text-tx2" aria-label={g.monthPrevious} onClick={() => setMonth(shiftMonth(month, -1))}>
           <Icon name="left" size={16} />
