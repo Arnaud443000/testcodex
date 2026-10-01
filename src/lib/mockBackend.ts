@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 19, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 20, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -1047,4 +1047,23 @@ export const mockMcp = createMcpMock({
   runTool: (accountIds, name, input) => coachTool({ accountIds, nowMs: Date.now(), tzOffsetMin: -new Date().getTimezoneOffset() }, name, input),
   now: () => Date.now(),
   tzOffsetMin: () => -new Date().getTimezoneOffset(),
+})
+
+// --- Lot 36 : bilan hebdomadaire (miroir de pulse-core/src/weekly_review.rs, voir mockReview.ts) ---
+import { createReviewMock } from './mockReview'
+export const mockReview = createReviewMock({
+  summary: (q) => behavior.mockPeriodSummary(behaviorInput(q.accountIds), q),
+  discipline: (q) => behavior.mockDiscipline(behaviorInput(q.accountIds), q),
+  mistakes: (q) => behavior.mockMistakes(behaviorInput(q.accountIds), q),
+  pauses: (q) => behavior.mockPauseReport(behaviorInput(q.accountIds), q, mockPause.all()),
+  goals: (q) => mockProcessGoals.getProcessGoalProgress(q),
+  ideas: (status, tz, now) => mockAnalysis.listIdeas(status, null, tz, now),
+  journal: () => [...journalEntries.values()],
+  currency: (accountIds) => behaviorInput(accountIds).accounts[0]?.currency ?? null,
+  // Comme le rappel de pulse-core : comptes actifs, sans contrôle de devise (rien n'est additionné).
+  closedCount: (from, to) =>
+    [...trades.values()].filter(
+      (t) => !accounts.find((a) => a.id === t.accountId)?.archived && t.exitTime != null && t.exitTime >= from && t.exitTime < to,
+    ).length,
+  now: () => Date.now(),
 })
