@@ -121,10 +121,9 @@ pub fn call_endpoint(endpoint: &Endpoint, tool: &str, arguments: &Value, timeout
         return Err(CallError::TooLarge);
     }
     let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, endpoint.port));
-    let stream = TcpStream::connect_timeout(&addr, timeouts.connect).map_err(|e| match e.kind() {
-        std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock => CallError::Timeout,
-        _ => CallError::Unreachable,
-    })?;
+    // Any failure to connect means nobody (Pulse) answers on that port: a stale file. Windows retries a closed
+    // loopback port for about a second and reports a timeout instead of a refusal, so both are « unreachable ».
+    let stream = TcpStream::connect_timeout(&addr, timeouts.connect).map_err(|_| CallError::Unreachable)?;
     if !stream.peer_addr().is_ok_and(|a| a.ip().is_loopback()) {
         return Err(CallError::NotPulse);
     }
