@@ -25,6 +25,7 @@ export const fr = {
     coach: 'Coach IA',
     sizing: 'Calculateur',
     prop: 'Prop firm',
+    review: 'Bilan',
     groups: { capture: 'Saisir', analyse: 'Analyser', understand: 'Comprendre', tools: 'Outils' },
     label: 'Navigation principale',
   },
@@ -463,6 +464,7 @@ export const fr = {
       pause: 'Pause',
       cashflows: 'Dépôts et retraits',
       reminder: 'Rappel',
+      weeklyReview: 'Bilan',
       display: 'Affichage',
       autoBackup: 'Sauvegarde auto',
       data: 'Données',
@@ -1617,6 +1619,7 @@ export const fr = {
   pause: frPause,
   // Lot 34 : objectifs de comportement (processus)
   processGoals: frProcessGoals,
+  review: frReview,
   // Lot 37 : accès MCP local (Claude Code)
   mcp: frMcp,
 }
@@ -1636,4 +1639,5 @@ import { frBackupAuto } from './fr.backupAuto'
 import { frProp } from './fr.prop'
 import { frPause } from './fr.pause'
 import { frProcessGoals } from './fr.processGoals'
+import { frReview } from './fr.review'
 import { frMcp } from './fr.mcp'

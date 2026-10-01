@@ -82,6 +82,9 @@ export function createReviewMock(deps: ReviewDeps) {
   let reminder: ReviewReminderSettings = { ...DEFAULT_REVIEW_REMINDER }
   let lastSent: string | null = null
   let dismissed: string | null = null
+  /** Horloge imposée (scénarios d'audit : un dimanche à 18:30 sans attendre) ; `null` = l'heure réelle. */
+  let clock: number | null = null
+  const now = () => clock ?? deps.now()
 
   const clone = (r: WeeklyReview): WeeklyReview => structuredClone(r)
   const find = (key: string) => reviews.find((r) => r.periodKey === key)
@@ -230,6 +233,11 @@ export function createReviewMock(deps: ReviewDeps) {
       reminder = { ...DEFAULT_REVIEW_REMINDER }
       lastSent = null
       dismissed = null
+      clock = null
+    },
+    /** Pour les scénarios d'audit seulement : impose l'heure que voit le faux backend du bilan (`null` = l'heure réelle). */
+    setClock: (ms: number | null) => {
+      clock = ms
     },
     /** Écriture directe pour les scénarios d'audit : une semaine entière de bilan, sans règle de date. */
     seed: (review: Omit<WeeklyReview, 'id' | 'firstDay' | 'lastDay' | 'state' | 'intentions'> & { intentions: { text: string; outcome: IntentionOutcome | null }[] }) => {
@@ -269,14 +277,14 @@ export function createReviewMock(deps: ReviewDeps) {
       const answers = cleanAnswers(input.answers)
       const texts = cleanIntentions(input.intentions)
       if (Object.values(answers).every((a) => a === '') && texts.length === 0) throw refuse('empty')
-      const now = deps.now()
-      if (todayNumber(now, tzOffsetMin) < p.firstDay) throw refuse('future')
+      const at = now()
+      if (todayNumber(at, tzOffsetMin) < p.firstDay) throw refuse('future')
       let r = find(input.periodKey)
       if (!r) {
-        r = { id: nextReviewId++, ...describe(p), createdAt: now, updatedAt: now, completedAt: null, state: 'draft', answers, intentions: [] }
+        r = { id: nextReviewId++, ...describe(p), createdAt: at, updatedAt: at, completedAt: null, state: 'draft', answers, intentions: [] }
         reviews.push(r)
       }
-      r.updatedAt = now
+      r.updatedAt = at
       r.answers = answers
       // Une intention dont le texte n'a pas changé garde son suivi ; une intention modifiée repart « non évaluée ».
       r.intentions = texts.map((text, i): ReviewIntention => {
@@ -291,7 +299,7 @@ export function createReviewMock(deps: ReviewDeps) {
       const r = find(periodKey)
       if (!r) throw new Error(`not found: weekly review ${periodKey}`)
       if (r.completedAt === null) {
-        r.completedAt = deps.now()
+        r.completedAt = now()
         r.updatedAt = r.completedAt
         r.state = 'done'
       }
@@ -320,7 +328,7 @@ export function createReviewMock(deps: ReviewDeps) {
     },
 
     getWeeklyReviewStatus: async (tzOffsetMin: number): Promise<WeekStatus> => {
-      const p = periodContaining('week', todayNumber(deps.now(), tzOffsetMin))
+      const p = periodContaining('week', todayNumber(now(), tzOffsetMin))
       const current = find(p.key)
       const before = find(previousPeriod(p).key)
       const source = current && current.intentions.length > 0 ? current : before && before.intentions.length > 0 ? before : undefined
@@ -343,16 +351,16 @@ export function createReviewMock(deps: ReviewDeps) {
 
     /** Même règle que la boucle de la coque, appliquée à la demande (voir l'en-tête). */
     getReviewReminderPending: async (tzOffsetMin: number, boundaryOffsets: Record<string, number> = {}): Promise<ReviewDue | null> => {
-      const now = deps.now()
-      const armed = check(now, tzOffsetMin, boundaryOffsets)
+      const at = now()
+      const armed = check(at, tzOffsetMin, boundaryOffsets)
       if (armed) lastSent = armed.periodKey
-      const key = currentWeekKey(now, tzOffsetMin)
+      const key = currentWeekKey(at, tzOffsetMin)
       if (!reminder.enabled || lastSent !== key || dismissed === key || stateOf(find(key)) === 'done') return null
-      return weekActivity(now, tzOffsetMin, boundaryOffsets)
+      return weekActivity(at, tzOffsetMin, boundaryOffsets)
     },
 
     dismissReviewReminder: async (tzOffsetMin: number): Promise<void> => {
-      dismissed = currentWeekKey(deps.now(), tzOffsetMin)
+      dismissed = currentWeekKey(now(), tzOffsetMin)
     },
 
     /** Pour les tests : la boucle de la coque, un tour. */

@@ -66,6 +66,8 @@ export const ROUTES = [
   ['calculateur', '/sizing'],
   ['objectifs', '/goals'],
   ['objectifs-comportement', '/goals?type=process'],
+  // Lot 36 : bilan hebdomadaire (semaine en cours : « vide » = aucune donnée, « chargé » = jeu de démonstration).
+  ['bilan', '/review'],
   ['replay', '/replay'],
   ['alertes', '/alerts'],
   // Lot 33 : état vide = aucun compte prop ; chargé = compte prop sans règles (le jeu de démonstration n'en a pas).
@@ -81,6 +83,33 @@ const clickText = async (page, text) => {
   await page.getByText(text, { exact: false }).first().click({ timeout: 3000 }).catch(() => {})
   await page.waitForTimeout(400)
 }
+
+
+// --- Lot 36 : bilan hebdomadaire --------------------------------------------------------------
+/** Clé ISO « AAAA-Www » du jour `d` (heure locale du navigateur). */
+const isoWeekKey = (d) => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  t.setUTCDate(t.getUTCDate() + 3 - ((t.getUTCDay() + 6) % 7))
+  const jan4 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4))
+  const week = 1 + Math.round(((t - jan4) / 86_400_000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7)
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
+/** La semaine en cours, la précédente (celle du jeu de démonstration, qui a des trades clôturés) et son dimanche. */
+const reviewWeeks = () => {
+  const now = new Date()
+  const back = (days) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - days)
+  const lastWeek = back(7)
+  const monday = new Date(lastWeek.getFullYear(), lastWeek.getMonth(), lastWeek.getDate() - ((lastWeek.getDay() + 6) % 7))
+  return {
+    current: isoWeekKey(now),
+    previous: isoWeekKey(lastWeek),
+    previousBefore: isoWeekKey(back(14)),
+    previousBefore2: isoWeekKey(back(21)),
+    sundayOfPrevious: new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 18, 30).getTime(),
+  }
+}
+/** Le faux backend du bilan est la même instance que celle de l'application (module Vite). */
+const reviewMock = (page, fn, arg) => page.evaluate(async ([src, a]) => (new Function('m', 'a', `return (${src})(m, a)`))((await import('/src/lib/mockBackend.ts')).mockReview, a), [fn.toString(), arg])
 
 /** États et boîtes de dialogue : chacun prépare la page, puis on l'inspecte et on la photographie. */
 export const SCENARIOS = [
@@ -431,6 +460,76 @@ export const SCENARIOS = [
     await page.getByRole('dialog').getByRole('button', { name: 'Enregistrer', exact: true }).click({ timeout: 3000 }).catch(() => {})
     await page.waitForTimeout(800)
     await page.getByText('Objectifs de comportement', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(600)
+  }],
+  // Lot 36 : bilan hebdomadaire, dans l'ordre d'un usage réel (vide, bannière du dimanche, brouillon, terminé, suivi des intentions, widget).
+  ['review-vide', async (page) => {
+    await reviewMock(page, (m) => m.reset())
+    await go(page, `/review?week=${reviewWeeks().previous}`)
+    await page.waitForTimeout(500)
+  }],
+  ['review-vide-refus', async (page) => {
+    // Un bilan entièrement vide : le bouton est grisé, le texte dit pourquoi ; une espace seule n'y change rien.
+    await page.getByLabel(/Qu’est-ce qui s’est bien passé/).fill('   ').catch(() => {})
+    await page.getByRole('button', { name: 'Terminer le bilan' }).evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['review-banniere', async (page) => {
+    // Le dimanche à 18:30 de la semaine qui a des trades : le rappel est armé, la bannière apparaît dans le flux de la page.
+    await reviewMock(page, (m, ms) => m.setClock(ms), reviewWeeks().sundayOfPrevious)
+    await go(page, '/')
+    await page.waitForTimeout(700)
+  }],
+  ['review-brouillon', async (page) => {
+    await reviewMock(page, (m) => m.setClock(null))
+    await go(page, `/review?week=${reviewWeeks().previous}`)
+    await page.getByLabel(/Qu’est-ce qui s’est bien passé/).fill('J’ai respecté mes stops sur presque tous les trades.')
+    await page.getByLabel(/Qu’est-ce que je referais autrement/).fill('Moins de trades en fin de journée.')
+    await page.getByLabel(/Quelle est ma priorité/).fill('Préparer la séance du lundi la veille.')
+    await page.getByLabel('Intention 1', { exact: true }).fill('Un stop sur chaque trade')
+    await page.getByRole('button', { name: 'Ajouter une intention' }).click()
+    await page.getByLabel('Intention 2', { exact: true }).fill('Pas de trade après deux pertes')
+    await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click()
+    await page.waitForTimeout(600)
+  }],
+  ['review-fait', async (page) => {
+    await page.getByRole('button', { name: 'Terminer le bilan' }).click()
+    await page.waitForTimeout(700)
+  }],
+  ['review-intentions-suivies', async (page) => {
+    // Deux semaines plus tôt avec une intention tenue : la série compte « 3 semaines de suite » une fois celle-ci suivie.
+    const w = reviewWeeks()
+    await reviewMock(page, (m, a) => {
+      for (const key of [a.b2, a.b1]) m.seed({ periodKey: key, createdAt: Date.now(), updatedAt: Date.now(), completedAt: Date.now(), answers: { wentWell: 'Un stop partout.', doDifferently: '', nextPriority: '' }, intentions: [{ text: 'Journal chaque soir', outcome: 'kept' }] })
+    }, { b1: w.previousBefore, b2: w.previousBefore2 })
+    await go(page, `/review?week=${w.current}`)
+    await page.getByRole('button', { name: 'Tenue', exact: true }).first().click().catch(() => {})
+    await page.getByRole('button', { name: 'En partie', exact: true }).nth(1).click().catch(() => {})
+    await page.waitForTimeout(500)
+    await page.getByTestId('review-last-week').evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['review-historique', async (page) => {
+    await page.getByRole('button', { name: /^Afficher \d+ bilans? passés?/ }).click().catch(() => {})
+    await page.waitForTimeout(400)
+    await page.getByTestId('review-history').evaluate((el) => el.scrollIntoView({ block: 'start' })).catch(() => {})
+    await page.waitForTimeout(300)
+  }],
+  ['review-parametres', async (page) => { await go(page, '/settings'); await page.evaluate(() => document.getElementById('bilan')?.scrollIntoView()); await page.waitForTimeout(400) }],
+  ['review-widget', async (page) => {
+    await go(page, '/')
+    const button = (name) => page.getByRole('button', { name, exact: true }).first().click({ timeout: 3000 }).catch(() => {})
+    await page.getByRole('button', { name: /^Modifier/ }).first().click({ timeout: 3000 }).catch(() => {})
+    await button('Ajouter un widget')
+    await button('Suivi')
+    await button('Ajouter Bilan hebdomadaire')
+    await page.waitForTimeout(400)
+    await button('Fermer la bibliothèque')
+    await button('Enregistrer comme copie')
+    await page.waitForTimeout(300)
+    await page.getByRole('dialog').getByRole('button', { name: 'Enregistrer', exact: true }).click({ timeout: 3000 }).catch(() => {})
+    await page.waitForTimeout(800)
+    await page.getByText('Bilan hebdomadaire', { exact: true }).last().evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {})
     await page.waitForTimeout(600)
   }],
   // Lot 37 : accès MCP (simulation du navigateur : aucune écoute), dans l'ordre d'un premier usage.

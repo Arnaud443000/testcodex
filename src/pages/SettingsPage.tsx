@@ -16,6 +16,7 @@ import { AnalysisSettingsPanel } from '../components/AnalysisSettingsPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
+import { ReviewReminderPanel } from '../components/ReviewReminderPanel'
 import { PausePanel } from '../components/PausePanel'
 import { SecurityPanel } from '../components/SecurityPanel'
 import { useT, type Messages } from '../i18n'
@@ -166,7 +167,7 @@ function EmotionsSection() {
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
   ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['analysis', 'analysis'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['pause', 'pause'], ['cashflows', 'depots'],
-  ['reminder', 'rappel'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['mcp', 'mcp'], ['about', 'apropos'],
+  ['reminder', 'rappel'], ['weeklyReview', 'bilan'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['mcp', 'mcp'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
   const t = useT()
@@ -243,6 +244,7 @@ export function SettingsPage() {
       <div id="pause" className="scroll-mt-4"><PausePanel /></div>
       <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>
       <div id="rappel" className="scroll-mt-4"><ReminderPanel /></div>
+      <div id="bilan" className="scroll-mt-4"><ReviewReminderPanel /></div>
       <DisplayPanel />
       <div id="sauvegarde" className="scroll-mt-4"><AutoBackupPanel /></div>
       <div id="donnees" className="scroll-mt-4"><DataPanel /></div>

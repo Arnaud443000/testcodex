@@ -130,3 +130,16 @@ describe('widget « Objectifs de comportement » (lot 34)', () => {
     expect(out).toContain(fr.dashboardBuilder.widgets.process_goals.title)
   })
 })
+
+describe('widget « Bilan hebdomadaire » (lot 36)', () => {
+  it('est un widget de suivi sans période ni compte, sans mode, et ne dépend pas des devises', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'weekly_review')!
+    expect([d.category, d.period, d.account, d.modes, d.defaultW, d.defaultH, d.minW, d.minH]).toEqual(['tracking', false, false, [], 10, 12, 8, 9])
+    expect(fr.dashboardBuilder.widgets.weekly_review.title).toBe('Bilan hebdomadaire')
+    // Devises mélangées : le widget ne lit aucun fait, il n'est donc pas bloqué (il charge son statut).
+    const out = html(instance('weekly_review'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.weekly_review.title)
+  })
+})
