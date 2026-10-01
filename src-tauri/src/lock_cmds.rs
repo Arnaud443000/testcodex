@@ -102,10 +102,16 @@ pub async fn change_lock_password(app: AppHandle, old_password: String, new_pass
 /// Writes what is pending, closes the database and forgets the keys. Refused (data kept) if the
 /// encrypted file cannot be written.
 pub(crate) fn lock_store(app: &AppHandle) -> Result<(), String> {
-    // Lot 37: the MCP access goes off first (port closed, endpoint file removed), before the database
-    // lock is taken (the runtime and the database are never held together).
-    crate::mcp_cmds::stop(app, pulse_core::mcp::StopReason::Locked);
     let state = app.state::<AppState>();
+    // A plain database cannot be locked: refused before anything changes (the MCP access included).
+    match state.db.lock().map_err(err)?.as_ref() {
+        None => return Ok(()),
+        Some(store) if !store.is_encrypted() => return Err(LockError::NotEncrypted.to_string()),
+        Some(_) => {}
+    }
+    // Lot 37: the MCP access goes off first (port closed, endpoint file removed), with the database lock
+    // released (the MCP runtime is never locked while the database lock is awaited).
+    crate::mcp_cmds::stop(app, pulse_core::mcp::StopReason::Locked);
     let mut slot = state.db.lock().map_err(err)?;
     let Some(store) = slot.take() else { return Ok(()) };
     if !store.is_encrypted() {

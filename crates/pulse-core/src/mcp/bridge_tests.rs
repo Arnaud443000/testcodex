@@ -179,11 +179,9 @@ fn only_loopback_peers_are_allowed() {
     let s = setup(Echo::default());
     let bridge = s.start(Limits::default());
     let lan_ip = std::net::UdpSocket::bind("0.0.0.0:0").and_then(|u| u.connect("10.255.255.255:9").map(|_| u)).and_then(|u| u.local_addr());
-    if let Ok(addr) = lan_ip {
-        if !addr.ip().is_loopback() && !addr.ip().is_unspecified() {
-            let tried = TcpStream::connect_timeout(&SocketAddr::new(addr.ip(), bridge.port()), Duration::from_millis(500));
-            assert!(tried.is_err(), "{} must not reach the bridge", addr.ip());
-        }
+    if let Ok(addr) = lan_ip.map(|a| a.ip()).map_err(drop).and_then(|ip| if ip.is_loopback() || ip.is_unspecified() { Err(()) } else { Ok(ip) }) {
+        let tried = TcpStream::connect_timeout(&SocketAddr::new(addr, bridge.port()), Duration::from_millis(500));
+        assert!(tried.is_err(), "{addr} must not reach the bridge");
     }
 }
 
