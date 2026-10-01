@@ -198,9 +198,35 @@ impl Period {
     }
 }
 
-fn day_string(day: i64) -> String {
+pub(crate) fn day_string(day: i64) -> String {
     let (y, m, d) = time::civil_from_days(day);
     format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// Refuses an impossible UTC offset or an unreadable day in `boundary_offsets`.
+pub(crate) fn check_offsets(tz_offset_min: i32, boundary_offsets: &BTreeMap<String, i32>) -> Result<()> {
+    for (day, offset) in boundary_offsets {
+        time::parse_day(day).ok_or_else(|| CoreError::Invalid(format!("invalid day {day:?}")))?;
+        if offset.abs() > 18 * 60 {
+            return Err(CoreError::Invalid(format!("invalid UTC offset {offset}")));
+        }
+    }
+    if tz_offset_min.abs() > 18 * 60 {
+        return Err(CoreError::Invalid(format!("invalid UTC offset {tz_offset_min}")));
+    }
+    Ok(())
+}
+
+/// UTC instant of local midnight at the start of `day`: the offset of that very day when given
+/// (daylight-saving change), the offset of now otherwise.
+pub(crate) fn midnight_of(day: i64, tz_offset_min: i32, boundary_offsets: &BTreeMap<String, i32>) -> i64 {
+    let offset = boundary_offsets.get(&day_string(day)).copied().unwrap_or(tz_offset_min);
+    day * DAY_MS - i64::from(offset) * 60_000
+}
+
+/// `[from, to)` in Unix ms, UTC, of a period's local days.
+pub(crate) fn window_of(p: &Period, tz_offset_min: i32, boundary_offsets: &BTreeMap<String, i32>) -> (i64, i64) {
+    (midnight_of(p.first_day, tz_offset_min, boundary_offsets), midnight_of(p.first_day + p.days, tz_offset_min, boundary_offsets))
 }
 
 // --- Goals --------------------------------------------------------------------------------
@@ -479,15 +505,7 @@ struct Sources {
 
 impl Sources {
     fn load(conn: &Connection, q: &ProgressQuery) -> Result<Sources> {
-        for (day, offset) in &q.boundary_offsets {
-            time::parse_day(day).ok_or_else(|| CoreError::Invalid(format!("invalid day {day:?}")))?;
-            if offset.abs() > 18 * 60 {
-                return Err(CoreError::Invalid(format!("invalid UTC offset {offset}")));
-            }
-        }
-        if q.tz_offset_min.abs() > 18 * 60 {
-            return Err(CoreError::Invalid(format!("invalid UTC offset {}", q.tz_offset_min)));
-        }
+        check_offsets(q.tz_offset_min, &q.boundary_offsets)?;
         let ledger = stats::load(conn, &q.account_ids)?;
         let accounts: Vec<i64> = ledger.accounts.iter().map(|a| a.id).collect();
         Ok(Sources {
@@ -502,14 +520,8 @@ impl Sources {
         })
     }
 
-    /// UTC instant of local midnight at the start of `day`.
-    fn midnight(&self, day: i64) -> i64 {
-        let offset = self.boundary_offsets.get(&day_string(day)).copied().unwrap_or(self.tz_offset_min);
-        day * DAY_MS - i64::from(offset) * 60_000
-    }
-
     fn window(&self, p: &Period) -> (i64, i64) {
-        (self.midnight(p.first_day), self.midnight(p.first_day + p.days))
+        window_of(p, self.tz_offset_min, &self.boundary_offsets)
     }
 
     fn query(&self, p: &Period) -> StatsQuery {

@@ -60,6 +60,8 @@ pub mod prop;
 pub mod pause;
 // Lot 34 (objectifs de comportement, par semaine et par mois).
 pub mod process_goals;
+// Lot 36 (bilan hebdomadaire : faits de la semaine, trois questions, intentions suivies la semaine d'après, rappel du dimanche).
+pub mod weekly_review;
 // Lot 37 (accès MCP local : pont sur 127.0.0.1 vers les outils du coach ; aucune connexion sortante).
 pub mod mcp;
 pub use rusqlite;

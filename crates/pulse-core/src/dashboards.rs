@@ -145,6 +145,9 @@ const LIBRARY: &[Def] = &[
     def("prop_firm", "tracking", (10, 16), (8, 12), &[], false, true),
     // Behaviour goals (lot 34): the mode is the goal period (this week or this month), so no period of its own.
     def("process_goals", "tracking", (10, 14), (8, 10), PROCESS_GOAL_MODES, false, true),
+    // Weekly review (lot 36): the status of the running week's review and the intentions in force. It reads
+    // no fact, so it has neither a period nor an account of its own.
+    def("weekly_review", "tracking", (8, 10), (6, 8), &[], false, false),
 ];
 
 fn find(kind: &str) -> Option<&'static Def> {

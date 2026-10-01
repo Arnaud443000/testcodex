@@ -598,7 +598,36 @@ pub const MIGRATIONS: &[&str] = &[
         duration_ms   INTEGER NOT NULL CHECK (duration_ms >= 0)
     );
     CREATE INDEX mcp_calls_by_time ON mcp_calls (at);",
+    // v20 — weekly review (lot 36): one row per local ISO week ("YYYY-Www"), the three short answers as
+    // a JSON object (technical keys, the wording of the questions lives in the interface: a question can
+    // change without a migration) and 1 to 3 intentions per review, followed up the week after
+    // (`outcome` NULL = not evaluated). Free text of the trader: it is in the backup and encrypted with the
+    // lock (it lives in the database), and no export, no coach tool and no MCP tool reads it.
+    // Deleting a review deletes its intentions.
+    "CREATE TABLE weekly_reviews (
+        id           INTEGER PRIMARY KEY,
+        period_key   TEXT NOT NULL UNIQUE CHECK (period_key GLOB '[0-9][0-9][0-9][0-9]-W[0-5][0-9]'),
+        created_at   INTEGER NOT NULL,
+        updated_at   INTEGER NOT NULL,
+        completed_at INTEGER,
+        answers      TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(answers) AND length(answers) <= 8000)
+    );
+    CREATE TABLE weekly_intentions (
+        id         INTEGER PRIMARY KEY,
+        review_id  INTEGER NOT NULL REFERENCES weekly_reviews(id) ON DELETE CASCADE,
+        position   INTEGER NOT NULL CHECK (position BETWEEN 1 AND 3),
+        body       TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 200),
+        outcome    TEXT CHECK (outcome IS NULL OR outcome IN ('kept','partly','notKept')),
+        outcome_at INTEGER,
+        UNIQUE (review_id, position)
+    );",
 ];
+
+/// Position (= schema version) of the weekly review migration (lot 36).
+#[cfg(test)]
+pub(crate) fn weekly_review_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE weekly_reviews")).expect("weekly review migration") as u32 + 1
+}
 
 /// Position (= schema version on this branch) of the process-goals migration (lot 34).
 #[cfg(test)]
@@ -1135,5 +1164,42 @@ mod tests {
         conn.execute("DELETE FROM trades", []).unwrap();
         conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
         assert_eq!(count("SELECT COUNT(*) FROM pauses"), 1);
+    }
+
+    #[test]
+    fn the_weekly_review_tables_are_added_and_existing_data_is_kept() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, weekly_review_version() - 1).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let mut t = trades::TradeData::new(a, eu, trades::Direction::Long, "1".parse().unwrap(), "1.1".parse().unwrap(), 1_000);
+        t.exit_price = Some("1.2".parse().unwrap());
+        t.exit_time = Some(2_000);
+        trades::create(&conn, &t).unwrap();
+        conn.execute("INSERT INTO mcp_calls (at, tz_offset_min, tool, params, result, is_error, size, duration_ms) VALUES (1, 0, 'x', '{}', '{}', 0, 2, 1)", []).unwrap();
+        conn.execute("INSERT INTO process_goals (period_kind, period_key, metric, target) VALUES ('week', '2026-W38', 'no_stop_trades', '0')", []).unwrap();
+        assert!(conn.prepare("SELECT * FROM weekly_reviews").is_err(), "no review before");
+
+        migrate_to(&mut conn, latest_version()).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!(
+            (count("SELECT COUNT(*) FROM trades"), count("SELECT COUNT(*) FROM mcp_calls"), count("SELECT COUNT(*) FROM process_goals")),
+            (1, 1, 1),
+            "everything that existed is kept"
+        );
+        assert_eq!((count("SELECT COUNT(*) FROM weekly_reviews"), count("SELECT COUNT(*) FROM weekly_intentions")), (0, 0));
+
+        // The constraints are a coarse guard (the module validates): one review per week, 1 to 3 intentions.
+        conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('2026-W38', 1, 1)", []).unwrap();
+        assert!(conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('2026-W38', 1, 1)", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('nope', 1, 1)", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_intentions (review_id, position, body) VALUES (1, 4, 'x')", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_intentions (review_id, position, body, outcome) VALUES (1, 1, 'x', 'maybe')", []).is_err());
+        conn.execute("INSERT INTO weekly_intentions (review_id, position, body) VALUES (1, 1, 'x')", []).unwrap();
+        // No review of its own is touched by an account: deleting the review deletes its intentions.
+        conn.execute("DELETE FROM weekly_reviews WHERE id = 1", []).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM weekly_intentions"), 0);
     }
 }
