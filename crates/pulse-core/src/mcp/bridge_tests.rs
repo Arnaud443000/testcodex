@@ -116,8 +116,8 @@ fn a_wrong_or_missing_proof_closes_at_once_and_runs_nothing() {
     let sn = wire::hex_field(&hello, "nonce", 32).unwrap();
     let cn = [4u8; 32];
     let bad = wire::client_proof(&[0u8; 32], ep.port, &sn, &cn);
-    writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&bad) })).unwrap();
-    writeln!(w, "{}", json!({ "tool": "discipline", "arguments": {} })).unwrap();
+    writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&bad) })).ok(); // the host may already have closed: a reset is a valid refusal (Windows)
+    writeln!(w, "{}", json!({ "tool": "discipline", "arguments": {} })).ok(); // the host may already have closed: a reset is a valid refusal (Windows)
     assert!(rest(&mut r).is_empty(), "closed without a word");
 
     // Right token but a proof for another port (a relay) or with the nonces swapped.
@@ -125,20 +125,20 @@ fn a_wrong_or_missing_proof_closes_at_once_and_runs_nothing() {
         let (mut r, mut w, hello) = raw(bridge.port());
         let sn2 = wire::hex_field(&hello, "nonce", 32).unwrap();
         assert_ne!(sn, sn2, "a new nonce for every connection");
-        writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&proof) })).unwrap();
+        writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&proof) })).ok(); // the host may already have closed: a reset is a valid refusal (Windows)
         assert!(rest(&mut r).is_empty());
     }
 
     // Replaying an old valid proof on a new connection (new nonce): refused.
     let (mut r, mut w, _) = raw(bridge.port());
     let replay = wire::client_proof(&ep.token, ep.port, &sn, &cn);
-    writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&replay) })).unwrap();
+    writeln!(w, "{}", json!({ "nonce": wire::hex(&cn), "proof": wire::hex(&replay) })).ok(); // the host may already have closed: a reset is a valid refusal (Windows)
     assert!(rest(&mut r).is_empty());
 
     // No proof: garbage, an HTTP request (a web page trying http://127.0.0.1:port), an empty line, EOF.
     for garbage in ["hello", "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n", "", "{\"nonce\":\"00\"}"] {
         let (mut r, mut w, _) = raw(bridge.port());
-        writeln!(w, "{garbage}").unwrap();
+        writeln!(w, "{garbage}").ok(); // the host may already have closed: a reset is a valid refusal (Windows)
         assert!(rest(&mut r).is_empty(), "{garbage:?}");
     }
     let (mut r, w, _) = raw(bridge.port());
@@ -234,13 +234,13 @@ fn oversized_or_malformed_requests_are_refused_and_not_run() {
         (r, w)
     };
     let (mut r, mut w) = authed();
-    w.write_all(&vec![b'x'; wire::MAX_REQUEST_LINE + 10]).unwrap();
-    w.write_all(b"\n").unwrap();
+    w.write_all(&vec![b'x'; wire::MAX_REQUEST_LINE + 10]).ok(); // the host may already have closed: a reset is a valid refusal (Windows)
+    w.write_all(b"\n").ok(); // the host may already have closed: a reset is a valid refusal (Windows)
     let text = String::from_utf8(rest(&mut r)).unwrap();
     assert!(text.contains("mcp:tooLarge"), "{text}");
     for bad in [r#"{"tool":"risk"}"#, r#"{"tool":"risk","arguments":[1]}"#, r#"{"arguments":{}}"#, "not json"] {
         let (mut r, mut w) = authed();
-        writeln!(w, "{bad}").unwrap();
+        writeln!(w, "{bad}").ok(); // the host may already have closed: a reset is a valid refusal (Windows)
         let text = String::from_utf8(rest(&mut r)).unwrap();
         assert!(text.contains("mcp:badRequest"), "{bad}: {text}");
     }

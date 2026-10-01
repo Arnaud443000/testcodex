@@ -1,0 +1,4 @@
+# Texts embedded in the binary (include_str!) must be byte-identical on every platform (no CRLF on Windows).
+crates/pulse-core/src/coach/rules.txt text eol=lf
+crates/pulse-mcp/src/tools.json text eol=lf
+crates/pulse-core/catalog/*.txt text eol=lf
