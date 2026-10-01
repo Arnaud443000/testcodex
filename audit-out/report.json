@@ -1,0 +1,7346 @@
+[
+ {
+  "key": "dashboard-vide-1280x720",
+  "page": "dashboard",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-vide-1280x720",
+  "page": "analyse-seance",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-vide-1280x720",
+  "page": "analyse-idees",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-vide-1280x720",
+  "page": "analyse-archives",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trades-vide-1280x720",
+  "page": "trades",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-nouveau-vide-1280x720",
+  "page": "trade-nouveau",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-detail-vide-1280x720",
+  "page": "trade-detail",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-vide-1280x720",
+  "page": "trade-modifier",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-vide-1280x720",
+  "page": "calendrier",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-eco-vide-1280x720",
+  "page": "calendrier-eco",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-vide-1280x720",
+  "page": "journal",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-vide-1280x720",
+  "page": "discipline",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-vide-1280x720",
+  "page": "comportement",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-assets-vide-1280x720",
+  "page": "analyses-assets",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-vide-1280x720",
+  "page": "analyses-fees",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-strategies-vide-1280x720",
+  "page": "analyses-strategies",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-vide-1280x720",
+  "page": "analyses-execution",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-opportunity-vide-1280x720",
+  "page": "analyses-opportunity",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-vide-1280x720",
+  "page": "analyses-year",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-duration-vide-1280x720",
+  "page": "analyses-duration",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-vide-1280x720",
+  "page": "analyses-scaling",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "comparaisons-vide-1280x720",
+  "page": "comparaisons",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "insights-vide-1280x720",
+  "page": "insights",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "coach-vide-1280x720",
+  "page": "coach",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-vide-1280x720",
+  "page": "calculateur",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-vide-1280x720",
+  "page": "objectifs",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-vide-1280x720",
+  "page": "objectifs-comportement",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "bilan-vide-1280x720",
+  "page": "bilan",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-vide-1280x720",
+  "page": "replay",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-vide-1280x720",
+  "page": "alertes",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-vide-1280x720",
+  "page": "prop",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "parametres-vide-1280x720",
+  "page": "parametres",
+  "state": "vide",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "dashboard-charge-1280x720",
+  "page": "dashboard",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-charge-1280x720",
+  "page": "analyse-seance",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-charge-1280x720",
+  "page": "analyse-idees",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-charge-1280x720",
+  "page": "analyse-archives",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "trades-charge-1280x720",
+  "page": "trades",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « XAUUSD » (59×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-nouveau-charge-1280x720",
+  "page": "trade-nouveau",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-detail-charge-1280x720",
+  "page": "trade-detail",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-charge-1280x720",
+  "page": "trade-modifier",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (378×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-charge-1280x720",
+  "page": "calendrier",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-eco-charge-1280x720",
+  "page": "calendrier-eco",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-charge-1280x720",
+  "page": "journal",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.min-w-0.font-medium.hover:underline « EURUSD Long · 19:37 » (132×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-charge-1280x720",
+  "page": "discipline",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-charge-1280x720",
+  "page": "comportement",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-assets-charge-1280x720",
+  "page": "analyses-assets",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « GBPUSD » (57×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « EURUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « BTCUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « XAUUSD » (59×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-charge-1280x720",
+  "page": "analyses-fees",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-strategies-charge-1280x720",
+  "page": "analyses-strategies",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « Cassure NY » (82×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « Retour à la moyenne » (142×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-charge-1280x720",
+  "page": "analyses-execution",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-opportunity-charge-1280x720",
+  "page": "analyses-opportunity",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-charge-1280x720",
+  "page": "analyses-year",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-duration-charge-1280x720",
+  "page": "analyses-duration",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-charge-1280x720",
+  "page": "analyses-scaling",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "comparaisons-charge-1280x720",
+  "page": "comparaisons",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "insights-charge-1280x720",
+  "page": "insights",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "coach-charge-1280x720",
+  "page": "coach",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-charge-1280x720",
+  "page": "calculateur",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-charge-1280x720",
+  "page": "objectifs",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-charge-1280x720",
+  "page": "objectifs-comportement",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "bilan-charge-1280x720",
+  "page": "bilan",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-charge-1280x720",
+  "page": "replay",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-charge-1280x720",
+  "page": "alertes",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-charge-1280x720",
+  "page": "prop",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "parametres-charge-1280x720",
+  "page": "parametres",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280,
+  "focusInvisible": []
+ },
+ {
+  "key": "dashboard-edition-charge-1280x720",
+  "page": "dashboard-edition",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "dashboard-bibliotheque-charge-1280x720",
+  "page": "dashboard-bibliotheque",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "carte-de-trade-charge-1280x720",
+  "page": "carte-de-trade",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "settings-securite-charge-1280x720",
+  "page": "settings-securite",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "settings-donnees-pdf-charge-1280x720",
+  "page": "settings-donnees-pdf",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "news-ff-consentement-charge-1280x720",
+  "page": "news-ff-consentement",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "news-ff-test-charge-1280x720",
+  "page": "news-ff-test",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "news-ff-calendrier-charge-1280x720",
+  "page": "news-ff-calendrier",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "news-ff-trop-tot-charge-1280x720",
+  "page": "news-ff-trop-tot",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "news-ff-widget-charge-1280x720",
+  "page": "news-ff-widget",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-sans-regles-charge-1280x720",
+  "page": "prop-sans-regles",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-editeur-charge-1280x720",
+  "page": "prop-editeur",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-editeur-erreurs-charge-1280x720",
+  "page": "prop-editeur-erreurs",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-statut-ok-charge-1280x720",
+  "page": "prop-statut-ok",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-statut-attention-charge-1280x720",
+  "page": "prop-statut-attention",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-statut-critique-charge-1280x720",
+  "page": "prop-statut-critique",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-statut-atteinte-charge-1280x720",
+  "page": "prop-statut-atteinte",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "prop-widget-charge-1280x720",
+  "page": "prop-widget",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-formulaire-charge-1280x720",
+  "page": "emotions-formulaire",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-catalogue-charge-1280x720",
+  "page": "emotions-catalogue",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-saisie-libre-charge-1280x720",
+  "page": "emotions-saisie-libre",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-retrait-confirmation-charge-1280x720",
+  "page": "emotions-retrait-confirmation",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-retrait-fait-charge-1280x720",
+  "page": "emotions-retrait-fait",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "emotions-parametres-charge-1280x720",
+  "page": "emotions-parametres",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-seance-remplie-charge-1280x720",
+  "page": "analyse-seance-remplie",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-seance-vide-refusee-charge-1280x720",
+  "page": "analyse-seance-vide-refusee",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-banniere-revue-charge-1280x720",
+  "page": "analyse-banniere-revue",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-revue-matin-charge-1280x720",
+  "page": "analyse-revue-matin",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-report-menu-charge-1280x720",
+  "page": "analyse-report-menu",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-report-libre-invalide-charge-1280x720",
+  "page": "analyse-report-libre-invalide",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-report-fait-charge-1280x720",
+  "page": "analyse-report-fait",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-cloture-charge-1280x720",
+  "page": "analyse-cloture",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-idee-nouvelle-charge-1280x720",
+  "page": "analyse-idee-nouvelle",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-archives-ouvertes-charge-1280x720",
+  "page": "analyse-archives-ouvertes",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-parametres-charge-1280x720",
+  "page": "analyse-parametres",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-formulaire-trade-charge-1280x720",
+  "page": "analyse-formulaire-trade",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "analyse-detail-trade-charge-1280x720",
+  "page": "analyse-detail-trade",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "sauvegarde-auto-desactivee-charge-1280x720",
+  "page": "sauvegarde-auto-desactivee",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "sauvegarde-auto-activee-erreur-charge-1280x720",
+  "page": "sauvegarde-auto-activee-erreur",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-choix-charge-1280x720",
+  "page": "pause-choix",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-active-barre-charge-1280x720",
+  "page": "pause-active-barre",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-formulaire-charge-1280x720",
+  "page": "pause-formulaire",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-formulaire-continuer-charge-1280x720",
+  "page": "pause-formulaire-continuer",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (440×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-banniere-choix-charge-1280x720",
+  "page": "pause-banniere-choix",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-banniere-suggestion-charge-1280x720",
+  "page": "pause-banniere-suggestion",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-comportement-avec-charge-1280x720",
+  "page": "pause-comportement-avec",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-discipline-repere-charge-1280x720",
+  "page": "pause-discipline-repere",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-comportement-sans-charge-1280x720",
+  "page": "pause-comportement-sans",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "pause-parametres-charge-1280x720",
+  "page": "pause-parametres",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "objectifs-comportement-vide-charge-1280x720",
+  "page": "objectifs-comportement-vide",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "objectifs-comportement-creation-charge-1280x720",
+  "page": "objectifs-comportement-creation",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "objectifs-comportement-rempli-charge-1280x720",
+  "page": "objectifs-comportement-rempli",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "objectifs-comportement-precedente-charge-1280x720",
+  "page": "objectifs-comportement-precedente",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "objectifs-comportement-widget-charge-1280x720",
+  "page": "objectifs-comportement-widget",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-vide-charge-1280x720",
+  "page": "review-vide",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-vide-refus-charge-1280x720",
+  "page": "review-vide-refus",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-banniere-charge-1280x720",
+  "page": "review-banniere",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-brouillon-charge-1280x720",
+  "page": "review-brouillon",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-fait-charge-1280x720",
+  "page": "review-fait",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-intentions-suivies-charge-1280x720",
+  "page": "review-intentions-suivies",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-historique-charge-1280x720",
+  "page": "review-historique",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-parametres-charge-1280x720",
+  "page": "review-parametres",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "review-widget-charge-1280x720",
+  "page": "review-widget",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-desactive-charge-1280x720",
+  "page": "mcp-desactive",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-consentement-charge-1280x720",
+  "page": "mcp-consentement",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-actif-charge-1280x720",
+  "page": "mcp-actif",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-puce-barre-du-haut-charge-1280x720",
+  "page": "mcp-puce-barre-du-haut",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-journal-charge-1280x720",
+  "page": "mcp-journal",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "mcp-installation-charge-1280x720",
+  "page": "mcp-installation",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "ecran-verrouillage-charge-1280x720",
+  "page": "ecran-verrouillage",
+  "state": "charge",
+  "size": "1280x720",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1280
+ },
+ {
+  "key": "dashboard-vide-1440x900",
+  "page": "dashboard",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-vide-1440x900",
+  "page": "analyse-seance",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-vide-1440x900",
+  "page": "analyse-idees",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-vide-1440x900",
+  "page": "analyse-archives",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trades-vide-1440x900",
+  "page": "trades",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-nouveau-vide-1440x900",
+  "page": "trade-nouveau",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-detail-vide-1440x900",
+  "page": "trade-detail",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-vide-1440x900",
+  "page": "trade-modifier",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-vide-1440x900",
+  "page": "calendrier",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-eco-vide-1440x900",
+  "page": "calendrier-eco",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-vide-1440x900",
+  "page": "journal",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-vide-1440x900",
+  "page": "discipline",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-vide-1440x900",
+  "page": "comportement",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-assets-vide-1440x900",
+  "page": "analyses-assets",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-vide-1440x900",
+  "page": "analyses-fees",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-strategies-vide-1440x900",
+  "page": "analyses-strategies",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-vide-1440x900",
+  "page": "analyses-execution",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-opportunity-vide-1440x900",
+  "page": "analyses-opportunity",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-vide-1440x900",
+  "page": "analyses-year",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-duration-vide-1440x900",
+  "page": "analyses-duration",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-vide-1440x900",
+  "page": "analyses-scaling",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "comparaisons-vide-1440x900",
+  "page": "comparaisons",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "insights-vide-1440x900",
+  "page": "insights",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "coach-vide-1440x900",
+  "page": "coach",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-vide-1440x900",
+  "page": "calculateur",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-vide-1440x900",
+  "page": "objectifs",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-vide-1440x900",
+  "page": "objectifs-comportement",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "bilan-vide-1440x900",
+  "page": "bilan",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-vide-1440x900",
+  "page": "replay",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-vide-1440x900",
+  "page": "alertes",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-vide-1440x900",
+  "page": "prop",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "parametres-vide-1440x900",
+  "page": "parametres",
+  "state": "vide",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "dashboard-charge-1440x900",
+  "page": "dashboard",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-charge-1440x900",
+  "page": "analyse-seance",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-charge-1440x900",
+  "page": "analyse-idees",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-charge-1440x900",
+  "page": "analyse-archives",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "trades-charge-1440x900",
+  "page": "trades",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « XAUUSD » (59×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-nouveau-charge-1440x900",
+  "page": "trade-nouveau",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-detail-charge-1440x900",
+  "page": "trade-detail",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-charge-1440x900",
+  "page": "trade-modifier",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (538×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-charge-1440x900",
+  "page": "calendrier",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-eco-charge-1440x900",
+  "page": "calendrier-eco",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-charge-1440x900",
+  "page": "journal",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.min-w-0.font-medium.hover:underline « EURUSD Long · 19:47 » (132×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-charge-1440x900",
+  "page": "discipline",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-charge-1440x900",
+  "page": "comportement",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-assets-charge-1440x900",
+  "page": "analyses-assets",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « GBPUSD » (57×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « EURUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « BTCUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « XAUUSD » (59×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-charge-1440x900",
+  "page": "analyses-fees",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-strategies-charge-1440x900",
+  "page": "analyses-strategies",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « Cassure NY » (82×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « Retour à la moyenne » (142×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-charge-1440x900",
+  "page": "analyses-execution",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-opportunity-charge-1440x900",
+  "page": "analyses-opportunity",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-charge-1440x900",
+  "page": "analyses-year",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-duration-charge-1440x900",
+  "page": "analyses-duration",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-charge-1440x900",
+  "page": "analyses-scaling",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "comparaisons-charge-1440x900",
+  "page": "comparaisons",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "insights-charge-1440x900",
+  "page": "insights",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "coach-charge-1440x900",
+  "page": "coach",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-charge-1440x900",
+  "page": "calculateur",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-charge-1440x900",
+  "page": "objectifs",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-charge-1440x900",
+  "page": "objectifs-comportement",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "bilan-charge-1440x900",
+  "page": "bilan",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-charge-1440x900",
+  "page": "replay",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-charge-1440x900",
+  "page": "alertes",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-charge-1440x900",
+  "page": "prop",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "parametres-charge-1440x900",
+  "page": "parametres",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440,
+  "focusInvisible": []
+ },
+ {
+  "key": "dashboard-edition-charge-1440x900",
+  "page": "dashboard-edition",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "dashboard-bibliotheque-charge-1440x900",
+  "page": "dashboard-bibliotheque",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "carte-de-trade-charge-1440x900",
+  "page": "carte-de-trade",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "settings-securite-charge-1440x900",
+  "page": "settings-securite",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "settings-donnees-pdf-charge-1440x900",
+  "page": "settings-donnees-pdf",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "news-ff-consentement-charge-1440x900",
+  "page": "news-ff-consentement",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "news-ff-test-charge-1440x900",
+  "page": "news-ff-test",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "news-ff-calendrier-charge-1440x900",
+  "page": "news-ff-calendrier",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "news-ff-trop-tot-charge-1440x900",
+  "page": "news-ff-trop-tot",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "news-ff-widget-charge-1440x900",
+  "page": "news-ff-widget",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-sans-regles-charge-1440x900",
+  "page": "prop-sans-regles",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-editeur-charge-1440x900",
+  "page": "prop-editeur",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-editeur-erreurs-charge-1440x900",
+  "page": "prop-editeur-erreurs",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-statut-ok-charge-1440x900",
+  "page": "prop-statut-ok",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-statut-attention-charge-1440x900",
+  "page": "prop-statut-attention",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-statut-critique-charge-1440x900",
+  "page": "prop-statut-critique",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-statut-atteinte-charge-1440x900",
+  "page": "prop-statut-atteinte",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "prop-widget-charge-1440x900",
+  "page": "prop-widget",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-formulaire-charge-1440x900",
+  "page": "emotions-formulaire",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-catalogue-charge-1440x900",
+  "page": "emotions-catalogue",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-saisie-libre-charge-1440x900",
+  "page": "emotions-saisie-libre",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-retrait-confirmation-charge-1440x900",
+  "page": "emotions-retrait-confirmation",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-retrait-fait-charge-1440x900",
+  "page": "emotions-retrait-fait",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "emotions-parametres-charge-1440x900",
+  "page": "emotions-parametres",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-seance-remplie-charge-1440x900",
+  "page": "analyse-seance-remplie",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-seance-vide-refusee-charge-1440x900",
+  "page": "analyse-seance-vide-refusee",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-banniere-revue-charge-1440x900",
+  "page": "analyse-banniere-revue",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-revue-matin-charge-1440x900",
+  "page": "analyse-revue-matin",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-report-menu-charge-1440x900",
+  "page": "analyse-report-menu",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-report-libre-invalide-charge-1440x900",
+  "page": "analyse-report-libre-invalide",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-report-fait-charge-1440x900",
+  "page": "analyse-report-fait",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-cloture-charge-1440x900",
+  "page": "analyse-cloture",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-idee-nouvelle-charge-1440x900",
+  "page": "analyse-idee-nouvelle",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-archives-ouvertes-charge-1440x900",
+  "page": "analyse-archives-ouvertes",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-parametres-charge-1440x900",
+  "page": "analyse-parametres",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-formulaire-trade-charge-1440x900",
+  "page": "analyse-formulaire-trade",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "analyse-detail-trade-charge-1440x900",
+  "page": "analyse-detail-trade",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "sauvegarde-auto-desactivee-charge-1440x900",
+  "page": "sauvegarde-auto-desactivee",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "sauvegarde-auto-activee-erreur-charge-1440x900",
+  "page": "sauvegarde-auto-activee-erreur",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-choix-charge-1440x900",
+  "page": "pause-choix",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-active-barre-charge-1440x900",
+  "page": "pause-active-barre",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-formulaire-charge-1440x900",
+  "page": "pause-formulaire",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-formulaire-continuer-charge-1440x900",
+  "page": "pause-formulaire-continuer",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (600×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-banniere-choix-charge-1440x900",
+  "page": "pause-banniere-choix",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-banniere-suggestion-charge-1440x900",
+  "page": "pause-banniere-suggestion",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-comportement-avec-charge-1440x900",
+  "page": "pause-comportement-avec",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-discipline-repere-charge-1440x900",
+  "page": "pause-discipline-repere",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)",
+   "button.group.flex.h-full (12×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-comportement-sans-charge-1440x900",
+  "page": "pause-comportement-sans",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "pause-parametres-charge-1440x900",
+  "page": "pause-parametres",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "objectifs-comportement-vide-charge-1440x900",
+  "page": "objectifs-comportement-vide",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "objectifs-comportement-creation-charge-1440x900",
+  "page": "objectifs-comportement-creation",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "objectifs-comportement-rempli-charge-1440x900",
+  "page": "objectifs-comportement-rempli",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "objectifs-comportement-precedente-charge-1440x900",
+  "page": "objectifs-comportement-precedente",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "objectifs-comportement-widget-charge-1440x900",
+  "page": "objectifs-comportement-widget",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-vide-charge-1440x900",
+  "page": "review-vide",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-vide-refus-charge-1440x900",
+  "page": "review-vide-refus",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-banniere-charge-1440x900",
+  "page": "review-banniere",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-brouillon-charge-1440x900",
+  "page": "review-brouillon",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-fait-charge-1440x900",
+  "page": "review-fait",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-intentions-suivies-charge-1440x900",
+  "page": "review-intentions-suivies",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-historique-charge-1440x900",
+  "page": "review-historique",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-parametres-charge-1440x900",
+  "page": "review-parametres",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "review-widget-charge-1440x900",
+  "page": "review-widget",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-desactive-charge-1440x900",
+  "page": "mcp-desactive",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-consentement-charge-1440x900",
+  "page": "mcp-consentement",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-actif-charge-1440x900",
+  "page": "mcp-actif",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-puce-barre-du-haut-charge-1440x900",
+  "page": "mcp-puce-barre-du-haut",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-journal-charge-1440x900",
+  "page": "mcp-journal",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "mcp-installation-charge-1440x900",
+  "page": "mcp-installation",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "ecran-verrouillage-charge-1440x900",
+  "page": "ecran-verrouillage",
+  "state": "charge",
+  "size": "1440x900",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1440
+ },
+ {
+  "key": "dashboard-vide-1920x1080",
+  "page": "dashboard",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-vide-1920x1080",
+  "page": "analyse-seance",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-vide-1920x1080",
+  "page": "analyse-idees",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-vide-1920x1080",
+  "page": "analyse-archives",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trades-vide-1920x1080",
+  "page": "trades",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-nouveau-vide-1920x1080",
+  "page": "trade-nouveau",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-detail-vide-1920x1080",
+  "page": "trade-detail",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-vide-1920x1080",
+  "page": "trade-modifier",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-vide-1920x1080",
+  "page": "calendrier",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-eco-vide-1920x1080",
+  "page": "calendrier-eco",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-vide-1920x1080",
+  "page": "journal",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-vide-1920x1080",
+  "page": "discipline",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-vide-1920x1080",
+  "page": "comportement",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-assets-vide-1920x1080",
+  "page": "analyses-assets",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-vide-1920x1080",
+  "page": "analyses-fees",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-strategies-vide-1920x1080",
+  "page": "analyses-strategies",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-vide-1920x1080",
+  "page": "analyses-execution",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-opportunity-vide-1920x1080",
+  "page": "analyses-opportunity",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-vide-1920x1080",
+  "page": "analyses-year",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyses-duration-vide-1920x1080",
+  "page": "analyses-duration",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-vide-1920x1080",
+  "page": "analyses-scaling",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "comparaisons-vide-1920x1080",
+  "page": "comparaisons",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "insights-vide-1920x1080",
+  "page": "insights",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "coach-vide-1920x1080",
+  "page": "coach",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-vide-1920x1080",
+  "page": "calculateur",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-vide-1920x1080",
+  "page": "objectifs",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-vide-1920x1080",
+  "page": "objectifs-comportement",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "bilan-vide-1920x1080",
+  "page": "bilan",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-vide-1920x1080",
+  "page": "replay",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-vide-1920x1080",
+  "page": "alertes",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-vide-1920x1080",
+  "page": "prop",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "parametres-vide-1920x1080",
+  "page": "parametres",
+  "state": "vide",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "dashboard-charge-1920x1080",
+  "page": "dashboard",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-seance-charge-1920x1080",
+  "page": "analyse-seance",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "analyse-idees-charge-1920x1080",
+  "page": "analyse-idees",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyse-archives-charge-1920x1080",
+  "page": "analyse-archives",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "trades-charge-1920x1080",
+  "page": "trades",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « XAUUSD » (59×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « GBPUSD » (57×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "trade-nouveau-charge-1920x1080",
+  "page": "trade-nouveau",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-detail-charge-1920x1080",
+  "page": "trade-detail",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "trade-modifier-charge-1920x1080",
+  "page": "trade-modifier",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (882×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "calendrier-charge-1920x1080",
+  "page": "calendrier",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "calendrier-eco-charge-1920x1080",
+  "page": "calendrier-eco",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "journal-charge-1920x1080",
+  "page": "journal",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.min-w-0.font-medium.hover:underline « EURUSD Long · 19:57 » (132×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "discipline-charge-1920x1080",
+  "page": "discipline",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)",
+   "button.group.flex.h-full (16×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "comportement-charge-1920x1080",
+  "page": "comportement",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-assets-charge-1920x1080",
+  "page": "analyses-assets",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « GBPUSD » (57×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « EURUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « BTCUSD » (56×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « XAUUSD » (59×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-fees-charge-1920x1080",
+  "page": "analyses-fees",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-strategies-charge-1920x1080",
+  "page": "analyses-strategies",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "a.font-semibold.hover:underline.focus-visible:outline « Cassure NY » (82×20)",
+   "a.font-semibold.hover:underline.focus-visible:outline « Retour à la moyenne » (142×20)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-execution-charge-1920x1080",
+  "page": "analyses-execution",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-opportunity-charge-1920x1080",
+  "page": "analyses-opportunity",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-year-charge-1920x1080",
+  "page": "analyses-year",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-duration-charge-1920x1080",
+  "page": "analyses-duration",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "analyses-scaling-charge-1920x1080",
+  "page": "analyses-scaling",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "comparaisons-charge-1920x1080",
+  "page": "comparaisons",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "insights-charge-1920x1080",
+  "page": "insights",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "coach-charge-1920x1080",
+  "page": "coach",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "calculateur-charge-1920x1080",
+  "page": "calculateur",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "objectifs-charge-1920x1080",
+  "page": "objectifs",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "objectifs-comportement-charge-1920x1080",
+  "page": "objectifs-comportement",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "bilan-charge-1920x1080",
+  "page": "bilan",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "replay-charge-1920x1080",
+  "page": "replay",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "alertes-charge-1920x1080",
+  "page": "alertes",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "prop-charge-1920x1080",
+  "page": "prop",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": [
+   "button « Compte »"
+  ]
+ },
+ {
+  "key": "parametres-charge-1920x1080",
+  "page": "parametres",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920,
+  "focusInvisible": []
+ },
+ {
+  "key": "dashboard-edition-charge-1920x1080",
+  "page": "dashboard-edition",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "dashboard-bibliotheque-charge-1920x1080",
+  "page": "dashboard-bibliotheque",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "carte-de-trade-charge-1920x1080",
+  "page": "carte-de-trade",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "settings-securite-charge-1920x1080",
+  "page": "settings-securite",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "settings-donnees-pdf-charge-1920x1080",
+  "page": "settings-donnees-pdf",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "news-ff-consentement-charge-1920x1080",
+  "page": "news-ff-consentement",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "news-ff-test-charge-1920x1080",
+  "page": "news-ff-test",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "news-ff-calendrier-charge-1920x1080",
+  "page": "news-ff-calendrier",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "news-ff-trop-tot-charge-1920x1080",
+  "page": "news-ff-trop-tot",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "news-ff-widget-charge-1920x1080",
+  "page": "news-ff-widget",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-sans-regles-charge-1920x1080",
+  "page": "prop-sans-regles",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-editeur-charge-1920x1080",
+  "page": "prop-editeur",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-editeur-erreurs-charge-1920x1080",
+  "page": "prop-editeur-erreurs",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-statut-ok-charge-1920x1080",
+  "page": "prop-statut-ok",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-statut-attention-charge-1920x1080",
+  "page": "prop-statut-attention",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-statut-critique-charge-1920x1080",
+  "page": "prop-statut-critique",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-statut-atteinte-charge-1920x1080",
+  "page": "prop-statut-atteinte",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "prop-widget-charge-1920x1080",
+  "page": "prop-widget",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-formulaire-charge-1920x1080",
+  "page": "emotions-formulaire",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-catalogue-charge-1920x1080",
+  "page": "emotions-catalogue",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-saisie-libre-charge-1920x1080",
+  "page": "emotions-saisie-libre",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-retrait-confirmation-charge-1920x1080",
+  "page": "emotions-retrait-confirmation",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-retrait-fait-charge-1920x1080",
+  "page": "emotions-retrait-fait",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "emotions-parametres-charge-1920x1080",
+  "page": "emotions-parametres",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-seance-remplie-charge-1920x1080",
+  "page": "analyse-seance-remplie",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-seance-vide-refusee-charge-1920x1080",
+  "page": "analyse-seance-vide-refusee",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-banniere-revue-charge-1920x1080",
+  "page": "analyse-banniere-revue",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-revue-matin-charge-1920x1080",
+  "page": "analyse-revue-matin",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-report-menu-charge-1920x1080",
+  "page": "analyse-report-menu",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-report-libre-invalide-charge-1920x1080",
+  "page": "analyse-report-libre-invalide",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-report-fait-charge-1920x1080",
+  "page": "analyse-report-fait",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-cloture-charge-1920x1080",
+  "page": "analyse-cloture",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-idee-nouvelle-charge-1920x1080",
+  "page": "analyse-idee-nouvelle",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-archives-ouvertes-charge-1920x1080",
+  "page": "analyse-archives-ouvertes",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-parametres-charge-1920x1080",
+  "page": "analyse-parametres",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-formulaire-trade-charge-1920x1080",
+  "page": "analyse-formulaire-trade",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "analyse-detail-trade-charge-1920x1080",
+  "page": "analyse-detail-trade",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "sauvegarde-auto-desactivee-charge-1920x1080",
+  "page": "sauvegarde-auto-desactivee",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "sauvegarde-auto-activee-erreur-charge-1920x1080",
+  "page": "sauvegarde-auto-activee-erreur",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-choix-charge-1920x1080",
+  "page": "pause-choix",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-active-barre-charge-1920x1080",
+  "page": "pause-active-barre",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-formulaire-charge-1920x1080",
+  "page": "pause-formulaire",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-formulaire-continuer-charge-1920x1080",
+  "page": "pause-formulaire-continuer",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "input.h-1.5.flex-1.cursor-pointer (944×6)",
+   "button.flex.w-full.items-center « Pas de trade après 2 pertes » (290×20)",
+   "button.flex.w-full.items-center « Risque max 1 % » (290×20)",
+   "button.flex.w-full.items-center « Attendre la clôture de bougie » (290×20)",
+   "input.sr-only (1×1)"
+  ],
+  "unnamed": [
+   "input.sr-only"
+  ],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-banniere-choix-charge-1920x1080",
+  "page": "pause-banniere-choix",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-banniere-suggestion-charge-1920x1080",
+  "page": "pause-banniere-suggestion",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.inline-flex.min-h-[28px].items-center « R » (9×28)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « BTCUSD » (56×17)",
+   "a.hover:underline.focus-visible:outline.focus-visible:outline-2 « EURUSD » (56×17)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-comportement-avec-charge-1920x1080",
+  "page": "pause-comportement-avec",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-discipline-repere-charge-1920x1080",
+  "page": "pause-discipline-repere",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)",
+   "button.group.flex.h-full (14×179)"
+  ],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-comportement-sans-charge-1920x1080",
+  "page": "pause-comportement-sans",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "pause-parametres-charge-1920x1080",
+  "page": "pause-parametres",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "objectifs-comportement-vide-charge-1920x1080",
+  "page": "objectifs-comportement-vide",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "objectifs-comportement-creation-charge-1920x1080",
+  "page": "objectifs-comportement-creation",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "objectifs-comportement-rempli-charge-1920x1080",
+  "page": "objectifs-comportement-rempli",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "objectifs-comportement-precedente-charge-1920x1080",
+  "page": "objectifs-comportement-precedente",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "objectifs-comportement-widget-charge-1920x1080",
+  "page": "objectifs-comportement-widget",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-vide-charge-1920x1080",
+  "page": "review-vide",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-vide-refus-charge-1920x1080",
+  "page": "review-vide-refus",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-banniere-charge-1920x1080",
+  "page": "review-banniere",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-brouillon-charge-1920x1080",
+  "page": "review-brouillon",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-fait-charge-1920x1080",
+  "page": "review-fait",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-intentions-suivies-charge-1920x1080",
+  "page": "review-intentions-suivies",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-historique-charge-1920x1080",
+  "page": "review-historique",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-parametres-charge-1920x1080",
+  "page": "review-parametres",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "review-widget-charge-1920x1080",
+  "page": "review-widget",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-desactive-charge-1920x1080",
+  "page": "mcp-desactive",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-consentement-charge-1920x1080",
+  "page": "mcp-consentement",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-actif-charge-1920x1080",
+  "page": "mcp-actif",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-puce-barre-du-haut-charge-1920x1080",
+  "page": "mcp-puce-barre-du-haut",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-journal-charge-1920x1080",
+  "page": "mcp-journal",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "mcp-installation-charge-1920x1080",
+  "page": "mcp-installation",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ },
+ {
+  "key": "ecran-verrouillage-charge-1920x1080",
+  "page": "ecran-verrouillage",
+  "state": "charge",
+  "size": "1920x1080",
+  "errors": [],
+  "focusInvisible": [],
+  "pageOverflowX": false,
+  "outside": [],
+  "clipped": [],
+  "small": [],
+  "unnamed": [],
+  "h1": [
+   "28px/600"
+  ],
+  "scrollWidth": 1920
+ }
+]
