@@ -18,6 +18,7 @@
 //! Totals over the 7 closed trades: gross +294, fees 12, net +282.
 
 use super::analyses::*;
+use super::dashboard::Period;
 use super::tests::{DAY, SEP_1, all, approx, ledger, trade};
 use super::*;
 use crate::instruments::AssetClass;
@@ -417,4 +418,437 @@ mod database {
         assert_eq!(fee_report(&conn, &all(), FeeGranularity::Month).unwrap().trade_count, 0);
         assert!(!execution_report(&conn, &all()).unwrap().comparable);
     }
+}
+
+// --- opportunity cost (3.3.18) ---------------------------------------------------
+//
+// Journal K — capital 10 000, multiplier 1, no fees, one trade per day from 1 Sept 2026.
+// TP = planned take profit, after = price typed by hand after the exit.
+//
+// | # | side  | entry → exit | size | TP | after | move after exit | left on table (capped at TP)        |
+// |---|-------|--------------|------|----|-------|-----------------|-------------------------------------|
+// | 1 | long  | 100 → 105    | 10   | 110| 112   | (112−105)×10 = 70   | min(112,110)=110 → 5×10 = 50   |
+// | 2 | long  | 200 → 204    | 5    | 210| 206   | 2×5 = 10            | 206 → 10                       |
+// | 3 | short | 50 → 48      | 20   | 45 | 44    | (44−48)×−1×20 = 80  | max(44,45)=45 → 3×20 = 60      |
+// | 4 | long  | 30 → 28      | 10   | 35 | 25    | −3×10 = −30         | 25 → −30, floored at 0         |
+// | 5 | long  | 10 → 12      | 100  | 11 | 13    | 1×100 = 100         | exit already beyond TP: 11 → −100 → 0 |
+// | 6 | long  | 20 → 21      | 1    | —  | 25    | excluded: no target                                   |
+// | 7 | long  | 40 → 41      | 1    | 45 | —     | excluded: no price after exit                         |
+// | 8 | short | 60 → 58      | 1    | 65 | 57    | excluded: a short's target above its entry is invalid |
+// | 9 | long  | 30 → (open)  | 1    | 35 | 40    | open: not a closed trade                              |
+//
+// Net PnL of 1–5: +50, +20, +40, −20, +200 = +290.
+
+fn opp_trade(id: i64, side: crate::trades::Direction, entry: &str, exit: Option<&str>, size: &str, day: i64, tp: Option<&str>) -> TradeFacts {
+    let mut t = trade(id, side, entry, exit, size, None, "0", day);
+    t.position.planned_tp = tp.map(dec);
+    t
+}
+
+fn journal_k() -> (Ledger, HashMap<i64, Decimal>) {
+    let trades = vec![
+        opp_trade(1, Long, "100", Some("105"), "10", 0, Some("110")),
+        opp_trade(2, Long, "200", Some("204"), "5", 1, Some("210")),
+        opp_trade(3, Short, "50", Some("48"), "20", 2, Some("45")),
+        opp_trade(4, Long, "30", Some("28"), "10", 3, Some("35")),
+        opp_trade(5, Long, "10", Some("12"), "100", 4, Some("11")),
+        opp_trade(6, Long, "20", Some("21"), "1", 5, None),
+        opp_trade(7, Long, "40", Some("41"), "1", 6, Some("45")),
+        opp_trade(8, Short, "60", Some("58"), "1", 7, Some("65")),
+        opp_trade(9, Long, "30", None, "1", 8, Some("35")),
+    ];
+    let after = [(1, "112"), (2, "206"), (3, "44"), (4, "25"), (5, "13"), (6, "25"), (8, "57"), (9, "40")];
+    (ledger("10000", trades, vec![]), after.into_iter().map(|(id, p)| (id, dec(p))).collect())
+}
+
+#[test]
+fn opportunity_journal_k() {
+    let (l, after) = journal_k();
+    let r = opportunity(&l, &after, &all()).unwrap();
+    assert_eq!((r.trade_count, r.eligible_count, r.excluded_count), (8, 5, 3));
+    assert_eq!((r.without_target_count, r.without_price_after_count), (2, 1)); // 6 and 8 / 7
+    assert!(!r.low_sample);
+    assert_eq!(r.total_left_on_table, d("120")); // 50 + 10 + 60
+    assert_eq!((r.left_count, r.left_per_early_exit), (3, Some(d("40"))));
+    assert_eq!((r.avoided_count, r.total_avoided), (1, d("30")));
+    assert_eq!(r.net_pnl_of_eligible, d("290"));
+    let order: Vec<i64> = r.trades.iter().map(|t| t.trade_id).collect();
+    assert_eq!(order, [3, 1, 2, 4, 5]); // most left first, ties by id
+    let moves: Vec<Decimal> = r.trades.iter().map(|t| t.move_after_exit).collect();
+    assert_eq!(moves, [d("80"), d("70"), d("10"), d("-30"), d("100")]);
+    let lefts: Vec<Decimal> = r.trades.iter().map(|t| t.left_on_table).collect();
+    assert_eq!(lefts, [d("60"), d("50"), d("10"), d("0"), d("0")]);
+}
+
+#[test]
+fn opportunity_respects_the_period_and_flags_small_samples() {
+    let (l, after) = journal_k();
+    // Only trades 1 and 2 close before day 2 → 2 eligible trades: shown, flagged.
+    let q = StatsQuery { to: Some(SEP_1 + 2 * DAY), ..all() };
+    let r = opportunity(&l, &after, &q).unwrap();
+    assert_eq!((r.trade_count, r.eligible_count, r.excluded_count), (2, 2, 0));
+    assert!(r.low_sample);
+    assert_eq!(r.total_left_on_table, d("60"));
+    assert_eq!(r.left_per_early_exit, Some(d("30")));
+}
+
+#[test]
+fn opportunity_with_one_trade_zero_trades_or_no_data() {
+    let (l, after) = journal_k();
+    let one = opportunity(&l, &after, &StatsQuery { from: Some(SEP_1), to: Some(SEP_1 + DAY), ..all() }).unwrap();
+    assert_eq!((one.eligible_count, one.total_left_on_table, one.left_count, one.left_per_early_exit), (1, d("50"), 1, Some(d("50"))));
+    assert!(one.low_sample);
+
+    let empty = opportunity(&ledger("10000", vec![], vec![]), &HashMap::new(), &all()).unwrap();
+    assert_eq!((empty.trade_count, empty.eligible_count, empty.excluded_count), (0, 0, 0));
+    assert_eq!((empty.total_left_on_table, empty.left_per_early_exit, empty.trades.len()), (d("0"), None, 0));
+
+    // Trades exist but none has a price after exit: everything is excluded, nothing invented.
+    let none = opportunity(&l, &HashMap::new(), &all()).unwrap();
+    assert_eq!((none.trade_count, none.eligible_count, none.excluded_count, none.without_price_after_count), (8, 0, 8, 8));
+    assert_eq!((none.total_left_on_table, none.left_per_early_exit, none.avoided_count), (d("0"), None, 0));
+}
+
+#[test]
+fn opportunity_report_reads_the_price_after_exit_from_sqlite() {
+    use crate::trades::{self, TradeData};
+    let conn = crate::db::open_in_memory().unwrap();
+    let account = crate::test_support::account(&conn, "10000");
+    let eur = crate::test_support::instrument(&conn, "EURUSD", "100000");
+    let mut data = TradeData::new(account, eur, Long, dec("1"), dec("1.0842"), 1_700_000_000_000);
+    data.exit_price = Some(dec("1.0871"));
+    data.exit_time = Some(1_700_004_320_000);
+    data.planned_tp = Some(dec("1.0900"));
+    data.price_after_exit = Some(dec("1.0950"));
+    trades::create(&conn, &data).unwrap();
+    // 1 lot × 100 000: (min(1.0950, 1.0900) − 1.0871) × 100 000 = 290 left on the table.
+    let r = opportunity_report(&conn, &StatsQuery::default()).unwrap();
+    assert_eq!((r.eligible_count, r.total_left_on_table), (1, d("290")));
+}
+
+// --- same period one year earlier (3.3.19) ---------------------------------------
+//
+// Journal L — capital 10 000, multiplier 1, size 1, no fees, long trades entered 10:00 and closed 11:00 UTC.
+// "Today" is Tue 29 Sept 2026 12:00 UTC and the period is 1M (30 local days): the window is
+// [31 Aug 2026 00:00, 30 Sept 2026 00:00) and, one year earlier, [31 Aug 2025 00:00, 30 Sept 2025 00:00).
+//
+// | # | date        | entry → exit | net | in window            |
+// |---|-------------|--------------|-----|----------------------|
+// | 1 | 2 Sep 2026  | 100 → 110    | +10 | this year            |
+// | 2 | 10 Sep 2026 | 100 → 95     | −5  | this year            |
+// | 3 | 20 Sep 2026 | 50 → 60      | +10 | this year            |
+// | 4 | 30 Aug 2025 | 10 → 30      | +20 | before last year's window |
+// | 5 | 5 Sep 2025  | 100 → 104    | +4  | last year            |
+// | 6 | 15 Sep 2025 | 100 → 90     | −10 | last year            |
+// | 7 | 25 Sep 2025 | 20 → 22      | +2  | last year            |
+// | 8 | 30 Sep 2025 | 10 → 11      | +1  | after last year's window (same date as today's end, exclusive) |
+//
+// This year: net +15, 3 trades, win rate 2/3, profit factor 20 / 5 = 4, max drawdown 5.
+// Last year: net −4, 3 trades, win rate 2/3, profit factor 6 / 10 = 0.6, max drawdown 10 (4 → −6).
+// Gaps: trades 0, net +19 (= 15 − (−4)), net % = 19 / |−4| = 4.75, win rate 0, profit factor 3.4, max drawdown 5 − 10 = −5.
+
+fn on(id: i64, (y, m, d): (i64, u32, u32), entry: &str, exit: &str) -> TradeFacts {
+    let day = time::days_from_civil(y, m, d).unwrap() - 20_697;
+    trade(id, Long, entry, Some(exit), "1", None, "0", day)
+}
+
+fn journal_l() -> Vec<TradeFacts> {
+    vec![
+        on(1, (2026, 9, 2), "100", "110"),
+        on(2, (2026, 9, 10), "100", "95"),
+        on(3, (2026, 9, 20), "50", "60"),
+        on(4, (2025, 8, 30), "10", "30"),
+        on(5, (2025, 9, 5), "100", "104"),
+        on(6, (2025, 9, 15), "100", "90"),
+        on(7, (2025, 9, 25), "20", "22"),
+        on(8, (2025, 9, 30), "10", "11"),
+    ]
+}
+
+fn today() -> i64 {
+    time::days_from_civil(2026, 9, 29).unwrap() * DAY + 12 * 3_600_000
+}
+
+fn yq(period: Period, now: i64) -> YearComparisonQuery {
+    YearComparisonQuery { account_ids: vec![], period, now_ms: now, tz_offset_min: 0 }
+}
+
+fn midnight(y: i64, m: u32, d: u32) -> i64 {
+    time::days_from_civil(y, m, d).unwrap() * DAY
+}
+
+#[test]
+fn year_comparison_journal_l() {
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::Month, today())).unwrap();
+    assert!(r.available);
+    assert_eq!((r.from, r.to), (Some(midnight(2026, 8, 31)), Some(midnight(2026, 9, 30))));
+    assert_eq!((r.previous_from, r.previous_to), (Some(midnight(2025, 8, 31)), Some(midnight(2025, 9, 30))));
+    assert_eq!((r.current.trade_count, r.current.net_pnl), (3, d("15")));
+    let p = r.previous.as_ref().unwrap();
+    assert_eq!((p.trade_count, p.net_pnl), (3, d("-4")));
+    approx(r.current.win_rate, 2.0 / 3.0);
+    approx(p.profit_factor, 0.6);
+    assert_eq!((r.current.max_drawdown, p.max_drawdown), (d("5"), d("10")));
+    assert!(!r.current_empty && !r.previous_empty && r.previous_reason.is_none());
+    assert!(r.current_low_sample && r.previous_low_sample); // 3 < 5: shown, flagged
+    let c = r.comparison.unwrap();
+    assert_eq!((c.trade_count, c.net_pnl, c.max_drawdown), (0, d("19"), d("-5")));
+    approx(c.net_pnl_pct, 4.75);
+    approx(c.win_rate, 0.0);
+    approx(c.profit_factor, 3.4);
+    assert_eq!(c.expectancy_r, None); // no stop on any trade
+}
+
+#[test]
+fn year_comparison_of_all_time_is_not_available() {
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::All, today())).unwrap();
+    assert!(!r.available);
+    assert_eq!((r.previous.is_none(), r.comparison.is_none(), r.previous_reason), (true, true, None));
+    assert_eq!(r.current.trade_count, 8);
+}
+
+#[test]
+fn an_empty_previous_year_says_why_and_never_compares_against_nothing() {
+    // Only this year's trades: the history starts after last year's window.
+    let recent: Vec<_> = journal_l().into_iter().take(3).collect();
+    let r = year_comparison(&ledger("10000", recent, vec![]), &yq(Period::Month, today())).unwrap();
+    assert!(r.previous_empty && r.comparison.is_none());
+    assert_eq!(r.previous_reason, Some(PreviousEmptyReason::HistoryTooShort));
+    assert_eq!(r.previous.as_ref().unwrap().trade_count, 0);
+    assert_eq!(r.current.net_pnl, d("15"));
+
+    // Older history exists (Jan 2024) but nothing in the window: not "too short".
+    let mut older = journal_l().into_iter().take(3).collect::<Vec<_>>();
+    older.push(on(9, (2024, 1, 10), "10", "12"));
+    let r = year_comparison(&ledger("10000", older, vec![]), &yq(Period::Month, today())).unwrap();
+    assert_eq!((r.previous_empty, r.previous_reason, r.comparison.is_none()), (true, Some(PreviousEmptyReason::NoTrades), true));
+}
+
+#[test]
+fn an_empty_current_period_and_a_journal_without_trades() {
+    // 1D = today only: no trade closes on 29 Sept 2026 → current empty; the same day last year has none either.
+    let r = year_comparison(&ledger("10000", journal_l(), vec![]), &yq(Period::Day, today())).unwrap();
+    assert!(r.current_empty && r.previous_empty);
+    assert_eq!(r.previous_reason, Some(PreviousEmptyReason::NoTrades)); // history starts in 2025, before 29 Sept 2025
+    let none = year_comparison(&ledger("10000", vec![], vec![]), &yq(Period::Year, today())).unwrap();
+    assert!(none.current_empty && none.previous_empty && none.comparison.is_none());
+    assert_eq!(none.previous_reason, Some(PreviousEmptyReason::NoTrades));
+}
+
+#[test]
+fn one_trade_each_year_is_compared_and_flagged() {
+    let trades = vec![on(1, (2026, 9, 2), "100", "110"), on(2, (2025, 9, 2), "100", "105")];
+    let r = year_comparison(&ledger("10000", trades, vec![]), &yq(Period::Month, today())).unwrap();
+    let c = r.comparison.unwrap();
+    assert_eq!((c.trade_count, c.net_pnl), (0, d("5")));
+    approx(c.net_pnl_pct, 1.0); // 5 / |+5|
+    assert!(r.current_low_sample && r.previous_low_sample);
+}
+
+#[test]
+fn the_leap_day_maps_to_the_28th_and_deposits_never_count() {
+    // Today is 29 Feb 2028 (period 1D): last year's window is the single day 28 Feb 2027.
+    let now = midnight(2028, 2, 29) + 12 * 3_600_000;
+    let r = year_comparison(&ledger("10000", vec![], vec![(midnight(2028, 2, 29), "500")]), &yq(Period::Day, now)).unwrap();
+    assert_eq!((r.previous_from, r.previous_to), (Some(midnight(2027, 2, 28)), Some(midnight(2027, 3, 1))));
+    assert_eq!((r.from, r.to), (Some(midnight(2028, 2, 29)), Some(midnight(2028, 3, 1))));
+    // A deposit is not performance: no trade, no figure.
+    assert_eq!((r.current.trade_count, r.current.net_pnl), (0, d("0")));
+}
+
+// --- time in position (3.3.20) ---------------------------------------------------
+//
+// Journal M — capital 10 000, multiplier 1, size 1, no fees, long trades entered at 10:00 on day (# − 1),
+// exit after the holding time below. The exit price sets the outcome (100 → 110 win, 100 → 90 loss, 100 → 100 flat).
+//
+// | #  | outcome | held (min) |
+// |----|---------|-----------|
+// | 1–5   | win  | 60, 120, 30, 240, 90  → mean 540 / 5 = 108, median 90 |
+// | 6–10  | loss | 20, 40, 10, 50, 30    → mean 150 / 5 = 30, median 30  |
+// | 11    | flat | 100                    → alone: mean = median = 100    |
+// | 12    | open (no exit)                                                  |
+// | 13    | loss, exit 10 min BEFORE entry → invalid, excluded              |
+// Ratio of means 108 / 30 = 3.6, of medians 90 / 30 = 3.
+
+const MIN_MS: f64 = 60_000.0;
+
+fn held(id: i64, exit_price: Option<&str>, minutes: i64) -> TradeFacts {
+    let mut t = trade(id, Long, "100", exit_price, "1", None, "0", id - 1);
+    if exit_price.is_some() {
+        t.exit_time = Some(t.entry_time + minutes * 60_000);
+    }
+    t
+}
+
+fn journal_m() -> Vec<TradeFacts> {
+    let mut v = Vec::new();
+    for (i, m) in [60, 120, 30, 240, 90].into_iter().enumerate() {
+        v.push(held(i as i64 + 1, Some("110"), m));
+    }
+    for (i, m) in [20, 40, 10, 50, 30].into_iter().enumerate() {
+        v.push(held(i as i64 + 6, Some("90"), m));
+    }
+    v.push(held(11, Some("100"), 100));
+    v.push(held(12, None, 0));
+    v.push(held(13, Some("90"), -10));
+    v
+}
+
+#[test]
+fn durations_journal_m() {
+    let r = durations(&ledger("10000", journal_m(), vec![]), &all()).unwrap();
+    assert_eq!((r.trade_count, r.measured_count, r.open_trade_count, r.invalid_count), (12, 11, 1, 1));
+    assert_eq!((r.winners.trade_count, r.losers.trade_count, r.breakevens.trade_count), (5, 5, 1));
+    approx(r.winners.avg_ms.map(|v| v / MIN_MS), 108.0);
+    approx(r.winners.median_ms.map(|v| v / MIN_MS), 90.0);
+    approx(r.losers.avg_ms.map(|v| v / MIN_MS), 30.0);
+    approx(r.losers.median_ms.map(|v| v / MIN_MS), 30.0);
+    assert!(r.comparable && !r.winners.low_sample && !r.losers.low_sample);
+    approx(r.avg_ratio, 3.6);
+    approx(r.median_ratio, 3.0);
+    // The breakeven is shown but never enters the ratio.
+    approx(r.breakevens.avg_ms.map(|v| v / MIN_MS), 100.0);
+    assert!(r.breakevens.low_sample);
+}
+
+#[test]
+fn durations_small_samples_have_no_ratio() {
+    // Only trades 1–3 (three winners, no loser) fall before day 3.
+    let q = StatsQuery { to: Some(SEP_1 + 3 * DAY), ..all() };
+    let r = durations(&ledger("10000", journal_m(), vec![]), &q).unwrap();
+    assert_eq!((r.winners.trade_count, r.losers.trade_count, r.comparable), (3, 0, false));
+    approx(r.winners.avg_ms.map(|v| v / MIN_MS), 70.0); // (60 + 120 + 30) / 3
+    approx(r.winners.median_ms.map(|v| v / MIN_MS), 60.0);
+    assert_eq!((r.losers.avg_ms, r.losers.median_ms, r.avg_ratio, r.median_ratio), (None, None, None, None));
+    assert!(r.winners.low_sample && r.losers.low_sample);
+}
+
+#[test]
+fn durations_of_one_trade_zero_trades_and_zero_length_losers() {
+    let one = durations(&ledger("10000", vec![held(1, Some("110"), 45)], vec![]), &all()).unwrap();
+    assert_eq!((one.trade_count, one.winners.trade_count, one.comparable, one.avg_ratio), (1, 1, false, None));
+    approx(one.winners.avg_ms.map(|v| v / MIN_MS), 45.0);
+    approx(one.winners.median_ms.map(|v| v / MIN_MS), 45.0);
+
+    let none = durations(&ledger("10000", vec![], vec![]), &all()).unwrap();
+    assert_eq!((none.trade_count, none.measured_count, none.open_trade_count), (0, 0, 0));
+    assert_eq!((none.winners.avg_ms, none.losers.median_ms, none.avg_ratio), (None, None, None));
+
+    // Five winners and five losers closed at the very instant of entry (0 min): the ratio would divide by zero.
+    let mut v: Vec<_> = (1..=5).map(|i| held(i, Some("110"), 10)).collect();
+    v.extend((6..=10).map(|i| held(i, Some("90"), 0)));
+    let z = durations(&ledger("10000", v, vec![]), &all()).unwrap();
+    assert!(z.comparable);
+    assert_eq!((z.avg_ratio, z.median_ratio), (None, None));
+    approx(z.losers.avg_ms, 0.0);
+}
+
+#[test]
+fn durations_count_open_trades_matching_the_filters_only() {
+    let mut v = journal_m();
+    v[11].position.direction = Short; // the open trade 12 becomes a short
+    let q = StatsQuery { direction: Some(Long), ..all() };
+    assert_eq!(durations(&ledger("10000", v, vec![]), &q).unwrap().open_trade_count, 0);
+}
+
+// --- capital scaling (3.3.21) ----------------------------------------------------
+//
+// Journal N — capital 10 000, multiplier 1, long 100 with stop 90 (risk = 10 × size), one trade per day from
+// 1 Sept 2026, exit at the entry price (break-even: no PnL, so the balance only moves with deposits).
+//
+// N1: trades 1–5 size 10 (risk 100 = 1 % of 10 000), trades 6–10 size 12 (risk 120 = 1.2 %).
+//     avg risk % 1 % → 1.2 % : +20 % exactly → oversized. Balance 10 000 throughout: capital change 0, not "moved".
+// N2: same sizes (10) all along, but a 10 000 deposit lands before trade 6: balance 10 000 → 20 000.
+//     risk 100 = 1 % → 0.5 %: −50 % → undersized; capital change +100 % (moved), risk change 0.
+// N3: like N2 with size 20 for trades 6–10 (risk 200 on 20 000 = 1 %): risk % change 0 → stable; risk in money +100 %.
+// N4: 11 trades, size 10 except the middle one (#6) at size 100 (10 %): the middle trade is ignored → stable.
+
+fn scaled(sizes: &[i64]) -> Vec<TradeFacts> {
+    sizes.iter().enumerate().map(|(i, s)| trade(i as i64 + 1, Long, "100", Some("100"), &s.to_string(), Some("90"), "0", i as i64)).collect()
+}
+
+const DEPOSIT_AT: i64 = SEP_1 + 5 * DAY; // before trade 6 opens (day 5, 10:00), after trade 5 closed
+
+#[test]
+fn scaling_n1_risk_grows_faster_than_the_capital() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 12, 12, 12, 12, 12]), vec![]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!((r.trade_count, r.usable_count, r.excluded_count, r.without_stop_count), (10, 10, 0, 0));
+    let (o, n) = (r.older.as_ref().unwrap(), r.recent.as_ref().unwrap());
+    assert_eq!((o.trade_count, o.avg_balance, o.avg_risk), (5, d("10000"), d("100")));
+    assert_eq!((n.trade_count, n.avg_balance, n.avg_risk), (5, d("10000"), d("120")));
+    approx(Some(o.avg_risk_pct), 0.01);
+    approx(Some(n.avg_risk_pct), 0.012);
+    approx(r.risk_pct_change, 0.2);
+    approx(r.capital_change, 0.0);
+    approx(r.risk_change, 0.2);
+    assert!(!r.capital_moved);
+    assert_eq!(r.verdict, ScalingVerdict::Oversized); // the 20 % band is inclusive
+    assert_eq!((r.min_per_half, r.capital_move_threshold, r.verdict_band), (5, 0.10, 0.20));
+    assert_eq!(r.points.len(), 10);
+    assert_eq!((r.points[0].trade_id, r.points[0].balance_at_entry, r.points[0].initial_risk), (1, d("10000"), d("100")));
+    assert_eq!(r.current_capital, d("10000"));
+}
+
+#[test]
+fn scaling_n2_a_deposit_raises_the_balance_and_the_size_did_not_follow() {
+    let l = ledger("10000", scaled(&[10; 10]), vec![(DEPOSIT_AT, "10000")]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!(r.older.as_ref().unwrap().avg_balance, d("10000"));
+    assert_eq!(r.recent.as_ref().unwrap().avg_balance, d("20000"));
+    approx(r.capital_change, 1.0);
+    approx(r.risk_change, 0.0);
+    approx(r.risk_pct_change, -0.5);
+    assert!(r.capital_moved);
+    assert_eq!(r.verdict, ScalingVerdict::Undersized);
+    assert_eq!(r.current_capital, d("20000")); // the deposit is in the balance, never in a PnL
+}
+
+#[test]
+fn scaling_n3_size_that_follows_the_capital_is_stable() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 20, 20, 20, 20, 20]), vec![(DEPOSIT_AT, "10000")]);
+    let r = scaling(&l, &all()).unwrap();
+    approx(r.risk_pct_change, 0.0);
+    approx(r.risk_change, 1.0);
+    approx(r.capital_change, 1.0);
+    assert_eq!(r.verdict, ScalingVerdict::Stable);
+}
+
+#[test]
+fn scaling_n4_the_middle_trade_of_an_odd_series_is_ignored() {
+    let l = ledger("10000", scaled(&[10, 10, 10, 10, 10, 100, 10, 10, 10, 10, 10]), vec![]);
+    let r = scaling(&l, &all()).unwrap();
+    assert_eq!((r.usable_count, r.older.as_ref().unwrap().trade_count, r.recent.as_ref().unwrap().trade_count), (11, 5, 5));
+    assert_eq!(r.older.as_ref().unwrap().to, r.points[4].exit_time);
+    assert_eq!(r.recent.as_ref().unwrap().from, r.points[6].exit_time);
+    approx(r.risk_pct_change, 0.0);
+    assert_eq!(r.verdict, ScalingVerdict::Stable);
+}
+
+#[test]
+fn scaling_needs_five_trades_in_each_half_and_never_invents_a_verdict() {
+    // 9 usable trades: halves of 4, below the minimum.
+    let r = scaling(&ledger("10000", scaled(&[10, 10, 10, 10, 10, 12, 12, 12, 12]), vec![]), &all()).unwrap();
+    assert_eq!(r.verdict, ScalingVerdict::NotEnoughData);
+    assert_eq!((r.older.is_none(), r.recent.is_none(), r.risk_pct_change, r.capital_change, r.capital_moved), (true, true, None, None, false));
+    assert_eq!(r.points.len(), 9); // the series is still there to draw
+
+    // One trade, then none.
+    let one = scaling(&ledger("10000", scaled(&[10]), vec![]), &all()).unwrap();
+    assert_eq!((one.usable_count, one.verdict, one.points.len()), (1, ScalingVerdict::NotEnoughData, 1));
+    let none = scaling(&ledger("10000", vec![], vec![]), &all()).unwrap();
+    assert_eq!((none.trade_count, none.usable_count, none.verdict, none.current_capital), (0, 0, ScalingVerdict::NotEnoughData, d("10000")));
+}
+
+#[test]
+fn scaling_leaves_out_trades_without_a_stop_and_counts_them() {
+    let mut trades = scaled(&[10; 10]);
+    for t in trades.iter_mut().take(3) {
+        t.position.planned_sl = None; // trades 1–3 have no stop: no risk, no risk %
+    }
+    trades.push(trade(11, Long, "100", Some("100"), "10", None, "0", 10));
+    let r = scaling(&ledger("10000", trades, vec![]), &all()).unwrap();
+    assert_eq!((r.trade_count, r.usable_count, r.excluded_count, r.without_stop_count), (11, 7, 4, 4));
+    // 7 usable → halves of 3: below the minimum.
+    assert_eq!(r.verdict, ScalingVerdict::NotEnoughData);
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { useT } from '../../i18n'
 import { formatRatioPercent, formatSignedMoney } from '../../lib/format'
 import type { EmotionReport } from '../../types/behavior'
@@ -44,7 +45,9 @@ export function EmotionsCard({ report, currency, initialMoment = 'before' }: { r
                 className="grid grid-cols-[130px_1fr_auto] items-center gap-3 text-[13.5px]"
                 aria-label={t.barLabel(name, money, s.summary.tradeCount)}
               >
-                <span className="truncate text-tx2" title={name}>{name}</span>
+                <Tooltip content={name}>
+                  <span className="truncate text-tx2">{name}</span>
+                </Tooltip>
                 <div className="relative h-2.5 rounded-full bg-white/[.06]" aria-hidden="true">
                   {net !== 0 && (
                     <i

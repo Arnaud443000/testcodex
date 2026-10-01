@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Select } from './ui/Select'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
@@ -148,11 +149,12 @@ export function MissedTradesPanel() {
         </div>
         {accounts.length > 1 && (
           <Field label={m.account} htmlFor="mt-account" error={errors.account}>
-            <select id="mt-account" className="input" value={draft.accountId ?? ''} onChange={(e) => set('accountId', Number(e.target.value))}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id} className="bg-bg">{a.name}</option>
-              ))}
-            </select>
+            <Select
+              id="mt-account"
+              value={draft.accountId === null ? '' : String(draft.accountId)}
+              onChange={(v) => set('accountId', Number(v))}
+              options={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+            />
           </Field>
         )}
         <Field label={m.asset} htmlFor="mt-asset" error={errors.asset}>

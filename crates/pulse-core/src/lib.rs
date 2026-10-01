@@ -5,12 +5,15 @@ mod util;
 
 pub mod accounts;
 pub mod backup;
+// Lot 32 (sauvegarde automatique planifiée).
+pub mod backup_auto;
 pub mod behavior;
 pub mod cash_flows;
 pub mod checklist;
 pub mod db;
 pub mod error;
 pub mod export;
+pub mod export_pdf;
 pub mod instruments;
 pub mod migrations;
 pub mod missed_trades;
@@ -19,6 +22,7 @@ pub mod rules;
 pub mod screenshots;
 pub mod settings;
 pub mod stats;
+pub mod emotions;
 pub mod tags;
 pub mod trade_view;
 pub mod trades;
@@ -36,6 +40,30 @@ pub mod alerts;
 
 // Lot 13.
 pub mod dashboards;
+// Lot 19.
+pub mod insights;
+// Lot 20 (IA optionnelle, sans réseau ici).
+pub mod ai;
+// Lot 21 (coach IA : outils locaux, historique ; sans réseau ici).
+pub mod coach;
+// Lot 22 (verrouillage optionnel par mot de passe, chiffrement de la base et des captures).
+pub mod lock;
+// Lot 27 (calculateur de taille de position).
+pub mod sizing;
+// Lot 25 (calendrier économique : stockage, fichiers, heure de Paris ; sans réseau ici).
+pub mod news;
+// Lot 31 (analyse avant trading, idées à surveiller, revue du lendemain ; sans réseau ni IA).
+pub mod analysis;
+// Lot 33 (suivi d'un compte prop firm : règles, calculs sur les trades clôturés).
+pub mod prop;
+// Lot 35 (pause volontaire : un rappel, jamais un blocage).
+pub mod pause;
+// Lot 34 (objectifs de comportement, par semaine et par mois).
+pub mod process_goals;
+// Lot 36 (bilan hebdomadaire : faits de la semaine, trois questions, intentions suivies la semaine d'après, rappel du dimanche).
+pub mod weekly_review;
+// Lot 37 (accès MCP local : pont sur 127.0.0.1 vers les outils du coach ; aucune connexion sortante).
+pub mod mcp;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

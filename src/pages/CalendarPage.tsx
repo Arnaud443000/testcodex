@@ -4,6 +4,7 @@ import { CalendarGrid } from '../components/CalendarGrid'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
+import { CalendarTabs } from '../components/news/CalendarTabs'
 import { Pnl } from '../components/ui'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -71,6 +72,7 @@ export function CalendarPage() {
 
   const title = formatMonthTitle(ym.year, ym.month)
   const header = (
+    <>
     <PageHeader
       title={t.pages.calendar.title}
       subtitle={t.pages.calendar.subtitle}
@@ -87,6 +89,8 @@ export function CalendarPage() {
         </div>
       }
     />
+    <CalendarTabs />
+    </>
   )
 
   if (loading) return <div className="flex flex-col gap-5">{header}</div>

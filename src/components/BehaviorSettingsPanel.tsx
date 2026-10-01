@@ -82,7 +82,7 @@ export function BehaviorSettingsPanel() {
 
   return (
     <section className="glass-card p-6" aria-labelledby="behavior-settings-title">
-      <h3 id="behavior-settings-title" className="mb-1 text-base font-semibold">{s.title}</h3>
+      <h2 id="behavior-settings-title" className="mb-1 text-base font-semibold">{s.title}</h2>
       <p className="mb-4 max-w-[80ch] text-[13px] leading-relaxed text-tx2">{s.intro}</p>
       {form && (
         <form onSubmit={submit} className="flex flex-col gap-5" noValidate>

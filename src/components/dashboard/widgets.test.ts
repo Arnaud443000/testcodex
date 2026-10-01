@@ -46,11 +46,22 @@ describe('bibliothèque de widgets', () => {
   it('devises mélangées : chaque widget lié à des comptes explique pourquoi il est vide', async () => {
     const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
     const mixed = env([account(1, 'USD'), account(2, 'EUR')])
-    for (const d of catalog) {
+    // Les insights évaluent chaque compte seul (chacun avec sa devise) : aucune somme, donc aucun blocage.
+    // Les prochaines news (lot 25) ne lisent aucun compte. Le widget prop firm (lot 33) lit UN compte prop.
+    for (const d of catalog.filter((c) => c.kind !== 'insights' && c.kind !== 'prop_firm' && c.account)) {
       const out = html(instance(d.kind), mixed)
       expect(out, d.kind).toContain(fr.dashboardBuilder.mixedCurrencies)
       expect(out, d.kind).toContain(fr.dashboardBuilder.widgets[d.kind].title)
     }
+  })
+
+  it('insights : le widget ne bloque pas sur des devises mélangées et n’a pas de période propre', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'insights')!
+    expect([d.period, d.account, d.modes]).toEqual([false, true, []])
+    const out = html(instance('insights'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.insights.title)
   })
 
   it('compte fixé qui a disparu : message clair, jamais de chiffres de tous les comptes', async () => {
@@ -63,5 +74,72 @@ describe('bibliothèque de widgets', () => {
   it('une période ou un compte propres sont signalés sur le widget', () => {
     const out = html(instance('kpi', { period: '1W', mode: 'win_rate' }), env([account(1, 'USD'), account(2, 'EUR')]))
     expect(out).toContain(fr.dashboardBuilder.ownPeriodTag('1 semaine'))
+  })
+})
+
+describe('widget « Prochaines news » (lot 25)', () => {
+  it('ni compte ni période, et ne bloque pas sur des devises mélangées', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'upcoming_news')!
+    expect([d.category, d.period, d.account, d.modes]).toEqual(['temporal', false, false, ['medium', 'high', 'all']])
+    const out = html(instance('upcoming_news'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.upcoming_news.title)
+  })
+})
+
+
+describe('widget « Idées à surveiller » (lot 31)', () => {
+  it('ni compte ni période, et ne bloque pas sur des devises mélangées', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'ideas')!
+    expect([d.category, d.period, d.account, d.modes, d.defaultW, d.defaultH, d.minW, d.minH]).toEqual(['tracking', false, false, [], 10, 14, 8, 8])
+    const out = html(instance('ideas'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.ideas.title)
+  })
+  it('chaque widget de la bibliothèque a un composant et un texte', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    for (const d of catalog) {
+      expect(fr.dashboardBuilder.widgets[d.kind]?.title, d.kind).toBeTruthy()
+    }
+  })
+})
+describe('widget « Prop firm » (lot 33)', () => {
+  const prop = (id: number, currency: string): Account => ({ ...account(id, currency), kind: 'prop' }) as Account
+  it('lit le seul compte prop de la portée : pas de blocage sur des devises mélangées (aucune somme)', () => {
+    const out = html(instance('prop_firm'), env([account(1, 'USD'), prop(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.prop_firm.title)
+    expect(out).not.toContain(fr.prop.widget.noAccount)
+  })
+  it('aucun ou plusieurs comptes prop : rien n’est deviné ; un compte non prop est expliqué', () => {
+    expect(html(instance('prop_firm'), env([account(1, 'USD'), account(2, 'USD')]))).toContain(fr.prop.widget.noAccount)
+    expect(html(instance('prop_firm'), env([prop(1, 'USD'), prop(2, 'USD')]))).toContain(fr.prop.widget.noAccount)
+    expect(html(instance('prop_firm'), env([account(1, 'USD')]))).toContain(fr.prop.widget.notProp)
+  })
+})
+describe('widget « Objectifs de comportement » (lot 34)', () => {
+  it('suit le compte, a pour mode la semaine ou le mois, et bloque sur des devises mélangées', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'process_goals')!
+    expect([d.category, d.period, d.account, d.modes]).toEqual(['tracking', false, true, ['week', 'month']])
+    expect(fr.dashboardBuilder.modes.process_goals).toEqual({ week: 'Semaine en cours', month: 'Mois en cours' })
+    const out = html(instance('process_goals', { mode: 'month' }), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.process_goals.title)
+  })
+})
+
+describe('widget « Bilan hebdomadaire » (lot 36)', () => {
+  it('est un widget de suivi sans période ni compte, sans mode, et ne dépend pas des devises', async () => {
+    const catalog = await createDashboardsMock(async () => []).listWidgetCatalog()
+    const d = catalog.find((c) => c.kind === 'weekly_review')!
+    expect([d.category, d.period, d.account, d.modes, d.defaultW, d.defaultH, d.minW, d.minH]).toEqual(['tracking', false, false, [], 10, 12, 8, 9])
+    expect(fr.dashboardBuilder.widgets.weekly_review.title).toBe('Bilan hebdomadaire')
+    // Devises mélangées : le widget ne lit aucun fait, il n'est donc pas bloqué (il charge son statut).
+    const out = html(instance('weekly_review'), env([account(1, 'USD'), account(2, 'EUR')]))
+    expect(out).not.toContain(fr.dashboardBuilder.mixedCurrencies)
+    expect(out).toContain(fr.dashboardBuilder.widgets.weekly_review.title)
   })
 })

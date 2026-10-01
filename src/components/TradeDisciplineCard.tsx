@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { formatPercentValue, formatScore } from '../lib/behaviorFormat'
@@ -96,11 +97,15 @@ export function TradeDisciplineCard({ tradeId }: { tradeId: number }) {
               {r.status === 'excluded' && <span className="mt-0.5 block text-xs text-[#E5C078]">{sentence(r)}</span>}
             </span>
             {r.status === 'excluded' ? (
-              <span className="shrink-0 text-xs text-tx3" title={s.excluded}>— {s.excluded}</span>
+              <Tooltip content={s.excluded}>
+                <span className="shrink-0 text-xs text-tx3">— {s.excluded}</span>
+              </Tooltip>
             ) : (
-              <b className="shrink-0 tabular-nums" title={r.status === 'weak' ? s.weak : s.full}>
-                {formatRatioPercent(r.value, 0)}
-              </b>
+              <Tooltip content={r.status === 'weak' ? s.weak : s.full}>
+                <b className="shrink-0 tabular-nums">
+                  {formatRatioPercent(r.value, 0)}
+                </b>
+              </Tooltip>
             )}
           </div>
         ))}

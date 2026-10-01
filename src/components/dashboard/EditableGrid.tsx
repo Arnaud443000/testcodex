@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Icon } from '../Icon'
 import { useT } from '../../i18n'
 import { cellAt, cellDelta, moveTo, resizeTo, rowCount } from '../../lib/gridLayout'
@@ -135,54 +136,61 @@ export function EditableGrid({
                 isActive ? 'outline-violet shadow-btn' : 'outline-white/20'
               }`}
             >
-              <div className="h-full" inert>
+              {/* Le haut est réservé à la barre de poignée : elle ne doit jamais recouvrir le titre du widget (audit lot 26). */}
+              <div className="h-full pt-[42px]" inert>
                 <WidgetHost instance={it} env={env} />
               </div>
-              <div
-                className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg/90 px-3 py-1.5 active:cursor-grabbing"
-                style={{ borderColor: 'var(--hairline)', touchAction: 'none' }}
-                onPointerDown={(e) => {
-                  if ((e.target as HTMLElement).closest('button')) return
-                  begin(e, it, 'move')
-                }}
-                onPointerMove={drag}
-                onPointerUp={end}
-                onPointerCancel={end}
-                title={t.edit.dragHandle(title)}
-              >
-                <span className="text-tx3"><Icon name="grip" size={16} /></span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</span>
-                <button
-                  type="button"
-                  className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-white/10 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
-                  aria-label={t.edit.settings(title)}
-                  title={t.edit.settings(title)}
-                  onClick={() => onSettings(it.uid)}
+              <Tooltip content={t.edit.dragHandle(title)}>
+                <div
+                  className="absolute inset-x-0 top-0 flex cursor-grab items-center gap-2 rounded-t-card border-b bg-bg px-3 py-1.5 active:cursor-grabbing"
+                  style={{ borderColor: 'var(--hairline)', touchAction: 'none' }}
+                  onPointerDown={(e) => {
+                    if ((e.target as HTMLElement).closest('button')) return
+                    begin(e, it, 'move')
+                  }}
+                  onPointerMove={drag}
+                  onPointerUp={end}
+                  onPointerCancel={end}
                 >
-                  <Icon name="settings" size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-loss/20 hover:text-[#F5A198] focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
-                  aria-label={t.edit.remove(title)}
-                  title={t.edit.remove(title)}
-                  onClick={() => onRemove(it.uid)}
+                  <span className="text-tx3"><Icon name="grip" size={16} /></span>
+                  <Tooltip content={title}>
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</span>
+                  </Tooltip>
+                  <Tooltip content={t.edit.settings(title)}>
+                    <button
+                      type="button"
+                      className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-white/10 hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
+                      aria-label={t.edit.settings(title)}
+                      onClick={() => onSettings(it.uid)}
+                    >
+                      <Icon name="settings" size={16} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content={t.edit.remove(title)}>
+                    <button
+                      type="button"
+                      className="grid h-7 w-7 place-items-center rounded-full text-tx2 hover:bg-loss/20 hover:text-[#F5A198] focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
+                      aria-label={t.edit.remove(title)}
+                      onClick={() => onRemove(it.uid)}
+                    >
+                      <Icon name="cross" size={16} />
+                    </button>
+                  </Tooltip>
+                </div>
+              </Tooltip>
+              <Tooltip content={t.edit.resizeHandle(title)}>
+                <span
+                  role="presentation"
+                  className="absolute bottom-1 right-1 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-md bg-bg/80 text-tx2 hover:bg-white/10 hover:text-tx"
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={(e) => begin(e, it, 'resize')}
+                  onPointerMove={drag}
+                  onPointerUp={end}
+                  onPointerCancel={end}
                 >
-                  <Icon name="cross" size={16} />
-                </button>
-              </div>
-              <span
-                role="presentation"
-                className="absolute bottom-1 right-1 grid h-6 w-6 cursor-nwse-resize place-items-center rounded-md bg-bg/80 text-tx2 hover:bg-white/10 hover:text-tx"
-                style={{ touchAction: 'none' }}
-                title={t.edit.resizeHandle(title)}
-                onPointerDown={(e) => begin(e, it, 'resize')}
-                onPointerMove={drag}
-                onPointerUp={end}
-                onPointerCancel={end}
-              >
-                <Icon name="resize" size={14} />
-              </span>
+                  <Icon name="resize" size={14} />
+                </span>
+              </Tooltip>
             </div>
           </div>
         )

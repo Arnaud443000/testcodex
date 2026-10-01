@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { Checkbox, CheckMark } from './ui/Checkbox'
 import { useT } from '../i18n'
 import { nextRuleState } from '../lib/tradeForm'
 import type { ChecklistItem, Rule } from '../types/trade'
-import { Icon } from './Icon'
 import { Notice } from './ui'
 
 /** Règles personnelles (tri-état) et checklist pré-trade (case à cocher), charte 5.5. */
@@ -50,7 +50,7 @@ export function RulesPanel({
                       aria-label={`${r.text} — ${stateLabel}`}
                       className="flex w-full items-center gap-3 rounded-sm text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet"
                     >
-                      <Box state={state === undefined ? 'off' : state ? 'on' : 'bad'} />
+                      <CheckMark visual={state === undefined ? 'off' : state ? 'on' : 'bad'} />
                       <span className={state === false ? 'text-[#F5A198]' : ''}>{r.text}</span>
                     </button>
                   </li>
@@ -68,16 +68,7 @@ export function RulesPanel({
             <ul className="flex flex-col gap-2.5">
               {checklist.map((c) => (
                 <li key={c.id}>
-                  <label className="flex cursor-pointer items-center gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      className="peer sr-only"
-                      checked={checked[c.id] ?? false}
-                      onChange={(e) => onItem(c.id, e.target.checked)}
-                    />
-                    <Box state={checked[c.id] ? 'on' : 'off'} focusPeer />
-                    {c.label}
-                  </label>
+                  <Checkbox checked={checked[c.id] ?? false} onChange={(v) => onItem(c.id, v)} label={c.label} />
                 </li>
               ))}
             </ul>
@@ -90,21 +81,6 @@ export function RulesPanel({
         <Notice key={r.id} level="bad">{t.form.notices.ruleBroken(r.text)}</Notice>
       ))}
     </>
-  )
-}
-
-function Box({ state, focusPeer = false }: { state: 'off' | 'on' | 'bad'; focusPeer?: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`grid h-[19px] w-[19px] shrink-0 place-items-center rounded-sm border text-white ${
-        focusPeer ? 'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-violet' : ''
-      } ${state === 'bad' ? 'border-loss text-loss' : state === 'on' ? 'border-transparent' : 'border-white/25'}`}
-      style={state === 'on' ? { background: 'var(--grad)' } : undefined}
-    >
-      {state === 'on' && <Icon name="check" size={13} />}
-      {state === 'bad' && <Icon name="cross" size={13} />}
-    </span>
   )
 }
 

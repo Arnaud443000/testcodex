@@ -1,6 +1,6 @@
 import type { AlertKind, AlertRecord } from '../types/alerts'
 
-/** Types d'alerte proposés en filtre, dans l'ordre du cahier (3.6.1 à 3.6.6). */
+/** Types d'alerte proposés en filtre, dans l'ordre du cahier (3.6.1 à 3.6.6, puis 3.6.8 au lot 25). */
 export const ALERT_KINDS: AlertKind[] = [
   'consecutiveLosses',
   'tradesPerDay',
@@ -11,6 +11,12 @@ export const ALERT_KINDS: AlertKind[] = [
   'outsideHours',
   'unusualSession',
   'noStopLoss',
+  'newsTrade',
+  'noAnalysis',
+  // Lot 33
+  'propDailyLoss',
+  'propMaxLoss',
+  'propConsistency',
 ]
 
 export interface HistoryFilter {

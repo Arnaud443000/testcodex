@@ -9,6 +9,7 @@ import { FirstTradeCard, PlanCard } from '../components/behavior/PlanCard'
 import { HeatmapCard, LongShortCard, RDistributionCard, RiskCard } from '../components/behavior/StatsCards'
 import { FactorsCard } from '../components/behavior/FactorsCard'
 import { StreaksCard } from '../components/behavior/StreaksCard'
+import { PausesCard } from '../components/behavior/PausesCard'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
@@ -140,6 +141,7 @@ export function BehaviorPage() {
         <FirstTradeCard report={data.firstTrade} currency={currency} />
         <MistakesCard report={data.mistakes} currency={currency} />
         <RulesCard report={data.ruleAdherence} />
+        <PausesCard accountIds={accountIds} currency={currency} />
         <HesitationCard report={data.patterns} />
         <RDistributionCard report={data.rDistribution} />
         <RiskCard report={data.risk} currency={currency} />

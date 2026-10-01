@@ -37,7 +37,7 @@ export function PlanCard({ report, currency, simulation }: { report: PlanReport;
         {block(p.yes, yes)}
         {block(p.no, no)}
       </div>
-      <p className="mt-2 text-xs text-tx3">{p.expectancyNote}</p>
+      <p className="fit-optional mt-2 text-xs text-tx3">{p.expectancyNote}</p>
       {others.length > 0 && (
         <div className="mt-3">
           <div className="caption mb-1">{p.others}</div>
@@ -132,34 +132,36 @@ function SimulationBlock({ simulation, currency }: { simulation: PlanSimulation;
       </div>
       <p className="mt-2 text-sm leading-relaxed">{simulationHeadline(simulation, currency, s)}</p>
       {usable && (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-xs tabular-nums">
-            <thead>
-              <tr className="caption">
-                <th className="py-1 pr-2 font-semibold" />
-                <th className="py-1 pr-2 text-right font-semibold">{s.trades}</th>
-                <th className="py-1 pr-2 text-right font-semibold">{s.netPnl}</th>
-                <th className="py-1 text-right font-semibold">{s.expectancy}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.label} className="border-t" style={{ borderColor: 'var(--hairline)' }}>
-                  <td className="py-1.5 pr-2 text-tx2">
-                    {r.label}
-                    {r.scenario && <span className="block text-tx3">{s.removed(r.scenario.excludedTradeCount)}</span>}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right">{r.result.tradeCount}</td>
-                  <td className={`py-1.5 pr-2 text-right ${toneOfDecimal(r.result.netPnl)}`}>
-                    {r.result.tradeCount === 0 ? '—' : formatSignedMoney(r.result.netPnl, currency)}
-                    <span className="block text-tx3">{s.drawdown} {r.result.tradeCount === 0 ? '—' : formatMoney(r.result.maxDrawdown, currency)}</span>
-                  </td>
-                  <td className={`py-1.5 text-right ${toneOfNumber(r.result.expectancyR)}`}>{formatR(r.result.expectancyR, 2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        // Une ligne par scénario, qui se replie proprement : la carte ne fait qu'un tiers de la page et un tableau à
+        // quatre colonnes y écrivait un mot par ligne (audit du lot 26).
+        <ul className="fit-optional mt-3 flex flex-col text-xs tabular-nums">
+          {rows.map((r) => (
+            <li key={r.label} className="border-t py-2.5" style={{ borderColor: 'var(--hairline)' }}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span className="text-[13px] font-medium text-tx">{r.label}</span>
+                {r.scenario && <span className="text-tx3">{s.removed(r.scenario.excludedTradeCount)}</span>}
+              </div>
+              <dl className="mt-1 flex flex-wrap gap-x-5 gap-y-1">
+                <div className="flex gap-1.5">
+                  <dt className="text-tx3">{s.trades}</dt>
+                  <dd>{r.result.tradeCount}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="text-tx3">{s.netPnl}</dt>
+                  <dd className={toneOfDecimal(r.result.netPnl)}>{r.result.tradeCount === 0 ? '—' : formatSignedMoney(r.result.netPnl, currency)}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="text-tx3">{s.expectancy}</dt>
+                  <dd className={toneOfNumber(r.result.expectancyR)}>{formatR(r.result.expectancyR, 2)}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="text-tx3">{s.drawdown}</dt>
+                  <dd>{r.result.tradeCount === 0 ? '—' : formatMoney(r.result.maxDrawdown, currency)}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
       )}
       <p className="mt-3 text-xs leading-relaxed text-tx3">{s.disclaimer}</p>
     </div>

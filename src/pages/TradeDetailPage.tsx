@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TradeDisciplineCard } from '../components/TradeDisciplineCard'
+import { TradeLinksCard } from '../components/analysis/TradeLinksCard'
+import { TradeCardDialog } from '../components/TradeCardDialog'
+import { ScreenshotAiCard } from '../components/ScreenshotAiCard'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -26,6 +30,7 @@ export function TradeDetailPage() {
   const [screenshot, setScreenshot] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [cardOpen, setCardOpen] = useState(false)
 
   useEffect(() => {
     let live = true
@@ -123,11 +128,16 @@ export function TradeDetailPage() {
           <>
             <NavBtn to={neighbours.prev}>‹ {d.previous}</NavBtn>
             <NavBtn to={neighbours.next}>{d.next} ›</NavBtn>
+            <Tooltip content={t.tradeCard.openHint}>
+              <button type="button" className="btn btn-secondary" onClick={() => setCardOpen(true)}>{t.tradeCard.open}</button>
+            </Tooltip>
             <Link to={`/trades/${trade.id}/edit`} className="btn btn-secondary">{d.edit}</Link>
             <button type="button" className="btn btn-danger" onClick={() => setConfirmDelete(true)}>{d.delete}</button>
           </>
         }
       />
+
+      {cardOpen && <TradeCardDialog trade={trade} setupName={setup?.name ?? null} screenshotUrl={screenshot} onClose={() => setCardOpen(false)} />}
 
       {confirmDelete && (
         <div className="nt nt-bad flex-col" role="alertdialog" aria-labelledby="del-title">
@@ -163,6 +173,8 @@ export function TradeDetailPage() {
             )}
           </section>
 
+          <ScreenshotAiCard tradeId={trade.id} hasScreenshot={!!trade.screenshotPath} />
+
           <div className="grid gap-5 md:grid-cols-2">
             <TextCard title={d.thesis} text={trade.thesis} empty={d.thesisEmpty} action={<Link to={`/trades/${trade.id}/edit`} className="btn-link">{d.writeIt}</Link>} />
             <TextCard title={d.postMortem} text={trade.postMortem} empty={d.postMortemEmpty} action={<Link to={`/trades/${trade.id}/edit`} className="btn-link">{d.writeIt}</Link>} />
@@ -188,6 +200,7 @@ export function TradeDetailPage() {
           </div>
 
           <TradeDisciplineCard tradeId={trade.id} />
+          <TradeLinksCard tradeId={trade.id} />
         </div>
 
         <aside className="flex flex-col gap-5">
@@ -201,8 +214,8 @@ export function TradeDetailPage() {
                 <p className="mt-1 text-xs text-tx3">
                   {formatDateTime(trade.entryTime)}
                   {trade.exitTime != null && ` → ${formatDateTime(trade.exitTime)}`}
-                  {session && ` · ${session.name}`}
-                  {timeframe && ` · ${timeframe.name}`}
+                  {session && <span className="whitespace-nowrap"> · {session.name}</span>}
+                  {timeframe && <span className="whitespace-nowrap"> · {timeframe.name}</span>}
                 </p>
               </div>
               <OutcomeBadge outcome={f?.outcome ?? 'open'} />
@@ -212,7 +225,7 @@ export function TradeDetailPage() {
               <div>
                 <Pnl value={f.netPnl} currency={trade.currency} className="text-[40px] font-semibold leading-tight tracking-tight" />
                 <p className="mt-1 text-sm text-tx2">
-                  {f.rMultiple !== null ? formatR(f.rMultiple) : '—'} · {d.net(formatMoney(f.fees, trade.currency))}
+                  {f.rMultiple !== null && `${formatR(f.rMultiple)} · `}{d.net(formatMoney(f.fees, trade.currency))}
                 </p>
               </div>
             ) : (
@@ -265,10 +278,12 @@ export function TradeDetailPage() {
                       <li key={i} className="flex flex-wrap items-center gap-2">
                         {i > 0 && emotionsByMoment.slice(0, i).some((l) => l.length > 0) && <span aria-hidden="true" className="text-tx3">→</span>}
                         {list.map((e) => (
-                          <span key={`${e.moment}-${e.tagId}`} className="chip chip-on chip-static" title={t.common.moments[e.moment]}>
-                            <span className="mr-1.5 text-[11px] uppercase text-tx2">{t.common.moments[e.moment]}</span>
-                            {tagName(e.tagId)}
-                          </span>
+                          <Tooltip key={`${e.moment}-${e.tagId}`} content={t.common.moments[e.moment]}>
+                            <span className="chip chip-on chip-static">
+                              <span className="mr-1.5 text-[11px] uppercase text-tx2">{t.common.moments[e.moment]}</span>
+                              {tagName(e.tagId)}
+                            </span>
+                          </Tooltip>
                         ))}
                       </li>
                     ),

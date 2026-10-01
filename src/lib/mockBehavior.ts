@@ -671,3 +671,67 @@ export function mockPlanSimulation(input: BehaviorInput, q: StatsQuery): PlanSim
 export function mockRevengeOf(input: BehaviorInput, t: TradeView): Revenge | null {
   return context(input).revenge(t)
 }
+
+// --- Lot 31 : trades liés à une idée ou à une analyse, comparés aux autres (miroir de `analysis::report`) ---
+import type { LinkedComparison, LinkedSide } from '../types/analysis'
+
+/** Score de discipline et expectancy R déjà calculés ci-dessus, aucune formule nouvelle ; 5 trades par côté au moins. */
+export function mockLinkedComparison(input: BehaviorInput, q: StatsQuery, linked: Set<number>): LinkedComparison {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const side = (trades: Closed[]): LinkedSide => {
+    const { score } = meanScore(trades.map((t) => disciplineOf(ctx, input.settings, t)))
+    const summary = summarize(trades.map(asMock))
+    return { tradeCount: trades.length, disciplineScore: score, expectancyR: withR(summary, MIN_R_TRADES), rTradeCount: summary.rTradeCount }
+  }
+  const a = side(list.filter((t) => linked.has(t.id)))
+  const b = side(list.filter((t) => !linked.has(t.id)))
+  const enough = a.tradeCount >= 5 && b.tradeCount >= 5
+  return {
+    linked: a,
+    unlinked: b,
+    discipline: compare(a.disciplineScore, b.disciplineScore, enough, 10),
+    expectancyR: compare(a.expectancyR, b.expectancyR, enough, 0.25),
+    minTradeCount: 5,
+  }
+}
+// --- Lot 35 : pause volontaire (miroir de `pause::pause_report`) ---
+import type { Pause, PauseGroup, PauseReport } from '../types/pause'
+
+const MIN_PAUSE_SAMPLE = 5
+
+/** Fin réelle : l'heure de fin choisie, sinon l'heure prévue. */
+export const pauseEffectiveEnd = (p: Pause) => p.endedAt ?? p.plannedEndAt
+/** Instant d'ENTRÉE dans [début ; fin réelle) : pile au début = pendant, pile à la fin = hors. */
+export const pauseContains = (p: Pause, instant: number) => instant >= p.startedAt && instant < pauseEffectiveEnd(p)
+
+export function mockPauseReport(input: BehaviorInput, q: StatsQuery, pauses: Pause[]): PauseReport {
+  const ctx = context(input)
+  const list = selected(input, q)
+  const group = (trades: Closed[]): PauseGroup => {
+    const { score, count } = meanScore(trades.map((t) => disciplineOf(ctx, input.settings, t)))
+    return { summary: summarize(trades.map(asMock)), disciplineScore: score, scoredTradeCount: count, tradeIds: trades.map((t) => t.id) }
+  }
+  const isDuring = (t: Closed) => pauses.some((p) => pauseContains(p, t.entryTime))
+  const during = group(list.filter(isDuring))
+  const others = group(list.filter((t) => !isDuring(t)))
+  const [d, o] = [during.summary, others.summary]
+  const enough = d.tradeCount >= MIN_PAUSE_SAMPLE && o.tradeCount >= MIN_PAUSE_SAMPLE
+  return {
+    pauseCount: pauses.filter((p) => (q.from == null || p.startedAt >= q.from) && (q.to == null || p.startedAt < q.to)).length,
+    tradeCount: list.length,
+    during,
+    others,
+    shareDuring: list.length ? d.tradeCount / list.length : null,
+    minTradeCount: MIN_PAUSE_SAMPLE,
+    sampleTooSmall: !enough,
+    avgNetPnlDifference: decGap(d.avgNetPnl, o.avgNetPnl, enough),
+    expectancyR: compare(withR(d, MIN_R_TRADES), withR(o, MIN_R_TRADES), enough, 0.25),
+    discipline: compare(during.disciplineScore, others.disciplineScore, enough, 10),
+  }
+}
+
+/** Résumé des trades clôturés de la période (lot 36, bilan hebdomadaire) : le même `summarize` que les autres rapports. */
+export function mockPeriodSummary(input: BehaviorInput, q: StatsQuery): Summary {
+  return summarize(selected(input, q).map(asMock))
+}

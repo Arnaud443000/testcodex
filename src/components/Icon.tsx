@@ -8,6 +8,12 @@ const PATHS = {
     </>
   ),
   trades: <path d="M4 7h16M4 12h16M4 17h10" />,
+  analysis: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2.5" />
+      <path d="M9 4h6v3H9zM9 12h6M9 16h4" />
+    </>
+  ),
   calendar: (
     <>
       <rect x="3" y="5" width="18" height="16" rx="2.5" />
@@ -15,6 +21,12 @@ const PATHS = {
     </>
   ),
   analytics: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  comparisons: (
+    <>
+      <path d="M7 4v16M17 4v16" />
+      <path d="M3 8l4-4 4 4M13 16l4 4 4-4" />
+    </>
+  ),
   behavior: (
     <>
       <circle cx="12" cy="12" r="9" />
@@ -48,6 +60,13 @@ const PATHS = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  // Lot 35 : pause volontaire.
+  pause: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 9v6M14 9v6" />
+    </>
+  ),
   bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4zM10 21h4" />,
   wallet: (
     <>
@@ -58,6 +77,16 @@ const PATHS = {
   chevron: <path d="M6 9l6 6 6-6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   cross: <path d="M6 6l12 12M18 6L6 18" />,
+  // Lot 29 : menu « Configuration » du tableau de bord (trois points).
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.3" />
+      <circle cx="12" cy="12" r="1.3" />
+      <circle cx="19" cy="12" r="1.3" />
+    </>
+  ),
+  // Lot 29 : état indéterminé d'une case à cocher.
+  minus: <path d="M6 12h12" />,
   alert: (
     <>
       <path d="M12 4l9 16H3z" />
@@ -98,6 +127,51 @@ const PATHS = {
   ),
   reset: <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5" />,
   star: <path d="M12 4l2.5 5.2 5.6.8-4.1 4 1 5.6L12 17l-5 2.6 1-5.6-4.1-4 5.6-.8z" />,
+  // Lot 19 bis : insights (ampoule)
+  insights: (
+    <>
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" />
+    </>
+  ),
+  // Lot 21 : coach IA (bulle de discussion).
+  coach: <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 9.5h8M8 12.5h5" />,
+  // Lot 22 : verrouillage (cadenas) et affichage du mot de passe (œil).
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3M12 15v2" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: <path d="M3 3l18 18M10.6 5.6A9.7 9.7 0 0 1 12 5.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-3 3.8M6.6 6.6C3.9 8.4 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2" />,
+  // Lot 27 : calculateur de position.
+  calculator: (
+    <>
+      <rect x="5" y="3" width="14" height="18" rx="2.5" />
+      <path d="M8.5 7.5h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01" />
+    </>
+  ),
+  // Lot 36 : bilan hebdomadaire (calendrier coché).
+  review: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" />
+      <path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4" />
+    </>
+  ),
+  // Lot 33 : suivi prop firm (bouclier) et « i » d'information.
+  shield: <path d="M12 3l7 3v5.5c0 4.4-2.9 7.9-7 9.5-4.1-1.6-7-5.1-7-9.5V6zM9 12l2 2 4-4" />,
+  info: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5M12 8h.01" />
+    </>
+  ),
 } as const
 
 export type IconName = keyof typeof PATHS

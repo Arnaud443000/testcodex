@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { OutcomeBadge, Pnl } from '../components/ui'
 import { useT } from '../i18n'
@@ -10,6 +12,7 @@ import { api } from '../lib/api'
 import { formatDateTime, formatDuration, formatR } from '../lib/format'
 import { INSTRUMENT_PARAM, SETUP_PARAM, parseIdParam } from '../lib/analysesView'
 import { MISTAKE_PARAM, parseMistakeParam } from '../lib/mistakeFilter'
+import { IDS_PARAM, parseIdsParam } from '../lib/idsFilter'
 import { useReferenceData } from '../lib/referenceData'
 import { NO_FILTERS, applyFilters, hasActiveFilters, isIncomplete, sortTrades, tagOfKind, type ListFilters, type SortDir, type SortKey } from '../lib/tradeList'
 import type { Outcome, TradeView } from '../types/trade'
@@ -29,6 +32,8 @@ export function TradesPage() {
     setupTagId: parseIdParam(params.get(SETUP_PARAM)),
   }))
   const mistake = useMemo(() => parseMistakeParam(params.get(MISTAKE_PARAM)), [params])
+  // Lot 34 : « Voir les trades » d'un objectif de comportement → « /trades?ids=1,2,3 » (filtre d'affichage).
+  const ids = useMemo(() => parseIdsParam(params.get(IDS_PARAM)), [params])
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'date', dir: 'desc' })
 
   useEffect(() => {
@@ -43,7 +48,10 @@ export function TradesPage() {
     }
   }, [selectedId, mistake])
 
-  const visible = useMemo(() => (trades ? sortTrades(applyFilters(trades, filters), sort.key, sort.dir) : []), [trades, filters, sort])
+  const visible = useMemo(
+    () => (trades ? sortTrades(applyFilters(ids ? trades.filter((tr) => ids.includes(tr.id)) : trades, filters), sort.key, sort.dir) : []),
+    [trades, filters, sort, ids],
+  )
 
   const header = (
     <PageHeader
@@ -124,6 +132,20 @@ export function TradesPage() {
           </button>
         </div>
       )}
+      {ids && (
+        <div className="nt nt-warn items-center justify-between" role="status">
+          <span>
+            <strong>{t.trades.idsFilter.label(ids.length)}</strong> — {t.trades.idsFilter.allPeriods}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setParams((p) => { const n = new URLSearchParams(p); n.delete(IDS_PARAM); return n })}
+          >
+            {t.trades.idsFilter.remove}
+          </button>
+        </div>
+      )}
       <section className="glass-card overflow-hidden">
         {trades === null ? (
           <p className="px-6 py-10 text-center text-sm text-tx2">{t.common.loading}</p>
@@ -160,19 +182,12 @@ export function TradesPage() {
               />
               <label className="flex flex-col gap-1.5">
                 <span className="caption">{t.trades.filters.result}</span>
-                <span className="relative">
-                  <select
-                    className="input !h-[38px] min-w-[140px]"
-                    value={filters.outcome ?? ''}
-                    onChange={(e) => setFilters((f) => ({ ...f, outcome: (e.target.value || null) as Outcome | 'open' | null }))}
-                  >
-                    <option value="" className="bg-bg">{t.trades.filters.all}</option>
-                    {(['win', 'loss', 'breakeven', 'open'] as const).map((o) => (
-                      <option key={o} value={o} className="bg-bg">{t.common.outcomes[o]}</option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-                </span>
+                <Select
+                  className="!h-[38px] min-w-[140px]"
+                  value={filters.outcome ?? ''}
+                  onChange={(v) => setFilters((f) => ({ ...f, outcome: (v || null) as Outcome | 'open' | null }))}
+                  options={[{ value: '', label: t.trades.filters.all }, ...(['win', 'loss', 'breakeven', 'open'] as const).map((o) => ({ value: o, label: t.common.outcomes[o] }))]}
+                />
               </label>
               {hasActiveFilters(filters) && (
                 <button type="button" className="btn-link pb-2" onClick={() => setFilters(NO_FILTERS)}>
@@ -204,15 +219,16 @@ export function TradesPage() {
                             className={`caption px-3 py-3 font-semibold ${c.align === 'right' ? 'text-right' : 'text-left'}`}
                           >
                             {c.key ? (
-                              <button
-                                type="button"
-                                title={t.trades.sortBy(c.label)}
-                                onClick={() => setSortKey(c.key!)}
-                                className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
-                              >
-                                {c.label}
-                                {active && <Icon name={sort.dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
-                              </button>
+                              <Tooltip content={t.trades.sortBy(c.label)}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSortKey(c.key!)}
+                                  className={`inline-flex min-h-[28px] items-center gap-1 uppercase tracking-[0.06em] hover:text-tx focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet ${active ? 'text-tx' : ''}`}
+                                >
+                                  {c.label}
+                                  {active && <Icon name={sort.dir === 'asc' ? 'sortUp' : 'sortDown'} size={14} />}
+                                </button>
+                              </Tooltip>
                             ) : (
                               c.label
                             )}
@@ -251,7 +267,9 @@ export function TradesPage() {
                             <span className="flex flex-wrap items-center gap-1.5">
                               <OutcomeBadge outcome={tr.figures?.outcome ?? 'open'} />
                               {isIncomplete(tr) && (
-                                <span className="badge badge-warn" title={t.trades.incompleteHint}>{t.trades.incomplete}</span>
+                                <Tooltip content={t.trades.incompleteHint}>
+                                  <span className="badge badge-warn">{t.trades.incomplete}</span>
+                                </Tooltip>
                               )}
                             </span>
                           </td>
@@ -285,15 +303,12 @@ function FilterSelect({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="caption">{label}</span>
-      <span className="relative">
-        <select className="input !h-[38px] min-w-[140px]" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
-          <option value="" className="bg-bg">{allLabel}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-bg">{o.label}</option>
-          ))}
-        </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-      </span>
+      <Select
+        className="!h-[38px] min-w-[140px]"
+        value={value === null ? '' : String(value)}
+        onChange={(v) => onChange(v === '' ? null : Number(v))}
+        options={[{ value: '', label: allLabel }, ...options.map((o) => ({ value: String(o.value), label: o.label }))]}
+      />
     </label>
   )
 }

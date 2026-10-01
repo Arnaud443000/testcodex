@@ -6,6 +6,8 @@ export interface BackupInfo {
   accounts: number
   trades: number
   screenshots: number
+  /** Lot 22 : sauvegarde chiffrée (elle s'ouvre avec le mot de passe en vigueur quand elle a été faite). */
+  encrypted: boolean
 }
 
 export interface RestoreResult {

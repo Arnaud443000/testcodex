@@ -21,3 +21,18 @@ jobs:
       - run: npm run build
       # The core crate has no UI dependency, so it is tested on Linux without WebKit.
       - run: cargo test -p pulse-core
+      # Lot 20: the network crate is tested against a fake local server; the key vault is checked for Windows.
+      - run: cargo test -p pulse-ai -p pulse-vault
+      # Lot 22: the lock's cryptography is pure Rust, tested here and checked for Windows like the vault.
+      - run: cargo test -p pulse-lock
+      # Lot 25: the economic calendar fetch, tested against a fake local server (never the real source).
+      - run: cargo test -p pulse-news
+      # Lot 37: the local MCP server, over stdio and against fake bridge listeners (real local sockets).
+      - run: cargo test -p pulse-mcp
+      # Lot 37: pulse-mcp must never be able to reach the Internet: no HTTP client, no TLS in its dependencies.
+      - name: pulse-mcp has no network dependency
+        run: |
+          if cargo tree -p pulse-mcp -e normal --prefix none | grep -Ei '^(ureq|reqwest|hyper|rustls|ring|native-tls|openssl|tokio|curl)[ -]'; then
+            echo "pulse-mcp must not depend on a network client"; exit 1
+          fi
+      - run: rustup target add x86_64-pc-windows-msvc && cargo check -p pulse-vault -p pulse-lock -p pulse-mcp --target x86_64-pc-windows-msvc --all-targets

@@ -345,7 +345,302 @@ pub const MIGRATIONS: &[&str] = &[
         UNIQUE (dashboard_id, uid)
     );
     CREATE INDEX dashboard_widgets_dashboard ON dashboard_widgets (dashboard_id);",
+    // v10 — scope of a dashboard (spec 3.8.9): `follow` = the account chosen in the top bar (what every
+    // dashboard did until now, so existing dashboards and the default one are unchanged), `account` = linked
+    // to one account, `all` = consolidated over every active account. Deleting the linked account empties
+    // `scope_account_id` (the dashboard is kept and reads the top bar again); `dashboards::resolve_scope` tells so.
+    "ALTER TABLE dashboards ADD COLUMN scope TEXT NOT NULL DEFAULT 'follow' CHECK (scope IN ('follow','account','all'));
+    ALTER TABLE dashboards ADD COLUMN scope_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;",
+    // v11 — automatic insights (spec 3.5): log of every insight shown, and of the ones the trader dismissed.
+    // An event log, not a cache: insights are always recomputed. `situation` = what it is about, `level` =
+    // coarse gravity, `episode` = a new one when the situation was not seen for 14 days (see `insights::log`).
+    // `payload` is the insight as first shown (JSON); deleting an account removes its history.
+    "CREATE TABLE insight_log (
+        insight_id    TEXT PRIMARY KEY CHECK (length(insight_id) > 0),
+        account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        situation     TEXT NOT NULL CHECK (length(situation) > 0),
+        level         INTEGER NOT NULL CHECK (level >= 0),
+        episode       INTEGER NOT NULL CHECK (episode >= 1),
+        kind          TEXT NOT NULL CHECK (length(kind) > 0),
+        category      TEXT NOT NULL CHECK (category IN ('trend','suggestion','highlight')),
+        priority      TEXT NOT NULL CHECK (priority IN ('high','medium','low')),
+        payload       TEXT NOT NULL,
+        first_seen_at INTEGER NOT NULL,
+        last_seen_at  INTEGER NOT NULL,
+        dismissed_at  INTEGER
+    );
+    CREATE INDEX insight_log_by_situation ON insight_log (situation, episode);
+    CREATE INDEX insight_log_by_account ON insight_log (account_id, first_seen_at);",
+    // v12 — AI comments on a trade's screenshot (lot 20, spec 3.5.4; to renumber if another branch also adds
+    // a v12). Text to read only: nothing computes from it. It goes with its trade; `sent` is the JSON list of
+    // the trade fields that were sent with the image. The API key is never stored in the database.
+    "CREATE TABLE ai_screenshot_notes (
+        id         INTEGER PRIMARY KEY,
+        trade_id   INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        provider   TEXT NOT NULL CHECK (length(provider) BETWEEN 1 AND 40),
+        model      TEXT NOT NULL CHECK (length(model) BETWEEN 1 AND 80),
+        sent       TEXT NOT NULL,
+        content    TEXT NOT NULL CHECK (length(content) >= 1)
+    );
+    CREATE INDEX ai_screenshot_notes_by_trade ON ai_screenshot_notes (trade_id, created_at);",
+    // v13 — AI coach conversations (lot 21, spec 3.5.5; to renumber if another branch also adds a v13).
+    // Text to read only: nothing computes from it, it is never sent back to the AI in another conversation.
+    // `sent` is the JSON log of what left the computer during the turn; `transcript` the technical messages
+    // replayed to the AI in the next turns of the same conversation (NULL for a failed turn, never replayed).
+    "CREATE TABLE coach_conversations (
+        id            INTEGER PRIMARY KEY,
+        title         TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 120),
+        created_at    INTEGER NOT NULL,
+        updated_at    INTEGER NOT NULL,
+        tools_version INTEGER NOT NULL
+    );
+    CREATE TABLE coach_turns (
+        id              INTEGER PRIMARY KEY,
+        conversation_id INTEGER NOT NULL REFERENCES coach_conversations(id) ON DELETE CASCADE,
+        seq             INTEGER NOT NULL CHECK (seq >= 1),
+        created_at      INTEGER NOT NULL,
+        question        TEXT NOT NULL CHECK (length(question) >= 1),
+        status          TEXT NOT NULL CHECK (status IN ('answered', 'failed')),
+        error_code      TEXT,
+        answer          TEXT,
+        provider        TEXT NOT NULL CHECK (length(provider) BETWEEN 1 AND 40),
+        model           TEXT NOT NULL CHECK (length(model) BETWEEN 1 AND 80),
+        sent            TEXT NOT NULL,
+        unverified      TEXT NOT NULL DEFAULT '[]',
+        transcript      TEXT,
+        usage           TEXT,
+        UNIQUE (conversation_id, seq),
+        CHECK ((status = 'answered' AND answer IS NOT NULL AND transcript IS NOT NULL AND error_code IS NULL)
+            OR (status = 'failed' AND answer IS NULL AND transcript IS NULL AND error_code IS NOT NULL))
+    );
+    CREATE INDEX coach_conversations_by_update ON coach_conversations (updated_at);",
+    // v14 — economic calendar (lot 25, spec 3.6.8; to renumber if another branch also adds a v14).
+    // Events read from a file or a feed; nothing links them to a trade (the alert compares instants).
+    // `starts_at` is a UTC instant (NULL = no time given), `day` the Paris day; forecast / previous /
+    // actual are the source's text (unit included), never money, never added up.
+    "CREATE TABLE economic_events (
+        id         INTEGER PRIMARY KEY,
+        source     TEXT NOT NULL CHECK (length(source) BETWEEN 1 AND 20),
+        uid        TEXT NOT NULL CHECK (length(uid) BETWEEN 1 AND 400),
+        starts_at  INTEGER,
+        day        TEXT NOT NULL CHECK (length(day) = 10),
+        currency   TEXT NOT NULL DEFAULT '' CHECK (length(currency) IN (0, 3)),
+        title      TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
+        importance TEXT NOT NULL CHECK (importance IN ('low','medium','high')),
+        forecast   TEXT,
+        previous   TEXT,
+        actual     TEXT,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (source, uid)
+    );
+    CREATE INDEX economic_events_by_day ON economic_events (day);
+    CREATE INDEX economic_events_by_start ON economic_events (importance, starts_at);",
+    // v15 — pre-trade analysis and ideas to watch (lot 31). Text to read only, nothing computes money from it.
+    // Questions are never deleted (answers keep pointing to them): `archived` hides them, like tags. A NULL
+    // `label` = the original wording, which the interface translates from `key`. `value` of an answer is JSON
+    // whose shape depends on the question `kind` (validated by `analysis::sessions`). Prices of an idea are exact
+    // decimals in TEXT. Deleting a trade removes its links, never the idea or the analysis; an instrument used
+    // by an idea cannot be deleted (no cascade).
+    "CREATE TABLE analysis_questions (
+        id       INTEGER PRIMARY KEY,
+        key      TEXT NOT NULL UNIQUE CHECK (length(key) BETWEEN 1 AND 60),
+        label    TEXT CHECK (label IS NULL OR length(label) BETWEEN 1 AND 200),
+        kind     TEXT NOT NULL CHECK (kind IN ('shortText','longText','choice','trend','conviction','setups','emotions','news')),
+        position INTEGER NOT NULL,
+        archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+        options  TEXT NOT NULL DEFAULT '{}'
+    );
+    INSERT INTO analysis_questions (key, kind, position, options) VALUES
+        ('trend',           'trend',      1, '{\"timeframes\":[\"monthly\",\"weekly\",\"daily\",\"h4\",\"h1\"]}'),
+        ('levels',          'longText',   2, '{}'),
+        ('news',            'news',       3, '{}'),
+        ('alts',            'longText',   4, '{}'),
+        ('scenarioMain',    'longText',   5, '{}'),
+        ('scenarioAlt',     'longText',   6, '{}'),
+        ('invalidation',    'longText',   7, '{}'),
+        ('assets',          'shortText',  8, '{}'),
+        ('setups',          'setups',     9, '{}'),
+        ('conviction',      'conviction', 10, '{}'),
+        ('riskLimits',      'shortText',  11, '{}'),
+        ('state',           'emotions',   12, '{}'),
+        ('mistakeToAvoid',  'shortText',  13, '{}');
+    CREATE TABLE analyses (
+        id            INTEGER PRIMARY KEY,
+        created_at    INTEGER NOT NULL,
+        tz_offset_min INTEGER NOT NULL,
+        day           TEXT NOT NULL CHECK (length(day) = 10),
+        updated_at    INTEGER NOT NULL,
+        note          TEXT CHECK (note IS NULL OR length(note) <= 2000)
+    );
+    CREATE INDEX analyses_by_day ON analyses (day, created_at);
+    CREATE TABLE analysis_answers (
+        analysis_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+        question_id INTEGER NOT NULL REFERENCES analysis_questions(id),
+        value       TEXT NOT NULL CHECK (length(value) >= 1),
+        PRIMARY KEY (analysis_id, question_id)
+    );
+    CREATE TABLE ideas (
+        id                INTEGER PRIMARY KEY,
+        instrument_id     INTEGER NOT NULL REFERENCES instruments(id),
+        timeframes        TEXT NOT NULL DEFAULT '[]',
+        note              TEXT NOT NULL CHECK (length(trim(note)) BETWEEN 1 AND 4000),
+        level_low         TEXT CHECK (level_low IS NULL OR (level_low GLOB '[0-9]*' AND level_low NOT GLOB '*[^0-9.]*')),
+        level_high        TEXT CHECK (level_high IS NULL OR (level_high GLOB '[0-9]*' AND level_high NOT GLOB '*[^0-9.]*')),
+        invalidation      TEXT CHECK (invalidation IS NULL OR length(invalidation) <= 2000),
+        created_at        INTEGER NOT NULL,
+        updated_at        INTEGER NOT NULL,
+        last_reviewed_at  INTEGER,
+        status            TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
+        outcome           TEXT CHECK (outcome IS NULL OR outcome IN ('worked', 'invalidated', 'noFollowUp')),
+        closed_at         INTEGER,
+        snoozed_until_day TEXT CHECK (snoozed_until_day IS NULL OR length(snoozed_until_day) = 10),
+        snooze_count      INTEGER NOT NULL DEFAULT 0 CHECK (snooze_count >= 0),
+        CHECK ((status = 'closed') = (outcome IS NOT NULL AND closed_at IS NOT NULL))
+    );
+    CREATE INDEX ideas_by_status ON ideas (status, instrument_id);
+    CREATE TABLE idea_notes (
+        id         INTEGER PRIMARY KEY,
+        idea_id    INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        kind       TEXT NOT NULL CHECK (kind IN ('created', 'edit', 'complement', 'snooze', 'closed')),
+        body       TEXT NOT NULL DEFAULT '' CHECK (length(body) <= 4000),
+        data       TEXT
+    );
+    CREATE INDEX idea_notes_by_idea ON idea_notes (idea_id, created_at, id);
+    CREATE TABLE trade_ideas (
+        trade_id INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        idea_id  INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+        PRIMARY KEY (trade_id, idea_id)
+    );
+    CREATE INDEX trade_ideas_by_idea ON trade_ideas (idea_id);
+    CREATE TABLE trade_analyses (
+        trade_id    INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+        analysis_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+        PRIMARY KEY (trade_id, analysis_id)
+    );
+    CREATE INDEX trade_analyses_by_analysis ON trade_analyses (analysis_id);",
+    // v16 — prop firm rules (lot 33): one row per `prop` account, deleted with it. Money and percents are
+    // exact decimals in TEXT (validated by `prop::rules`, the CHECKs are a coarse net); a limit is either
+    // both columns or none. `started_on` is a day "YYYY-MM-DD", `reset_time` "HH:MM" in `reset_zone`.
+    "CREATE TABLE prop_rules (
+        account_id                INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+        phase_label               TEXT CHECK (phase_label IS NULL OR length(trim(phase_label)) BETWEEN 1 AND 60),
+        started_on                TEXT NOT NULL CHECK (length(started_on) = 10),
+        daily_loss_mode           TEXT CHECK (daily_loss_mode IS NULL OR daily_loss_mode IN ('percent','amount')),
+        daily_loss_value          TEXT,
+        daily_reference           TEXT NOT NULL CHECK (daily_reference IN ('initial_balance','day_start_balance')),
+        max_loss_mode             TEXT CHECK (max_loss_mode IS NULL OR max_loss_mode IN ('percent','amount')),
+        max_loss_value            TEXT,
+        max_loss_kind             TEXT NOT NULL CHECK (max_loss_kind IN ('static','trailing')),
+        trailing_locks_at_initial INTEGER NOT NULL DEFAULT 0 CHECK (trailing_locks_at_initial IN (0,1)),
+        reset_time                TEXT NOT NULL CHECK (length(reset_time) = 5),
+        reset_zone                TEXT NOT NULL CHECK (reset_zone IN ('paris','new_york')),
+        profit_target_mode        TEXT CHECK (profit_target_mode IS NULL OR profit_target_mode IN ('percent','amount')),
+        profit_target_value       TEXT,
+        min_trading_days          INTEGER CHECK (min_trading_days IS NULL OR min_trading_days >= 1),
+        consistency_max_best_day_percent TEXT,
+        updated_at                INTEGER NOT NULL,
+        CHECK ((daily_loss_mode IS NULL) = (daily_loss_value IS NULL)),
+        CHECK ((max_loss_mode IS NULL) = (max_loss_value IS NULL)),
+        CHECK ((profit_target_mode IS NULL) = (profit_target_value IS NULL))
+    );
+    CREATE TRIGGER prop_rules_prop_account_only BEFORE INSERT ON prop_rules
+    WHEN (SELECT kind FROM accounts WHERE id = NEW.account_id) IS NOT 'prop'
+    BEGIN SELECT RAISE(ABORT, 'prop rules need a prop account'); END;",
+    // Lot 35 — voluntary pause (asked as v18: the v15 to v17 of the parallel lots are not in this branch,
+    // so this is the next free number here; to renumber at the merge). A reminder, never a lock: nothing
+    // reads this table to refuse a trade. Instants are UTC ms; `ended_at` stays NULL while the pause runs
+    // or when it ended by itself at `planned_end_at`. No foreign key: a pause belongs to the trader, not
+    // to an account. Not exported (CSV, PDF), not read by the coach, never sent anywhere.
+    "CREATE TABLE pauses (
+        id             INTEGER PRIMARY KEY,
+        started_at     INTEGER NOT NULL,
+        planned_end_at INTEGER NOT NULL,
+        ended_at       INTEGER,
+        tz_offset_min  INTEGER NOT NULL CHECK (tz_offset_min BETWEEN -840 AND 840),
+        reason         TEXT CHECK (reason IS NULL OR length(reason) BETWEEN 1 AND 20),
+        note           TEXT CHECK (note IS NULL OR length(note) BETWEEN 1 AND 140),
+        CHECK (planned_end_at > started_at),
+        CHECK (ended_at IS NULL OR ended_at >= started_at)
+    );
+    CREATE INDEX pauses_by_start ON pauses (started_at);",
+    // v17 in the numbering of the lots run in parallel (lot 34, process goals; v15 and v16 belong to other
+    // lots: move this entry after them at the merge, the SQL does not change and the tests find its
+    // position by themselves). Weekly / monthly targets on the trader's process; the result goals of
+    // `goals` are not touched. `target` is the text of a decimal: a whole number for counts and journal
+    // days, a percentage for rates (validated in `process_goals`, the CHECKs are only a coarse guard).
+    "CREATE TABLE process_goals (
+        id          INTEGER PRIMARY KEY,
+        period_kind TEXT NOT NULL CHECK (period_kind IN ('week','month')),
+        period_key  TEXT NOT NULL CHECK (
+                        (period_kind = 'week' AND period_key GLOB '[0-9][0-9][0-9][0-9]-W[0-5][0-9]')
+                        OR (period_kind = 'month' AND period_key GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]')),
+        metric      TEXT NOT NULL CHECK (metric IN ('no_stop_trades','overtrading_days','revenge_trades','risk_breaches',
+                        'rules_respect_rate','plan_follow_rate','journal_days')),
+        target      TEXT NOT NULL CHECK (target GLOB '[0-9]*' AND target NOT GLOB '*[^0-9.]*'),
+        created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (period_kind, period_key, metric)
+    );",
+    // v19 (v20 in the lot's own numbering) — local MCP access (lot 37): log of every tool call answered to the user's MCP client, with the
+    // exact text sent. Capped at the 500 latest rows (pruned at each write). Nothing computes from it,
+    // no tool reads it, no export writes it; it is in the backup and encrypted with the lock (it lives
+    // in the database). `tool` is the name as asked; `params` the arguments as received (JSON).
+    "CREATE TABLE mcp_calls (
+        id            INTEGER PRIMARY KEY,
+        at            INTEGER NOT NULL,
+        tz_offset_min INTEGER NOT NULL,
+        tool          TEXT NOT NULL CHECK (length(tool) BETWEEN 1 AND 64),
+        params        TEXT NOT NULL,
+        result        TEXT NOT NULL,
+        is_error      INTEGER NOT NULL CHECK (is_error IN (0, 1)),
+        size          INTEGER NOT NULL CHECK (size >= 0),
+        duration_ms   INTEGER NOT NULL CHECK (duration_ms >= 0)
+    );
+    CREATE INDEX mcp_calls_by_time ON mcp_calls (at);",
+    // v20 — weekly review (lot 36): one row per local ISO week ("YYYY-Www"), the three short answers as
+    // a JSON object (technical keys, the wording of the questions lives in the interface: a question can
+    // change without a migration) and 1 to 3 intentions per review, followed up the week after
+    // (`outcome` NULL = not evaluated). Free text of the trader: it is in the backup and encrypted with the
+    // lock (it lives in the database), and no export, no coach tool and no MCP tool reads it.
+    // Deleting a review deletes its intentions.
+    "CREATE TABLE weekly_reviews (
+        id           INTEGER PRIMARY KEY,
+        period_key   TEXT NOT NULL UNIQUE CHECK (period_key GLOB '[0-9][0-9][0-9][0-9]-W[0-5][0-9]'),
+        created_at   INTEGER NOT NULL,
+        updated_at   INTEGER NOT NULL,
+        completed_at INTEGER,
+        answers      TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(answers) AND length(answers) <= 8000)
+    );
+    CREATE TABLE weekly_intentions (
+        id         INTEGER PRIMARY KEY,
+        review_id  INTEGER NOT NULL REFERENCES weekly_reviews(id) ON DELETE CASCADE,
+        position   INTEGER NOT NULL CHECK (position BETWEEN 1 AND 3),
+        body       TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 200),
+        outcome    TEXT CHECK (outcome IS NULL OR outcome IN ('kept','partly','notKept')),
+        outcome_at INTEGER,
+        UNIQUE (review_id, position)
+    );",
 ];
+
+/// Position (= schema version) of the weekly review migration (lot 36).
+#[cfg(test)]
+pub(crate) fn weekly_review_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE weekly_reviews")).expect("weekly review migration") as u32 + 1
+}
+
+/// Position (= schema version on this branch) of the process-goals migration (lot 34).
+#[cfg(test)]
+/// Position (= schema version on this branch) of the MCP call log migration (lot 37).
+#[cfg(test)]
+pub(crate) fn mcp_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE mcp_calls")).expect("mcp migration") as u32 + 1
+}
+
+#[cfg(test)]
+pub(crate) fn process_goals_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE process_goals")).expect("process goals migration") as u32 + 1
+}
 
 pub fn latest_version() -> u32 {
     MIGRATIONS.len() as u32
@@ -762,5 +1057,149 @@ mod tests {
         conn.execute("DELETE FROM dashboards WHERE id = 1", []).unwrap();
         let n: i64 = conn.query_row("SELECT COUNT(*) FROM dashboard_widgets", [], |r| r.get(0)).unwrap();
         assert_eq!(n, 0);
+    }
+
+    #[test]
+    fn v10_adds_dashboard_scope_and_keeps_existing_dashboards_and_default() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 9).unwrap();
+        let account = account_v2(&conn);
+        // A user of v9 with two dashboards, widgets pinned to an account, and one of them as default.
+        conn.execute("INSERT INTO dashboards (name, position) VALUES ('Mon suivi', 1), ('Autre', 2)", []).unwrap();
+        conn.execute(
+            "INSERT INTO dashboard_widgets (dashboard_id, uid, kind, x, y, w, h, account_id) VALUES (1, 'a', 'calendar', 0, 0, 13, 13, ?1)",
+            [account],
+        )
+        .unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('dashboard.default', 'custom:2')", []).unwrap();
+
+        migrate_to(&mut conn, 10).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 10);
+        let all = crate::dashboards::list(&conn).unwrap();
+        let mine: Vec<_> = all.iter().filter(|d| !d.builtin).collect();
+        assert_eq!(mine.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["Mon suivi", "Autre"]);
+        assert!(all.iter().all(|d| d.scope == crate::dashboards::DashboardScope::FOLLOW), "existing dashboards keep following the top bar");
+        assert_eq!(mine[0].widget_count, 1);
+        assert_eq!(crate::dashboards::startup(&conn).unwrap().key, "custom:2", "the default dashboard is unchanged");
+        let pinned = crate::dashboards::get(&conn, "custom:1").unwrap().widgets[0].account_id;
+        assert_eq!(pinned, Some(account), "widget settings are unchanged");
+
+        // Guards written straight to the schema.
+        assert!(conn.execute("UPDATE dashboards SET scope = 'weird' WHERE id = 1", []).is_err());
+        assert!(conn.execute("UPDATE dashboards SET scope = 'account', scope_account_id = ?1 WHERE id = 1", [account]).is_ok());
+        assert!(conn.execute("UPDATE dashboards SET scope_account_id = 999 WHERE id = 1", []).is_err(), "unknown account");
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [account]).unwrap();
+        let (scope, acc): (String, Option<i64>) =
+            conn.query_row("SELECT scope, scope_account_id FROM dashboards WHERE id = 1", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!((scope.as_str(), acc), ("account", None), "the dashboard survives its account");
+    }
+
+    #[test]
+    fn v11_adds_the_insight_log_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 10).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let trade = trades::create(&conn, &trades::TradeData::new(a, eu, trades::Direction::Long, 1.into(), 1.into(), 0)).unwrap();
+        conn.execute("INSERT INTO alert_log (alert_id, account_id, kind, severity, payload, first_seen_at) VALUES ('x:1:1', ?1, 'x', 'warning', '{}', 0)", [a])
+            .unwrap();
+        conn.execute("INSERT INTO dashboards (name, scope, scope_account_id) VALUES ('Prop', 'account', ?1)", [a]).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('behavior.max_trades_per_day', '3')", []).unwrap();
+
+        migrate_to(&mut conn, 11).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 11);
+        // Existing data untouched.
+        assert_eq!(trades::get(&conn, trade.id).unwrap().data.account_id, a);
+        let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(count("SELECT COUNT(*) FROM alert_log"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM dashboards WHERE scope = 'account'"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM settings WHERE key = 'behavior.max_trades_per_day'"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM insight_log"), 0, "the history starts empty");
+
+        // Guards written straight to the schema.
+        let insert = |id: &str, account: i64, level: i64, episode: i64, category: &str, priority: &str| {
+            conn.execute(
+                "INSERT INTO insight_log (insight_id, account_id, situation, level, episode, kind, category, priority, payload, first_seen_at, last_seen_at)
+                 VALUES (?1, ?2, 'k:1:s', ?3, ?4, 'k', ?5, ?6, '{}', 0, 0)",
+                rusqlite::params![id, account, level, episode, category, priority],
+            )
+        };
+        assert!(insert("k:1:s:0#1", a, 0, 1, "trend", "high").is_ok());
+        assert!(insert("k:1:s:0#1", a, 0, 1, "trend", "high").is_err(), "one line per identity");
+        assert!(insert("k:1:s:1#1", a, -1, 1, "trend", "high").is_err());
+        assert!(insert("k:1:s:1#0", a, 1, 0, "trend", "high").is_err());
+        assert!(insert("k:1:s:2#1", a, 2, 1, "news", "high").is_err());
+        assert!(insert("k:1:s:3#1", a, 3, 1, "trend", "urgent").is_err());
+        assert!(insert("", a, 4, 1, "trend", "high").is_err());
+        assert!(insert("k:9:s:0#1", 999, 0, 1, "trend", "high").is_err(), "unknown account");
+        // Deleting the account removes its insight history.
+        conn.execute("DELETE FROM trades", []).unwrap();
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM insight_log"), 0);
+    }
+    #[test]
+    fn the_pause_table_is_added_and_existing_data_is_kept() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        let before = MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE pauses")).expect("pause migration") as u32; // just before the pause migration
+        migrate_to(&mut conn, before).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let mut t = trades::TradeData::new(a, eu, trades::Direction::Long, "1".parse().unwrap(), "1.1".parse().unwrap(), 1_000);
+        t.exit_price = Some("1.2".parse().unwrap());
+        t.exit_time = Some(2_000);
+        trades::create(&conn, &t).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('dashboard.default', 'custom:2')", []).unwrap();
+        assert!(conn.prepare("SELECT * FROM pauses").is_err(), "no pauses before");
+
+        migrate_to(&mut conn, latest_version()).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((count("SELECT COUNT(*) FROM trades"), count("SELECT COUNT(*) FROM accounts"), count("SELECT COUNT(*) FROM settings WHERE key = 'dashboard.default'")), (1, 1, 1));
+        assert_eq!(count("SELECT COUNT(*) FROM pauses"), 0);
+        // No foreign key: deleting an account (and its trades) never touches a pause.
+        conn.execute("INSERT INTO pauses (started_at, planned_end_at, tz_offset_min) VALUES (1000, 2000, 60)", []).unwrap();
+        conn.execute("DELETE FROM trades", []).unwrap();
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [a]).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM pauses"), 1);
+    }
+
+    #[test]
+    fn the_weekly_review_tables_are_added_and_existing_data_is_kept() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, weekly_review_version() - 1).unwrap();
+        let a = account(&conn, "10000");
+        let eu = instrument(&conn, "EURUSD", "100000");
+        let mut t = trades::TradeData::new(a, eu, trades::Direction::Long, "1".parse().unwrap(), "1.1".parse().unwrap(), 1_000);
+        t.exit_price = Some("1.2".parse().unwrap());
+        t.exit_time = Some(2_000);
+        trades::create(&conn, &t).unwrap();
+        conn.execute("INSERT INTO mcp_calls (at, tz_offset_min, tool, params, result, is_error, size, duration_ms) VALUES (1, 0, 'x', '{}', '{}', 0, 2, 1)", []).unwrap();
+        conn.execute("INSERT INTO process_goals (period_kind, period_key, metric, target) VALUES ('week', '2026-W38', 'no_stop_trades', '0')", []).unwrap();
+        assert!(conn.prepare("SELECT * FROM weekly_reviews").is_err(), "no review before");
+
+        migrate_to(&mut conn, latest_version()).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), latest_version());
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!(
+            (count("SELECT COUNT(*) FROM trades"), count("SELECT COUNT(*) FROM mcp_calls"), count("SELECT COUNT(*) FROM process_goals")),
+            (1, 1, 1),
+            "everything that existed is kept"
+        );
+        assert_eq!((count("SELECT COUNT(*) FROM weekly_reviews"), count("SELECT COUNT(*) FROM weekly_intentions")), (0, 0));
+
+        // The constraints are a coarse guard (the module validates): one review per week, 1 to 3 intentions.
+        conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('2026-W38', 1, 1)", []).unwrap();
+        assert!(conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('2026-W38', 1, 1)", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_reviews (period_key, created_at, updated_at) VALUES ('nope', 1, 1)", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_intentions (review_id, position, body) VALUES (1, 4, 'x')", []).is_err());
+        assert!(conn.execute("INSERT INTO weekly_intentions (review_id, position, body, outcome) VALUES (1, 1, 'x', 'maybe')", []).is_err());
+        conn.execute("INSERT INTO weekly_intentions (review_id, position, body) VALUES (1, 1, 'x')", []).unwrap();
+        // No review of its own is touched by an account: deleting the review deletes its intentions.
+        conn.execute("DELETE FROM weekly_reviews WHERE id = 1", []).unwrap();
+        assert_eq!(count("SELECT COUNT(*) FROM weekly_intentions"), 0);
     }
 }

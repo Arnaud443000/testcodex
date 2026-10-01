@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '../ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../../i18n'
 import { signOf } from '../../lib/decimal'
@@ -6,6 +7,7 @@ import { formatRatioPercent } from '../../lib/format'
 import { formatLoss } from '../../lib/behaviorFormat'
 import { mistakeLink } from '../../lib/mistakeFilter'
 import type { MistakeReport } from '../../types/behavior'
+import { FitList } from '../ui/fit'
 import { Card, EmptyLine, Note, Segmented } from './parts'
 
 type Sort = 'count' | 'cost'
@@ -34,7 +36,7 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
         <EmptyLine>{t.empty}</EmptyLine>
       ) : (
         <>
-          <ul>
+          <FitList moreTo="/behavior">
             {rows.map((m) => (
               <li key={`${m.source}-${m.id}`} className="flex items-center gap-3 border-b py-3 last:border-b-0" style={{ borderColor: 'var(--hairline)' }}>
                 <span
@@ -45,15 +47,17 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                   {m.tradeCount}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block break-words text-sm font-medium leading-snug" title={m.source === 'rule' ? t.ruleBroken(m.label) : m.label}>
-                    {m.source === 'rule' ? t.ruleBroken(m.label) : m.label}
-                  </span>
+                  <Tooltip content={m.source === 'rule' ? t.ruleBroken(m.label) : m.label}>
+                    <span className="block break-words text-sm font-medium leading-snug">
+                      {m.source === 'rule' ? t.ruleBroken(m.label) : m.label}
+                    </span>
+                  </Tooltip>
                   <span className="block text-xs text-tx3 tabular-nums">
                     {t.detail(m.tradeCount, formatRatioPercent(m.share, 0))}
                     {' · '}
                     <Link
                       to={mistakeLink({ source: m.source === 'rule' ? 'rule' : 'tag', id: m.id })}
-                      className="text-tx-accent underline underline-offset-2"
+                      className="btn-link"
                       aria-label={t.seeTradesAria(m.source === 'rule' ? t.ruleBroken(m.label) : m.label)}
                     >
                       {t.seeTrades}
@@ -63,7 +67,7 @@ export function MistakesCard({ report, currency }: { report: MistakeReport; curr
                 <b className={`whitespace-nowrap tabular-nums ${signOf(m.cost) > 0 ? 'text-loss' : 'text-neutral'}`}>{formatLoss(m.cost, currency)}</b>
               </li>
             ))}
-          </ul>
+          </FitList>
           <Note>{t.summary(report.tradesWithMistake, report.tradeCount)}</Note>
         </>
       )}

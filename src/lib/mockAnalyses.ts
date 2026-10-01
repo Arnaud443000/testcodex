@@ -25,7 +25,7 @@ import type { BehaviorInput } from './mockBehavior'
 const DAY = 86_400_000
 const MIN_SAMPLE = 5
 
-type Closed = TradeView & { exitTime: number; figures: NonNullable<TradeView['figures']> }
+export type Closed = TradeView & { exitTime: number; figures: NonNullable<TradeView['figures']> }
 const isClosed = (t: TradeView): t is Closed => t.figures !== null && t.exitTime != null
 const byExit = (a: Closed, b: Closed) => a.exitTime - b.exitTime || a.id - b.id
 const asMock = (t: Closed): MockClosed => ({
@@ -47,7 +47,7 @@ function selected(input: BehaviorInput, q: StatsQuery): Closed[] {
 }
 
 /** Résumé d'un groupe : `summarize` du mock, avec le vrai brut et les vrais frais. */
-function summary(list: Closed[]): Summary {
+export function summary(list: Closed[]): Summary {
   return {
     ...summarize(list.map(asMock)),
     grossPnl: toDec(sum(list.map((t) => t.figures.grossPnl))),

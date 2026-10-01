@@ -4,17 +4,19 @@
 //! counted where they close, net PnL as reference, deposits and withdrawals
 //! never involved, `None` when undefined.
 
-use super::pnl::{checked, ratio};
+use super::pnl::{Outcome, checked, ratio};
 use super::segments::{SegmentBy, groups};
 use super::summary::{Summary, analyze};
-use super::{Ledger, StatsQuery, load, replay, time};
+use super::dashboard::{Comparison, Period, compare};
+use super::{Ledger, StatsQuery, compute, load, matches, replay, time};
+use super::distribution::median;
 use crate::error::Result;
 use crate::instruments::AssetClass;
 use crate::money::Decimal;
 use crate::tags::TagKind;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// Closed trades a group needs before its figures stand on their own; below
 /// it a group is shown but flagged `low_sample`. Same threshold as the discipline score.
@@ -302,4 +304,464 @@ pub fn executions(ledger: &Ledger, query: &StatsQuery) -> Result<ExecutionReport
 
 pub fn execution_report(conn: &Connection, query: &StatsQuery) -> Result<ExecutionReport> {
     executions(&load(conn, &query.account_ids)?, query)
+}
+
+// --- opportunity cost (3.3.18) -------------------------------------------------------
+
+/// One closed trade that has both a valid planned target and a price after its exit.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpportunityTrade {
+    pub trade_id: i64,
+    pub symbol: String,
+    pub direction: crate::trades::Direction,
+    pub exit_price: Decimal,
+    pub planned_tp: Decimal,
+    pub price_after_exit: Decimal,
+    /// (price after − exit) × side × size × multiplier: positive when the price kept going the trade's way.
+    pub move_after_exit: Decimal,
+    /// Same move with the price after exit capped at the planned target, floored at 0.
+    pub left_on_table: Decimal,
+    pub net_pnl: Decimal,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpportunityReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades with both data: the only ones measured.
+    pub eligible_count: usize,
+    pub excluded_count: usize,
+    /// No planned take profit on the right side of the entry. Overlaps `without_price_after_count`.
+    pub without_target_count: usize,
+    pub without_price_after_count: usize,
+    pub min_sample: usize,
+    pub low_sample: bool,
+    pub total_left_on_table: Decimal,
+    /// Trades that left something on the table.
+    pub left_count: usize,
+    /// Average over those trades; `None` when there are none.
+    pub left_per_early_exit: Option<Decimal>,
+    /// Trades whose price went against them after the exit, and the money the exit spared (positive, uncapped).
+    pub avoided_count: usize,
+    pub total_avoided: Decimal,
+    pub net_pnl_of_eligible: Decimal,
+    /// Biggest amount left first (ties: trade id).
+    pub trades: Vec<OpportunityTrade>,
+}
+
+/// `price_after_exit` maps a trade id to the price typed by hand after the exit.
+pub fn opportunity(ledger: &Ledger, price_after_exit: &HashMap<i64, Decimal>, query: &StatsQuery) -> Result<OpportunityReport> {
+    let replay = replay(ledger)?;
+    let selected = replay.selected(query);
+    let zero = Decimal::ZERO;
+    let (mut without_target, mut without_after) = (0, 0);
+    let (mut left_total, mut avoided_total, mut net_total) = (zero, zero, zero);
+    let (mut left_count, mut avoided_count) = (0, 0);
+    let mut trades = Vec::new();
+    for c in &selected {
+        let p = &c.facts.position;
+        let target = p.planned_tp.filter(|tp| tp.checked_sub(p.entry_price).is_some_and(|d| d * p.direction.sign() > zero));
+        let after = price_after_exit.get(&c.facts.id).copied();
+        without_target += usize::from(target.is_none());
+        without_after += usize::from(after.is_none());
+        let (Some(tp), Some(after), Some(exit)) = (target, after, p.exit_price) else { continue };
+        let cost = |to: Decimal| crate::trade_view::opportunity_cost(p.direction, Some(exit), Some(to), p.size, p.multiplier);
+        let moved = cost(after)?.unwrap_or(zero);
+        let capped = if p.direction.sign() > zero { after.min(tp) } else { after.max(tp) };
+        let left = cost(capped)?.unwrap_or(zero).max(zero);
+        left_total = checked(left_total.checked_add(left))?;
+        net_total = checked(net_total.checked_add(c.figures.net_pnl))?;
+        if left > zero {
+            left_count += 1;
+        }
+        if moved < zero {
+            avoided_count += 1;
+            avoided_total = checked(avoided_total.checked_sub(moved))?;
+        }
+        trades.push(OpportunityTrade {
+            trade_id: c.facts.id,
+            symbol: c.facts.symbol.clone(),
+            direction: p.direction,
+            exit_price: exit,
+            planned_tp: tp,
+            price_after_exit: after,
+            move_after_exit: moved,
+            left_on_table: left,
+            net_pnl: c.figures.net_pnl,
+        });
+    }
+    trades.sort_by(|a, b| b.left_on_table.cmp(&a.left_on_table).then(a.trade_id.cmp(&b.trade_id)));
+    let eligible = trades.len();
+    Ok(OpportunityReport {
+        trade_count: selected.len(),
+        eligible_count: eligible,
+        excluded_count: selected.len() - eligible,
+        without_target_count: without_target,
+        without_price_after_count: without_after,
+        min_sample: MIN_SAMPLE,
+        low_sample: eligible < MIN_SAMPLE,
+        total_left_on_table: left_total,
+        left_count,
+        left_per_early_exit: if left_count == 0 { None } else { left_total.checked_div(Decimal::from(left_count)) },
+        avoided_count,
+        total_avoided: avoided_total,
+        net_pnl_of_eligible: net_total,
+        trades,
+    })
+}
+
+pub fn opportunity_report(conn: &Connection, query: &StatsQuery) -> Result<OpportunityReport> {
+    let ledger = load(conn, &query.account_ids)?;
+    let mut stmt = conn.prepare("SELECT id, price_after_exit FROM trades WHERE price_after_exit IS NOT NULL")?;
+    let mut after = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, crate::money::col(r, 1)?)))? {
+        let (id, price) = row?;
+        after.insert(id, price);
+    }
+    opportunity(&ledger, &after, query)
+}
+
+// --- same period one year earlier (3.3.19) ---------------------------------------------
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearComparisonQuery {
+    #[serde(default)]
+    pub account_ids: Vec<i64>,
+    pub period: Period,
+    /// The current instant and the user's UTC offset, supplied by the shell (as for the dashboard).
+    pub now_ms: i64,
+    #[serde(default)]
+    pub tz_offset_min: i32,
+}
+
+/// Why nothing can be compared with last year.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PreviousEmptyReason {
+    /// The first trade of the accounts is later than the end of last year's window.
+    HistoryTooShort,
+    /// The history reaches back far enough but holds no closed trade in that window.
+    NoTrades,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearComparison {
+    /// `false` for "all time": nothing precedes it.
+    pub available: bool,
+    /// Current window `[from, to)` and the same calendar dates one year earlier.
+    pub from: Option<i64>,
+    pub to: Option<i64>,
+    pub previous_from: Option<i64>,
+    pub previous_to: Option<i64>,
+    pub min_sample: usize,
+    pub current: Summary,
+    pub current_empty: bool,
+    pub current_low_sample: bool,
+    /// `None` when `available` is false.
+    pub previous: Option<Summary>,
+    pub previous_empty: bool,
+    pub previous_low_sample: bool,
+    pub previous_reason: Option<PreviousEmptyReason>,
+    /// Same gaps as the dashboard; `None` when last year is empty or unavailable (never a gap against nothing).
+    pub comparison: Option<Comparison>,
+}
+
+/// The local calendar day one year earlier (29 February becomes 28 February).
+fn day_minus_one_year(day: i64) -> i64 {
+    let (y, m, d) = time::civil_from_days(day);
+    let d = d.min(u32::from(time::days_in_month(y - 1, m)));
+    time::days_from_civil(y - 1, m, d).unwrap_or(day - 365)
+}
+
+pub fn year_comparison(ledger: &Ledger, q: &YearComparisonQuery) -> Result<YearComparison> {
+    const DAY_MS: i64 = 86_400_000;
+    let stats = |from: Option<i64>, to: Option<i64>| StatsQuery { account_ids: q.account_ids.clone(), from, to, ..StatsQuery::default() };
+    let midnight = |day: i64| day * DAY_MS - i64::from(q.tz_offset_min) * 60_000;
+    let Some(n) = q.period.days() else {
+        let current = compute(ledger, &stats(None, None))?.summary;
+        return Ok(YearComparison {
+            available: false,
+            from: None,
+            to: None,
+            previous_from: None,
+            previous_to: None,
+            min_sample: MIN_SAMPLE,
+            current_empty: current.trade_count == 0,
+            current_low_sample: low_sample(&current),
+            current,
+            previous: None,
+            previous_empty: false,
+            previous_low_sample: false,
+            previous_reason: None,
+            comparison: None,
+        });
+    };
+    let today = time::local_day_number(q.now_ms, q.tz_offset_min);
+    let (first, last) = (today + 1 - n, today);
+    let (from, to) = (midnight(first), midnight(last + 1));
+    let (previous_from, previous_to) = (midnight(day_minus_one_year(first)), midnight(day_minus_one_year(last) + 1));
+    let current = compute(ledger, &stats(Some(from), Some(to)))?.summary;
+    let previous = compute(ledger, &stats(Some(previous_from), Some(previous_to)))?.summary;
+    let previous_empty = previous.trade_count == 0;
+    let previous_reason = previous_empty.then(|| match ledger.trades.iter().map(|t| t.entry_time).min() {
+        Some(first_entry) if first_entry >= previous_to => PreviousEmptyReason::HistoryTooShort,
+        _ => PreviousEmptyReason::NoTrades,
+    });
+    let comparison = if previous_empty { None } else { Some(compare(&current, &previous)?) };
+    Ok(YearComparison {
+        available: true,
+        from: Some(from),
+        to: Some(to),
+        previous_from: Some(previous_from),
+        previous_to: Some(previous_to),
+        min_sample: MIN_SAMPLE,
+        current_empty: current.trade_count == 0,
+        current_low_sample: low_sample(&current),
+        previous_low_sample: low_sample(&previous),
+        current,
+        previous: Some(previous),
+        previous_empty,
+        previous_reason,
+        comparison,
+    })
+}
+
+pub fn year_comparison_report(conn: &Connection, q: &YearComparisonQuery) -> Result<YearComparison> {
+    year_comparison(&load(conn, &q.account_ids)?, q)
+}
+
+// --- time in position (3.3.20) ----------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DurationGroup {
+    pub trade_count: usize,
+    /// Mean holding time in milliseconds; `None` for an empty group.
+    pub avg_ms: Option<f64>,
+    pub median_ms: Option<f64>,
+    pub low_sample: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DurationReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades measured (closed, exit not before entry).
+    pub measured_count: usize,
+    /// Open trades passing the filters: no exit time, so no duration.
+    pub open_trade_count: usize,
+    /// Exit before entry (inconsistent data): excluded.
+    pub invalid_count: usize,
+    pub min_sample: usize,
+    pub winners: DurationGroup,
+    pub losers: DurationGroup,
+    /// Shown apart, never part of the ratio.
+    pub breakevens: DurationGroup,
+    /// Both winners and losers reach `min_sample`.
+    pub comparable: bool,
+    /// Mean winner duration / mean loser duration; `None` unless `comparable` and the loser mean is not zero.
+    pub avg_ratio: Option<f64>,
+    pub median_ratio: Option<f64>,
+}
+
+fn duration_group(mut ms: Vec<i64>) -> DurationGroup {
+    let n = ms.len();
+    ms.sort_unstable();
+    DurationGroup {
+        trade_count: n,
+        avg_ms: (n > 0).then(|| ms.iter().map(|&v| v as i128).sum::<i128>() as f64 / n as f64),
+        median_ms: median(ms.iter().map(|&v| v as f64).collect()),
+        low_sample: n < MIN_SAMPLE,
+    }
+}
+
+pub fn durations(ledger: &Ledger, query: &StatsQuery) -> Result<DurationReport> {
+    let replay = replay(ledger)?;
+    let selected = replay.selected(query);
+    let (mut win, mut loss, mut flat) = (Vec::new(), Vec::new(), Vec::new());
+    let mut invalid = 0;
+    for c in &selected {
+        let held = c.exit_time - c.facts.entry_time;
+        if held < 0 {
+            invalid += 1;
+            continue;
+        }
+        match c.figures.outcome {
+            Outcome::Win => win.push(held),
+            Outcome::Loss => loss.push(held),
+            Outcome::Breakeven => flat.push(held),
+        }
+    }
+    let open_trade_count = ledger.trades.iter().filter(|t| t.exit_time.is_none() && matches(t, query)).count();
+    let (winners, losers, breakevens) = (duration_group(win), duration_group(loss), duration_group(flat));
+    let comparable = !winners.low_sample && !losers.low_sample;
+    let quotient = |a: Option<f64>, b: Option<f64>| if comparable { a.zip(b).filter(|(_, b)| *b > 0.0).map(|(a, b)| a / b) } else { None };
+    Ok(DurationReport {
+        trade_count: selected.len(),
+        measured_count: selected.len() - invalid,
+        open_trade_count,
+        invalid_count: invalid,
+        min_sample: MIN_SAMPLE,
+        avg_ratio: quotient(winners.avg_ms, losers.avg_ms),
+        median_ratio: quotient(winners.median_ms, losers.median_ms),
+        comparable,
+        winners,
+        losers,
+        breakevens,
+    })
+}
+
+pub fn duration_report(conn: &Connection, query: &StatsQuery) -> Result<DurationReport> {
+    durations(&load(conn, &query.account_ids)?, query)
+}
+
+// --- capital scaling (3.3.21) -----------------------------------------------------
+
+/// Trades needed in each half before a verdict is given.
+pub const SCALING_MIN_PER_HALF: usize = MIN_SAMPLE;
+/// The average balance must move by this fraction between the halves for the capital to count as having moved.
+pub const SCALING_CAPITAL_MOVE: f64 = 0.10;
+/// Relative change of the average risk % beyond which the size is called over- or under-sized.
+pub const SCALING_VERDICT_BAND: f64 = 0.20;
+const SCALING_EPSILON: f64 = 1e-9;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScalingVerdict {
+    NotEnoughData,
+    /// The risk taken has fallen behind the capital.
+    Undersized,
+    Stable,
+    /// The risk taken has grown faster than the capital.
+    Oversized,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingPoint {
+    pub trade_id: i64,
+    pub exit_time: i64,
+    pub balance_at_entry: Decimal,
+    pub initial_risk: Decimal,
+    /// Initial risk / balance at entry (0.01 = 1 %).
+    pub risk_pct: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingHalf {
+    pub trade_count: usize,
+    pub avg_balance: Decimal,
+    pub avg_risk: Decimal,
+    pub avg_risk_pct: f64,
+    /// Exit instants of the first and last trade of the half.
+    pub from: i64,
+    pub to: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScalingReport {
+    /// Closed trades of the selection.
+    pub trade_count: usize,
+    /// Trades with a risk in %.
+    pub usable_count: usize,
+    /// Trades left out: no valid stop, or a balance that is not positive.
+    pub excluded_count: usize,
+    /// Of which without a valid stop.
+    pub without_stop_count: usize,
+    pub min_per_half: usize,
+    pub capital_move_threshold: f64,
+    pub verdict_band: f64,
+    /// Initial capital + flows + realized PnL of the selected accounts, now.
+    pub current_capital: Decimal,
+    /// The usable trades, in exit order.
+    pub points: Vec<ScalingPoint>,
+    /// `None` when there is not enough data for a verdict.
+    pub older: Option<ScalingHalf>,
+    pub recent: Option<ScalingHalf>,
+    /// Recent / older − 1 of the average balance (0.25 = +25 %).
+    pub capital_change: Option<f64>,
+    /// Same for the average risk in money.
+    pub risk_change: Option<f64>,
+    /// Same for the average risk in % of capital: the figure the verdict is read from.
+    pub risk_pct_change: Option<f64>,
+    /// The average balance moved by at least the threshold between the halves.
+    pub capital_moved: bool,
+    pub verdict: ScalingVerdict,
+}
+
+fn scaling_half(points: &[ScalingPoint]) -> Result<ScalingHalf> {
+    let n = Decimal::from(points.len());
+    let (mut balance, mut risk) = (Decimal::ZERO, Decimal::ZERO);
+    for p in points {
+        balance = checked(balance.checked_add(p.balance_at_entry))?;
+        risk = checked(risk.checked_add(p.initial_risk))?;
+    }
+    Ok(ScalingHalf {
+        trade_count: points.len(),
+        avg_balance: checked(balance.checked_div(n))?,
+        avg_risk: checked(risk.checked_div(n))?,
+        avg_risk_pct: points.iter().map(|p| p.risk_pct).sum::<f64>() / points.len() as f64,
+        from: points[0].exit_time,
+        to: points[points.len() - 1].exit_time,
+    })
+}
+
+/// Does the risk taken follow the capital? Reads the risk in % of capital of [`super::risk`], splits the
+/// usable trades in an older and a recent half and compares them (see CLAUDE.md, "Analyses complémentaires (lot 16)").
+pub fn scaling(ledger: &Ledger, query: &StatsQuery) -> Result<ScalingReport> {
+    let risk = super::risk::risk(ledger, query, &crate::settings::BehaviorSettings::default())?;
+    let points: Vec<ScalingPoint> = risk
+        .trades
+        .iter()
+        .filter_map(|t| Some(ScalingPoint { trade_id: t.trade_id, exit_time: t.exit_time, balance_at_entry: t.balance_at_entry, initial_risk: t.initial_risk?, risk_pct: t.risk_pct? }))
+        .collect();
+    let half = points.len() / 2;
+    let mut report = ScalingReport {
+        trade_count: risk.trade_count,
+        usable_count: points.len(),
+        excluded_count: risk.trade_count - points.len(),
+        without_stop_count: risk.without_stop_count,
+        min_per_half: SCALING_MIN_PER_HALF,
+        capital_move_threshold: SCALING_CAPITAL_MOVE,
+        verdict_band: SCALING_VERDICT_BAND,
+        current_capital: risk.current_capital,
+        older: None,
+        recent: None,
+        capital_change: None,
+        risk_change: None,
+        risk_pct_change: None,
+        capital_moved: false,
+        verdict: ScalingVerdict::NotEnoughData,
+        points: Vec::new(),
+    };
+    if half >= SCALING_MIN_PER_HALF {
+        // With an odd count the trade in the middle belongs to neither half.
+        let (older, recent) = (scaling_half(&points[..half])?, scaling_half(&points[points.len() - half..])?);
+        let change = |a: Decimal, b: Decimal| -> Result<Option<f64>> { Ok(ratio(checked(b.checked_sub(a))?, a)) };
+        report.capital_change = change(older.avg_balance, recent.avg_balance)?;
+        report.risk_change = change(older.avg_risk, recent.avg_risk)?;
+        report.risk_pct_change = (older.avg_risk_pct > 0.0).then(|| recent.avg_risk_pct / older.avg_risk_pct - 1.0);
+        report.capital_moved = report.capital_change.is_some_and(|c| c.abs() >= SCALING_CAPITAL_MOVE - SCALING_EPSILON);
+        report.verdict = match report.risk_pct_change {
+            Some(c) if c >= SCALING_VERDICT_BAND - SCALING_EPSILON => ScalingVerdict::Oversized,
+            Some(c) if c <= -SCALING_VERDICT_BAND + SCALING_EPSILON => ScalingVerdict::Undersized,
+            Some(_) => ScalingVerdict::Stable,
+            None => ScalingVerdict::NotEnoughData,
+        };
+        report.older = Some(older);
+        report.recent = Some(recent);
+    }
+    report.points = points;
+    Ok(report)
+}
+
+pub fn scaling_report(conn: &Connection, query: &StatsQuery) -> Result<ScalingReport> {
+    scaling(&load(conn, &query.account_ids)?, query)
 }

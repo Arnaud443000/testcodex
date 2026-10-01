@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertRules } from '../components/AlertRules'
 import { EmptyState } from '../components/EmptyState'
-import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -88,15 +88,12 @@ export function AlertHistoryPage() {
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="caption">{h.typeFilter}</span>
-            <span className="relative">
-              <select className="input !h-[38px] min-w-[220px]" value={kind ?? ''} onChange={(e) => setKind((e.target.value || null) as AlertKind | null)}>
-                <option value="" className="bg-bg">{h.allTypes}</option>
-                {ALERT_KINDS.map((k) => (
-                  <option key={k} value={k} className="bg-bg">{h.kinds[k]}</option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-            </span>
+            <Select
+              className="!h-[38px] min-w-[220px]"
+              value={kind ?? ''}
+              onChange={(v) => setKind((v || null) as AlertKind | null)}
+              options={[{ value: '', label: h.allTypes }, ...ALERT_KINDS.map((k) => ({ value: k, label: h.kinds[k] }))]}
+            />
           </label>
           {kind !== null && (
             <button type="button" className="btn-link pb-2" onClick={() => setKind(null)}>{h.resetFilters}</button>

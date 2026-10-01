@@ -16,6 +16,10 @@ export interface ReferenceData {
   error: string | null
   addInstrument: (i: NewInstrument) => Promise<Instrument>
   addTag: (kind: TagKind, name: string) => Promise<Tag>
+  /** Ma liste d'émotions (lot 30) : ajoute ou réactive, retire (archive), supprime si jamais utilisée. */
+  addEmotion: (name: string) => Promise<Tag>
+  removeEmotion: (tagId: number) => Promise<Tag>
+  deleteEmotion: (tagId: number) => Promise<void>
   addRule: (text: string) => Promise<Rule>
   addChecklistItem: (label: string) => Promise<ChecklistItem>
 }
@@ -56,6 +60,21 @@ export function useReferenceData(): ReferenceData {
     setAllTags((prev) => [...prev, t])
     return t
   }, [])
+  const upsertTag = (t: Tag) => setAllTags((prev) => (prev.some((g) => g.id === t.id) ? prev.map((g) => (g.id === t.id ? t : g)) : [...prev, t]))
+  const addEmotion = useCallback(async (name: string) => {
+    const t = await api.addEmotionToList(name)
+    upsertTag(t)
+    return t
+  }, [])
+  const removeEmotion = useCallback(async (tagId: number) => {
+    const t = await api.removeEmotionFromList(tagId)
+    upsertTag(t)
+    return t
+  }, [])
+  const deleteEmotion = useCallback(async (tagId: number) => {
+    await api.deleteUnusedEmotion(tagId)
+    setAllTags((prev) => prev.filter((g) => g.id !== tagId))
+  }, [])
   const addRule = useCallback(async (text: string) => {
     const r = await api.createRule(text)
     setAllRules((prev) => [...prev, r])
@@ -78,6 +97,9 @@ export function useReferenceData(): ReferenceData {
     error,
     addInstrument,
     addTag,
+    addEmotion,
+    removeEmotion,
+    deleteEmotion,
     addRule,
     addChecklistItem,
   }

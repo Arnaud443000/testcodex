@@ -1,7 +1,9 @@
 import type { Messages } from '../i18n'
 import type { Alert, LossDetail } from '../types/alerts'
-import { formatDecimal, formatDuration, formatNumber, formatRatioPercent, formatSignedMoney, formatMoney } from './format'
+import { formatDecimal, formatDuration, formatNumber, formatR, formatRatioPercent, formatSignedMoney, formatMoney } from './format'
 import { formatPercentValue } from './behaviorFormat'
+import { signOf } from './decimal'
+import { formatUsedPercent } from './propView'
 
 /**
  * Texte d'une alerte à seuils, à partir de sa clé et de ses valeurs (renvoyées par pulse-core).
@@ -29,7 +31,32 @@ export function alertMessage(t: Messages, a: Alert): string {
       return m.unusualSession(a.session, a.sessionCount, a.historyCount, formatRatioPercent(a.share, 0))
     case 'noStopLoss':
       return a.open ? m.noStopLossOpen : m.noStopLossClosed
+    case 'noAnalysis':
+      return m.noAnalysis
+    case 'newsTrade': {
+      const names = a.events.map((e) => m.newsEvent(e.title, e.currency, e.parisTime))
+      if (a.eventCount > a.events.length) names.push(m.newsMore(a.eventCount - a.events.length))
+      const c = a.comparison
+      return m.newsTrade(names.join(', '), formatR(c.newsExpectancyR, 2), formatR(c.otherExpectancyR, 2), c.newsRTradeCount, c.otherRTradeCount)
+    }
+    case 'propDailyLoss':
+    case 'propMaxLoss':
+    case 'propConsistency':
+      return propAlertMessage(t, a)
   }
+}
+
+/** Lot 33 : alertes prop firm (constat « à surveiller », jamais un ordre ; trades clôturés seulement). */
+function propAlertMessage(t: Messages, a: Extract<Alert, { kind: 'propDailyLoss' | 'propMaxLoss' | 'propConsistency' }>): string {
+  const p = t.prop.alerts
+  const level = a.kind === 'propConsistency' && a.level === 'reached' ? t.prop.consistencyReached : t.prop.levels[a.level]
+  const phase = a.phaseLabel ? p.phase(a.phaseLabel) : ''
+  const used = formatUsedPercent(a.used)
+  const left =
+    a.remaining === null ? '—' : signOf(a.remaining) < 0 ? p.exceeded(formatMoney(a.remaining.replace(/^-/, ''), a.currency)) : p.remaining(formatMoney(a.remaining, a.currency))
+  if (a.kind === 'propDailyLoss') return p.dailyLoss(level, phase, used, left, a.nextResetParisTime ?? '—')
+  if (a.kind === 'propMaxLoss') return p.maxLoss(level, phase, used, left)
+  return p.consistency(level, phase, formatRatioPercent(a.share), formatPercentValue(a.maxBestDayPercent))
 }
 
 /** Résultat signé de la période, part du solde, et limites atteintes (« 3 % et 345,00 $ »). */

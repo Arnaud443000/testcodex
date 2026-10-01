@@ -31,7 +31,7 @@ pub enum Period {
 
 impl Period {
     /// Length in local days: today, 7, 30, 90 and 365 days ending today; `None` for all time.
-    fn days(self) -> Option<i64> {
+    pub(crate) fn days(self) -> Option<i64> {
         match self {
             Period::Day => Some(1),
             Period::Week => Some(7),
@@ -147,7 +147,7 @@ pub fn dashboard(conn: &Connection, q: &DashboardQuery) -> Result<Dashboard> {
     Ok(Dashboard { report, from, to, previous_from, previous_to, previous, comparison, sparklines })
 }
 
-fn compare(now: &Summary, before: &Summary) -> Result<Comparison> {
+pub(crate) fn compare(now: &Summary, before: &Summary) -> Result<Comparison> {
     let diff = |a: Option<f64>, b: Option<f64>| a.zip(b).map(|(a, b)| a - b);
     let delta = now.net_pnl.checked_sub(before.net_pnl).ok_or_else(|| CoreError::Invalid("amount overflow".into()))?;
     let max_dd = now.max_drawdown.checked_sub(before.max_drawdown).ok_or_else(|| CoreError::Invalid("amount overflow".into()))?;

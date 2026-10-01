@@ -1,4 +1,7 @@
+import { Checkbox } from '../components/ui/Checkbox'
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
+import { Select } from '../components/ui/Select'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { ExecutionScoreLine } from '../components/ExecutionScoreLine'
@@ -50,16 +53,16 @@ function Ladder({ levels }: { levels: Level[] }) {
     <div className="flex flex-col gap-2">
       <ol className="flex flex-col">
         {levels.map((l) => (
-          <li key={l.kind} className="hairline-row !gap-3" aria-label={`${r.levels[l.kind]} ${l.price}`}>
-            <span className={`w-[150px] shrink-0 font-medium ${tone(l)}`}>{r.levels[l.kind]}</span>
-            <span className="w-[100px] shrink-0 tabular-nums">{l.price}</span>
-            <span className="relative h-1.5 flex-1 rounded-full" style={{ background: 'rgba(255,255,255,.1)' }} aria-hidden="true">
+          <li key={l.kind} className="grid grid-cols-[minmax(90px,1.4fr)_auto_minmax(36px,1fr)_auto] items-center gap-3 border-b py-2.5 text-sm last:border-b-0" style={{ borderColor: 'var(--hairline)' }} aria-label={`${r.levels[l.kind]} ${l.price}`}>
+            <span className={`min-w-0 font-medium ${tone(l)}`}>{r.levels[l.kind]}</span>
+            <span className="tabular-nums">{l.price}</span>
+            <span className="relative h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,.1)' }} aria-hidden="true">
               <span
                 className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{ left: `${((Number(l.price) - min) / span) * 100}%`, background: l.kind === 'entry' ? 'var(--grad)' : 'rgba(255,255,255,.7)' }}
               />
             </span>
-            <span className="w-[70px] shrink-0 text-right font-semibold tabular-nums">{formatR(l.r)}</span>
+            <span className="min-w-[52px] text-right font-semibold tabular-nums">{formatR(l.r)}</span>
           </li>
         ))}
       </ol>
@@ -200,30 +203,24 @@ export function ReplayPage() {
         </div>
         <label className="flex flex-col gap-1.5">
           <span className="caption">{r.filters.result}</span>
-          <select className="input !w-auto" value={filters.outcome ?? ''} onChange={(e) => set('outcome', (e.target.value || null) as ReplayOutcome | null)}>
-            <option value="" className="bg-bg">{r.filters.all}</option>
-            {Object.entries(r.outcomes).map(([k, l]) => (
-              <option key={k} value={k} className="bg-bg">{l}</option>
-            ))}
-          </select>
+          <Select
+            className="min-w-[150px] !w-auto"
+            value={filters.outcome ?? ''}
+            onChange={(v) => set('outcome', (v || null) as ReplayOutcome | null)}
+            options={[{ value: '', label: r.filters.all }, ...Object.entries(r.outcomes).map(([k, l]) => ({ value: k, label: l }))]}
+          />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="caption">{r.filters.asset}</span>
-          <select className="input !w-auto" value={filters.instrumentId ?? ''} onChange={(e) => set('instrumentId', e.target.value ? Number(e.target.value) : null)}>
-            <option value="" className="bg-bg">{r.filters.all}</option>
-            {ref.instruments.map((i) => (
-              <option key={i.id} value={i.id} className="bg-bg">{i.symbol}</option>
-            ))}
-          </select>
+          <Select
+            className="min-w-[150px] !w-auto"
+            value={filters.instrumentId === null ? '' : String(filters.instrumentId)}
+            onChange={(v) => set('instrumentId', v ? Number(v) : null)}
+            options={[{ value: '', label: r.filters.all }, ...ref.instruments.map((i) => ({ value: String(i.id), label: i.symbol }))]}
+          />
         </label>
-        <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-violet" checked={filters.withScreenshot} onChange={(e) => set('withScreenshot', e.target.checked)} />
-          {r.filters.withScreenshot}
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-violet" checked={filters.withNotes} onChange={(e) => set('withNotes', e.target.checked)} />
-          {r.filters.withNotes}
-        </label>
+        <Checkbox className="mb-2" checked={filters.withScreenshot} onChange={(v) => set('withScreenshot', v)} label={r.filters.withScreenshot} />
+        <Checkbox className="mb-2" checked={filters.withNotes} onChange={(v) => set('withNotes', v)} label={r.filters.withNotes} />
         {filtered && (
           <button type="button" className="btn-link pb-2.5" onClick={() => setFilters(NO_FILTERS)}>{r.filters.reset}</button>
         )}
@@ -259,7 +256,7 @@ export function ReplayPage() {
                         <span>{formatDateTime(x.entryTime)}</span>
                         <span className="flex items-center gap-2">
                           {x.rating !== null && <span aria-label={t.form.star(x.rating)} className="text-warn">{'★'.repeat(x.rating)}</span>}
-                          {x.hasScreenshot && <span title={r.chartTitle}>▣</span>}
+                          {x.hasScreenshot && <Tooltip content={r.chartTitle}><span>▣</span></Tooltip>}
                         </span>
                       </span>
                     </button>

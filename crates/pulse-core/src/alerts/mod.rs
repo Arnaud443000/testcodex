@@ -6,6 +6,12 @@
 //! its own. Nothing an account does ever raises an alert on another one.
 
 pub mod log;
+// Lot 25: 3.6.8, trade taken during a major economic news.
+pub mod news;
+// Lot 31: optional alert, a trade entered before any analysis of the day.
+pub mod no_analysis;
+// Lot 33: prop firm rules (daily loss, maximum loss, consistency).
+pub mod prop;
 pub mod settings;
 
 pub use log::{AlertRecord, active_alerts, dismiss, history};
@@ -86,6 +92,20 @@ pub enum AlertDetail {
     UnusualSession { session: String, session_count: usize, history_count: usize, share: f64 },
     /// 3.6.6: no valid planned stop loss.
     NoStopLoss { open: bool },
+    /// 3.6.8 (lot 25): entered around a major news while the trader's news trades did worse.
+    NewsTrade {
+        events: Vec<news::NewsEventRef>,
+        event_count: usize,
+        window_before_min: u32,
+        window_after_min: u32,
+        comparison: news::NewsComparison,
+    },
+    /// Lot 31: entered before any pre-trade analysis of its local day (optional alert, off by default).
+    NoAnalysis { day: String },
+    /// Lot 33: a prop firm rule nearing or reaching its limit (closed trades only).
+    PropDailyLoss(prop::PropAlertDetail),
+    PropMaxLoss(prop::PropAlertDetail),
+    PropConsistency(prop::PropAlertDetail),
 }
 
 impl AlertDetail {
@@ -100,6 +120,11 @@ impl AlertDetail {
             AlertDetail::OutsideHours { .. } => 6,
             AlertDetail::UnusualSession { .. } => 7,
             AlertDetail::NoStopLoss { .. } => 8,
+            AlertDetail::NewsTrade { .. } => 9,
+            AlertDetail::NoAnalysis { .. } => 10,
+            AlertDetail::PropDailyLoss(_) => 11,
+            AlertDetail::PropMaxLoss(_) => 12,
+            AlertDetail::PropConsistency(_) => 13,
         }
     }
 }
@@ -122,8 +147,8 @@ pub struct Alert {
 }
 
 /// The ledger as it stood at `now`: later trades and flows do not exist yet,
-/// and a trade closed after `now` is still open.
-fn as_of(ledger: &Ledger, now: i64) -> Ledger {
+/// and a trade closed after `now` is still open. Also used by the insights (lot 19).
+pub(crate) fn as_of(ledger: &Ledger, now: i64) -> Ledger {
     let mut l = ledger.clone();
     l.trades.retain(|t| t.entry_time <= now);
     for t in &mut l.trades {

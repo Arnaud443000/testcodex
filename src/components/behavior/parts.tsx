@@ -1,4 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { useContext, useRef, type ReactNode } from 'react'
+import { EmbeddedCardContext, useCardDensity } from '../ui/fit'
 import { signOf } from '../../lib/decimal'
 import type { Decimal } from '../../types/money'
 
@@ -16,13 +17,18 @@ export function toneOfNumber(value: number | null): string {
   return value > 0 ? 'text-gain' : value < 0 ? 'text-loss' : 'text-neutral'
 }
 
-/** Vrai quand la carte est posée dans un widget du dashboard : elle remplit sa cellule au lieu de prendre des colonnes. */
-export const EmbeddedCardContext = createContext(false)
+export { EmbeddedCardContext }
 
 export function Card({ title, span, children, aside }: { title: string; span: string; children: ReactNode; aside?: ReactNode }) {
   const embedded = useContext(EmbeddedCardContext)
+  const ref = useRef<HTMLElement>(null)
+  const density = useCardDensity(ref, embedded, children)
   return (
-    <section className={embedded ? 'glass-card flex h-full flex-col overflow-auto p-6' : `glass-card col-span-12 flex flex-col p-6 ${span}`}>
+    <section
+      ref={ref}
+      data-density={embedded && density > 0 ? density : undefined}
+      className={embedded ? 'fit-card glass-card flex h-full flex-col pop-scroll p-6' : `glass-card col-span-12 flex flex-col p-6 ${span}`}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
         {aside}
@@ -48,9 +54,9 @@ export function Row({ label, children, hint }: { label: string; children: ReactN
 /** Bloc de comparaison (charte 5.3) : libellé en majuscules, grande valeur, précisions. */
 export function CompareBlock({ label, value, tone, lines }: { label: string; value: string; tone: string; lines: string[] }) {
   return (
-    <div className="rounded-inner border p-4" style={{ background: 'rgba(255,255,255,.04)', borderColor: 'var(--hairline)' }}>
+    <div className="cmp-block rounded-inner border p-4" style={{ background: 'rgba(255,255,255,.04)', borderColor: 'var(--hairline)' }}>
       <div className="caption">{label}</div>
-      <div className={`mt-1.5 text-[26px] font-semibold leading-tight tabular-nums ${tone}`}>{value}</div>
+      <div className={`cmp-value mt-1.5 text-[26px] font-semibold leading-tight tabular-nums ${tone}`}>{value}</div>
       {lines.map((l) => (
         <div key={l} className="mt-0.5 text-[13px] text-tx2 tabular-nums">{l}</div>
       ))}
@@ -90,7 +96,7 @@ export function Segmented<T extends string>({
 
 /** Texte discret sous un graphique ou une liste. */
 export function Note({ children }: { children: ReactNode }) {
-  return <p className="mt-3 text-xs leading-relaxed text-tx3">{children}</p>
+  return <p className="fit-optional mt-3 text-xs leading-relaxed text-tx3">{children}</p>
 }
 
 export function EmptyLine({ children }: { children: ReactNode }) {

@@ -4,7 +4,7 @@ import { overlaps } from './gridLayout'
 import { createDashboardsMock, ESSENTIAL, validateLayout } from './mockDashboards'
 import type { WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
-const mock = createDashboardsMock(async () => [1])
+const mock = createDashboardsMock(async () => [{ id: 1, name: 'A', currency: 'USD', archived: false }])
 const defs = async () => (await mock.listWidgetCatalog()) as WidgetDefinition[]
 
 describe('brouillon de dashboard', () => {

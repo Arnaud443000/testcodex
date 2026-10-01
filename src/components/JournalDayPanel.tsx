@@ -1,4 +1,6 @@
+import { Checkbox } from './ui/Checkbox'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tooltip } from './ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -134,10 +136,7 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
             <Scale label={d.mood} value={form.mood} labels={d.moodScale} onChange={(v) => set('mood', v)} />
             <Scale label={d.sleep} value={form.sleepQuality} labels={d.sleepScale} onChange={(v) => set('sleepQuality', v)} />
             <Scale label={d.fatigue} value={form.fatigue} labels={d.fatigueScale} onChange={(v) => set('fatigue', v)} />
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-violet" checked={form.lateHours} onChange={(e) => set('lateHours', e.target.checked)} />
-              {d.lateHours}
-            </label>
+            <Checkbox checked={form.lateHours} onChange={(v) => set('lateHours', v)} label={d.lateHours} />
           </div>
 
           <Field label={d.wentWell} htmlFor="j-well">
@@ -175,9 +174,11 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
                   <span className="flex items-center gap-2">
                     {l.netPnl !== null && l.outcome ? <Pnl value={l.netPnl} currency={l.currency} className="text-sm font-semibold" /> : <OutcomeBadge outcome="open" />}
                     {l.incomplete && (
-                      <Link to={`/trades/${l.tradeId}/edit`} className="badge badge-warn" title={t.trades.incompleteHint}>
-                        {d.incomplete}
-                      </Link>
+                      <Tooltip content={t.trades.incompleteHint}>
+                        <Link to={`/trades/${l.tradeId}/edit`} className="badge badge-warn">
+                          {d.incomplete}
+                        </Link>
+                      </Tooltip>
                     )}
                   </span>
                 </li>
@@ -196,7 +197,7 @@ export function JournalDayPanel({ initialDay }: { initialDay?: string }) {
                 <li key={e.day} className="hairline-row">
                   <button
                     type="button"
-                    className={`text-left font-medium first-letter:uppercase hover:underline ${e.day === day ? 'text-tx-accent' : ''}`}
+                    className={`min-h-[28px] text-left font-medium first-letter:uppercase hover:underline ${e.day === day ? 'text-tx-accent' : ''}`}
                     aria-current={e.day === day ? 'date' : undefined}
                     aria-label={d.historyOpen(formatDayTitle(e.day))}
                     onClick={() => setDay(e.day)}

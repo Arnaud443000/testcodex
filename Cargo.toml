@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/pulse-core", "src-tauri"]
+members = ["crates/pulse-core", "crates/pulse-ai", "crates/pulse-vault", "crates/pulse-lock", "crates/pulse-news", "crates/pulse-mcp", "src-tauri"]
 
 [profile.release]
 codegen-units = 1

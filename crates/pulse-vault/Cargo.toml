@@ -1,0 +1,13 @@
+[package]
+name = "pulse-vault"
+version = "0.1.0"
+edition = "2024"
+description = "Pulse: the AI API key in the Windows Credential Manager (and nowhere else)"
+
+[dependencies]
+zeroize = "1"
+
+# The credential store is compiled on Windows only; elsewhere the vault answers "unavailable".
+[target.'cfg(windows)'.dependencies]
+keyring-core = "1"
+windows-native-keyring-store = { version = "1.1", default-features = false }

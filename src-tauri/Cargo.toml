@@ -19,3 +19,11 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 pulse-core = { path = "../crates/pulse-core" }
+# Lot 20: optional AI (network isolated in pulse-ai, key only in the Windows credential store).
+pulse-ai = { path = "../crates/pulse-ai" }
+pulse-vault = { path = "../crates/pulse-vault" }
+# Lot 25: optional economic calendar (network isolated in pulse-news, off by default).
+pulse-news = { path = "../crates/pulse-news" }
+zeroize = "1"
+# Lot 37: local MCP access (bridge protocol and tool reply; no network client).
+pulse-mcp = { path = "../crates/pulse-mcp" }

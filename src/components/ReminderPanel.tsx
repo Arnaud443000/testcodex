@@ -1,3 +1,4 @@
+import { Checkbox } from './ui/Checkbox'
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
@@ -33,14 +34,11 @@ export function ReminderPanel() {
 
   return (
     <section className="glass-card p-6" aria-labelledby="reminder-title">
-      <h3 id="reminder-title" className="mb-1 text-base font-semibold">{r.title}</h3>
+      <h2 id="reminder-title" className="mb-1 text-base font-semibold">{r.title}</h2>
       <p className="mb-4 max-w-[80ch] text-[13px] leading-relaxed text-tx2">{r.intro}</p>
       {settings && (
         <div className="flex flex-wrap items-center gap-6">
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-            <input type="checkbox" className="h-4 w-4 accent-violet" checked={settings.enabled} onChange={(e) => void apply({ ...settings, enabled: e.target.checked })} />
-            {r.enabled}
-          </label>
+          <Checkbox checked={settings.enabled} onChange={(v) => void apply({ ...settings, enabled: v })} label={r.enabled} />
           <label className="flex items-center gap-3 text-sm">
             <span className="caption">{r.time}</span>
             <input

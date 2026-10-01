@@ -1,4 +1,5 @@
 import { useT } from '../../i18n'
+import { Tooltip } from '../ui/Tooltip'
 import { formatDayShort, formatScore } from '../../lib/behaviorFormat'
 import type { DayDiscipline } from '../../types/behavior'
 
@@ -32,25 +33,25 @@ export function DayBars({
             const active = d.day === selected
             const phrase = d.score === null ? t.dayNoScore : t.dayScoreOf(formatScore(d.score))
             return (
-              <button
-                key={d.day}
-                type="button"
-                aria-pressed={active}
-                aria-label={t.dayBarLabel(d.day, phrase, d.tradeCount)}
-                title={t.dayBarLabel(formatDayShort(d.day), phrase, d.tradeCount)}
-                onClick={() => onSelect(active ? null : d.day)}
-                className="group flex h-full min-w-[8px] max-w-[64px] flex-1 items-end justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-violet"
-              >
-                <span
-                  className="block w-full rounded-t-[4px] transition group-hover:opacity-100"
-                  style={{
-                    height: d.score === null ? '3px' : `${Math.max(d.score, 1)}%`,
-                    background: d.score === null ? 'rgba(255,255,255,.18)' : 'var(--grad)',
-                    opacity: active ? 1 : 0.72,
-                    boxShadow: active ? '0 0 0 2px rgba(245,242,236,.85)' : undefined,
-                  }}
-                />
-              </button>
+              <Tooltip key={d.day} content={t.dayBarLabel(formatDayShort(d.day), phrase, d.tradeCount)}>
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  aria-label={t.dayBarLabel(d.day, phrase, d.tradeCount)}
+                  onClick={() => onSelect(active ? null : d.day)}
+                  className="group flex h-full min-w-[8px] max-w-[64px] flex-1 items-end justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-violet"
+                >
+                  <span
+                    className="block w-full rounded-t-[4px] transition group-hover:opacity-100"
+                    style={{
+                      height: d.score === null ? '3px' : `${Math.max(d.score, 1)}%`,
+                      background: d.score === null ? 'rgba(255,255,255,.18)' : 'var(--grad)',
+                      opacity: active ? 1 : 0.72,
+                      boxShadow: active ? '0 0 0 2px rgba(245,242,236,.85)' : undefined,
+                    }}
+                  />
+                </button>
+              </Tooltip>
             )
           })}
         </div>

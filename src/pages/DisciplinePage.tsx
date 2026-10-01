@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tooltip } from '../components/ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { DayBars } from '../components/behavior/DayBars'
+import { PauseHint } from '../components/behavior/PausesCard'
 import { Card, EmptyLine, Note, toneOfDecimal } from '../components/behavior/parts'
 import { QuadrantsGrid, Ring } from '../components/behavior/ScoreRing'
 import { EmptyState } from '../components/EmptyState'
@@ -107,7 +109,7 @@ export function DisciplinePage() {
           <p className="mt-2 text-center text-xs text-tx3">{b.basedOn(report.scoredTradeCount)}</p>
         )}
         <Note>
-          {d.settingsNote} <Link to="/settings" className="text-tx-accent underline underline-offset-2">{d.settingsLink}</Link>
+          {d.settingsNote} <Link to="/settings" className="btn-link">{d.settingsLink}</Link>
         </Note>
       </Card>
 
@@ -119,7 +121,9 @@ export function DisciplinePage() {
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-medium">{b.components[c.key]}</span>
                 {c.average === null ? (
-                  <span className="text-tx3" title={b.componentEmpty}>—</span>
+                  <Tooltip content={b.componentEmpty}>
+                    <span className="text-tx3">—</span>
+                  </Tooltip>
                 ) : (
                   <b className="tabular-nums">{formatRatioPercent(c.average, 0)}</b>
                 )}
@@ -172,7 +176,9 @@ export function DisciplinePage() {
                   </span>
                   {x.outcome && <OutcomeBadge outcome={x.outcome} />}
                   {x.netPnl !== null && <b className={`tabular-nums ${toneOfDecimal(x.netPnl)}`}>{formatSignedMoney(x.netPnl, currency)}</b>}
-                  <b className="w-16 text-right tabular-nums" title={x.score === null ? d.tradeScoreEmpty : undefined}>{formatScore(x.score)}</b>
+                  <Tooltip content={x.score === null ? d.tradeScoreEmpty : undefined}>
+                    <b className="w-16 text-right tabular-nums">{formatScore(x.score)}</b>
+                  </Tooltip>
                   <Link to={`/trades/${x.tradeId}`} className="btn btn-secondary btn-sm">{d.openTrade}</Link>
                 </li>
               ))}
@@ -185,6 +191,7 @@ export function DisciplinePage() {
         <p className="mb-3 text-[13px] leading-relaxed text-tx2">{d.quadrantsIntro}</p>
         <QuadrantsGrid quadrants={report.quadrants} currency={currency} />
       </Card>
+      <PauseHint accountIds={accountIds} />
     </div>,
   )
 }

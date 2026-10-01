@@ -13,6 +13,7 @@
 //! a deposit never shows up as performance.
 
 pub mod analyses;
+pub mod comparisons;
 pub mod dashboard;
 pub mod distribution;
 mod load;
@@ -21,6 +22,7 @@ pub mod risk;
 pub(crate) mod segments;
 pub(crate) mod summary;
 pub mod time;
+pub mod trade_card;
 
 pub use load::load;
 pub use pnl::{Figures, Outcome, Position};
@@ -289,3 +291,5 @@ mod tests;
 mod extra_tests;
 #[cfg(test)]
 mod analyses_tests;
+#[cfg(test)]
+mod comparisons_tests;

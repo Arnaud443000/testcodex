@@ -1,4 +1,5 @@
 import type { BackupInfo, RestoreResult } from '../types/data'
+import { createLockMock, type MockSeal } from './mockLock'
 import type { Account, AccountUpdate, CashFlow, NewAccount, NewCashFlow } from '../types/account'
 import type { Decimal } from '../types/money'
 import type {
@@ -10,6 +11,8 @@ import type {
   Preview,
   Rule,
   Tag,
+  EmotionCatalogGroup,
+  EmotionUsage,
   TagKind,
   TradeData,
   TradeFilter,
@@ -20,8 +23,11 @@ import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
 import * as analyses from './mockAnalyses'
-import type { FeeGranularity } from '../types/stats'
+import type { FeeGranularity, YearComparisonQuery } from '../types/stats'
+import * as comparisons from './mockComparisons'
 import { ASSET_CATALOG } from './assetCatalog'
+import { EMOTION_CATALOG } from './emotionCatalog'
+import { addEmotionToList, deleteUnusedEmotion, emotionUsage, removeEmotionFromList } from './mockEmotions'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
 import { dayOf, isBlankEntry, isIncompleteData, mockConfidenceReport, mockExecutionScore, mockQualityReport } from './mockJournalLogic'
 import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
@@ -101,6 +107,7 @@ const trades = new Map<number, TradeData & { id: number; createdAt: string; upda
 let behaviorSettings: BehaviorSettings = { ...behavior.DEFAULT_BEHAVIOR_SETTINGS }
 const screenshots = new Map<string, string>()
 
+const emotionCtx = () => ({ tags, trades: trades.values(), nextId: id })
 const key = (s: string) => s.split(/\s+/).filter(Boolean).join(' ').toLowerCase()
 const invalid = (m: string) => new Error(`invalid input: ${m}`)
 const need = (v: string, what: string) => {
@@ -244,6 +251,9 @@ function behaviorInput(accountIds: number[] = []): behavior.BehaviorInput {
 // Sauvegardes du faux backend : instantanés en mémoire, indexés par « dossier ».
 type Snapshot = ReturnType<typeof snapshot>
 const backups = new Map<string, Snapshot>()
+/** Lot 22 : faux verrou (simulation, aucun chiffrement). Une sauvegarde faite verrou actif garde l'empreinte du moment. */
+export const mockLock = createLockMock()
+const backupSeals = new Map<string, MockSeal>()
 let nextBackup = 1
 const snapshot = () =>
   structuredClone({
@@ -251,8 +261,17 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 9, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 20, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  encrypted: backupSeals.has(path),
 })
+/** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
+function openBackup(folder: string, password?: string): Snapshot {
+  const s = backups.get(folder)
+  if (!s) throw invalid('this folder does not contain a pulse.db file')
+  const seal = backupSeals.get(folder)
+  if (seal) mockLock.checkBackupPassword(seal, password)
+  return s
+}
 function replaceWith(s: Snapshot) {
   const put = <T,>(target: T[], from: T[]) => target.splice(0, target.length, ...from)
   put(accounts, s.accounts); put(tags, s.tags); put(instruments, s.instruments)
@@ -270,19 +289,18 @@ export const mock = {
     const path = `${destDir}/pulse-backup-${nextBackup++}`
     const s = snapshot()
     backups.set(path, s)
+    const seal = mockLock.currentSeal()
+    if (seal) backupSeals.set(path, seal)
     return infoOf(path, s)
   },
-  inspectBackup: async (folder: string): Promise<BackupInfo> => {
-    const s = backups.get(folder)
-    if (!s) throw invalid('this folder does not contain a pulse.db file')
-    return infoOf(folder, s)
-  },
-  restoreBackup: async (folder: string, confirmed: boolean): Promise<RestoreResult> => {
+  inspectBackup: async (folder: string, password?: string): Promise<BackupInfo> => infoOf(folder, openBackup(folder, password)),
+  restoreBackup: async (folder: string, confirmed: boolean, password?: string): Promise<RestoreResult> => {
     if (!confirmed) throw invalid('the restore was not confirmed')
-    const s = backups.get(folder)
-    if (!s) throw invalid('this folder does not contain a pulse.db file')
-    const safetyCopy = `(dossier de démonstration)/pulse-avant-restauration-${nextBackup++}.db`
+    const s = openBackup(folder, password)
+    const seal = mockLock.currentSeal()
+    const safetyCopy = `(dossier de démonstration)/pulse-avant-restauration-${nextBackup++}.db${seal ? '.enc' : ''}`
     backups.set(safetyCopy, snapshot())
+    if (seal) backupSeals.set(safetyCopy, seal)
     replaceWith(structuredClone(s))
     return { info: infoOf(folder, s), safetyCopy }
   },
@@ -293,6 +311,7 @@ export const mock = {
     if (cashFlows.some((f) => f.accountId === accountId)) throw invalid('account_in_use')
     const i = accounts.findIndex((a) => a.id === accountId)
     if (i >= 0) accounts.splice(i, 1)
+    mockProp.forget(accountId)
   },
   createAccount: async (a: NewAccount): Promise<Account> => {
     if (!a.name.trim()) throw new Error('invalid input: account name is required')
@@ -339,6 +358,11 @@ export const mock = {
     tags.push(tag)
     return tag
   },
+  getEmotionCatalog: async (): Promise<EmotionCatalogGroup[]> => EMOTION_CATALOG.map((g) => ({ ...g, emotions: [...g.emotions] })),
+  getEmotionUsage: async (): Promise<EmotionUsage[]> => emotionUsage(emotionCtx()),
+  addEmotionToList: async (name: string): Promise<Tag> => addEmotionToList(emotionCtx(), name),
+  removeEmotionFromList: async (tagId: number): Promise<Tag> => removeEmotionFromList(emotionCtx(), tagId),
+  deleteUnusedEmotion: async (tagId: number): Promise<void> => deleteUnusedEmotion(emotionCtx(), tagId),
   listRules: async (includeArchived = false): Promise<Rule[]> => rules.filter((r) => includeArchived || !r.archived),
   createRule: async (text: string): Promise<Rule> => {
     const r = { id: id(), text: need(text, 'rule'), archived: false, position: rules.length }
@@ -426,6 +450,7 @@ export const mock = {
   },
   deleteTrade: async (tid: number): Promise<void> => {
     if (!trades.delete(tid)) throw new Error(`not found: trade ${tid}`)
+    mockAnalysis.dropTradeLinks(tid)
   },
   previewTrade: async (d: TradeData): Promise<Preview> => {
     const instrument = instruments.find((i) => i.id === d.instrumentId)
@@ -712,6 +737,20 @@ function alertsAt(accountIds: number[], now: number, tz: number): Alert[] {
       tz,
     ),
   )
+  // Lot 31 : alerte facultative « sans analyse du jour » (éteinte par défaut).
+  const stamps = mockAnalysis.noAnalysisStamps(analysisDayOf(now, tz))
+  const enabled = mockAnalysis.noAnalysisEnabled()
+  for (const account of chosen) {
+    const mine = [...trades.values()].filter((t) => t.accountId === account.id)
+    for (const n of noAnalysisAlerts(mine, stamps, now, tz, enabled)) {
+      all.push({ id: n.id, accountId: n.accountId, severity: 'warning', messageKey: 'noAnalysis', at: n.at, tradeId: n.tradeId, kind: 'noAnalysis', day: n.day })
+    }
+  }
+  // Lot 33 : alertes prop firm, après les autres (comme `alerts::active_alerts`).
+  for (const account of chosen) {
+    const logged = [...alertLog.keys()].filter((id) => alertLog.get(id)!.accountId === account.id && /^prop[A-Z]/.test(id))
+    all.push(...mockProp.alertsFor(account, now, logged))
+  }
   return sortAlerts(all)
 }
 
@@ -757,3 +796,274 @@ export const mockAnalyses = {
   getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
   getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
 }
+
+// --- Lot 16 : analyses complémentaires (coût d'opportunité, année précédente, temps en position, scaling) ---
+import * as analysesMore from './mockAnalysesMore'
+export const mockAnalysesMore = {
+  getOpportunityReport: async (q: StatsQuery) => analysesMore.mockOpportunity(behaviorInput(q.accountIds), q),
+  getYearComparison: async (q: YearComparisonQuery) => analysesMore.mockYearComparison(behaviorInput(q.accountIds), q),
+  getDurationReport: async (q: StatsQuery) => analysesMore.mockDurations(behaviorInput(q.accountIds), q),
+  getScalingReport: async (q: StatsQuery) => analysesMore.mockScaling(behaviorInput(q.accountIds), q),
+}
+// --- Lot 17 : comparaison de comptes, benchmark du risque max, exposition par catégorie d'actif ---
+export const mockComparisons = {
+  /** Chaque compte est calculé seul : les devises peuvent différer (aucune somme entre comptes). */
+  getAccountComparison: async (q: StatsQuery) => {
+    const chosen = q.accountIds?.length ? accounts.filter((a) => q.accountIds!.includes(a.id)) : accounts.filter((a) => !a.archived)
+    return comparisons.mockCompareAccounts(
+      chosen.map((account) => ({ account, input: behaviorInput([account.id]) })),
+      q,
+    )
+  },
+  getRiskBenchmark: async (q: StatsQuery) => comparisons.mockRiskBenchmark(behaviorInput(q.accountIds), q),
+  getExposureReport: async (q: StatsQuery) => comparisons.mockExposure(behaviorInput(q.accountIds), q),
+}
+
+// --- Lot 19 : insights automatiques (chaque compte évalué seul, comme pulse-core) ---
+import * as insights from './mockInsights'
+const insightLog = insights.createInsightLog()
+export const mockInsights = {
+  getInsights: async (accountIds: number[], tzOffsetMin: number, includeDismissed = false, now = Date.now()) => {
+    const chosen = accountIds.length ? accounts.filter((a) => accountIds.includes(a.id)) : accounts.filter((a) => !a.archived)
+    const found = insights.sortInsights(
+      chosen.flatMap((a) => insights.mockEvaluateInsights(behaviorInput([a.id]), [...journalEntries.values()], now, tzOffsetMin)),
+    )
+    return insightLog.record(found, now, includeDismissed)
+  },
+  dismissInsight: async (insightId: string, now = Date.now()) => insightLog.dismiss(insightId, now),
+  getInsightHistory: async (accountIds: number[], limit = 100) => insightLog.history(accountIds, limit),
+}
+// --- Lot 20 : IA optionnelle — SIMULATION, aucun appel réseau (voir mockAi.ts) ---
+import { createAiMock } from './mockAi'
+export const mockAi = createAiMock({
+  trade: (tid) => trades.get(tid),
+  instrument: (iid) => instruments.find((i) => i.id === iid),
+  screenshot: (path) => screenshots.get(path),
+  now: () => Date.now(),
+})
+// --- Lot 21 : coach IA — SIMULATION, aucun appel réseau (voir mockCoach.ts) ---
+// Le faux coach n'appelle qu'une partie des outils de pulse-core (résumé de période, jours de la semaine,
+// erreurs récurrentes, discipline, comptes) ; les autres répondent « non simulé ».
+import { createCoachMock, type CoachScope, type CoachToolOutput } from './mockCoach'
+import { summarize } from './mockStats'
+const COACH_TOOLS: { name: string; description: string }[] = [
+  ['list_accounts', 'Comptes de la portée (identifiant, devise, type, archivé, nombre de trades clôturés) et date locale du jour.'],
+  ['period_summary', 'Indicateurs de performance d’une fenêtre (PnL, win rate, profit factor, expectancy, drawdown…), avec la fenêtre précédente en option.'],
+  ['segments', 'Indicateurs par segment : jour, heure, session, setup, émotion, actif, sens…'],
+  ['recurring_mistakes', 'Erreurs récurrentes (tags d’erreur et règles non respectées), par coût et par fréquence.'],
+  ['discipline', 'Score de discipline, composantes, gagnant / perdant × bien / mal exécuté.'],
+  ['streaks_and_sequences', 'Séries, revanches, surtrading, après 2 pertes, taille après une perte.'],
+  ['plan_and_rules', 'Dans le plan / hors plan, simulation du plan, respect des règles.'],
+  ['risk', 'Risque par trade en % du solde à l’entrée (sans solde ni capital).'],
+  ['external_factors', 'Résultats selon les facteurs notés du journal (jamais son texte).'],
+  ['fees_and_holding_time', 'Frais et temps en position.'],
+  ['insights', 'Insights automatiques du moment.'],
+  ['alerts_today', 'Alertes garde-fous d’aujourd’hui.'],
+  ['trade_list', 'Liste courte de trades (20 au plus) : identifiants et chiffres, jamais de texte libre.'],
+].map(([name, description]) => ({ name, description }))
+
+const COACH_PERIODS: Record<string, DashboardQuery['period']> = { '1J': 'day', '1S': 'week', '1M': 'month', '3M': 'quarter', '1A': 'year', Tout: 'all' }
+const coachError = (msg: string): CoachToolOutput => ({ content: { error: msg }, isError: true })
+
+function coachTool(scope: CoachScope, name: string, input: Record<string, unknown>): CoachToolOutput {
+  const accountId = input.accountId as number | undefined
+  if (accountId != null && !scope.accountIds.includes(accountId)) return coachError('accountId doit être un compte de la portée (voir list_accounts).')
+  const ids = accountId != null ? [accountId] : scope.accountIds
+  const label = (input.period as string | undefined) ?? '1M'
+  const period = COACH_PERIODS[label]
+  if (!period) return coachError(`Période inconnue : ${label} (1J, 1S, 1M, 3M, 1A ou Tout).`)
+  try {
+    const dash = mockDashboard(ledgerOf(ids), { accountIds: ids, period, nowMs: scope.nowMs, tzOffsetMin: scope.tzOffsetMin })
+    const window = { label, from: dash.from == null ? null : dayKey(dash.from, scope.tzOffsetMin), to: dayKey(scope.nowMs, scope.tzOffsetMin) }
+    const q: StatsQuery = { accountIds: ids, from: dash.from, to: dash.to }
+    switch (name) {
+      case 'list_accounts':
+        return {
+          content: {
+            today: dayKey(scope.nowMs, scope.tzOffsetMin),
+            accounts: accounts
+              .filter((a) => scope.accountIds.includes(a.id))
+              .map((a) => ({ id: a.id, currency: a.currency, type: a.kind, archived: a.archived, closedTradeCount: [...trades.values()].filter((t) => t.accountId === a.id && t.exitTime != null).length })),
+          },
+          isError: false,
+        }
+      case 'period_summary':
+        return {
+          content: {
+            window,
+            currency: dash.report.currency,
+            openTradeCount: dash.report.openTradeCount,
+            summary: dash.report.summary,
+            ...(input.comparePrevious && dash.previous ? { previous: { summary: dash.previous }, comparison: dash.comparison } : {}),
+          },
+          isError: false,
+        }
+      case 'segments': {
+        if (input.by !== 'weekday') return coachError('Découpage non simulé dans le navigateur (seulement weekday).')
+        const closed = ledgerOf(ids).closed.filter((c) => (dash.from == null || c.exitTime >= dash.from) && (dash.to == null || c.exitTime < dash.to))
+        const weekdayOf = (c: (typeof closed)[number]) => {
+          const t = trades.get(c.id)!
+          return ((new Date(t.entryTime + t.tzOffsetMin * 60_000).getUTCDay() + 6) % 7) + 1
+        }
+        const segments = [1, 2, 3, 4, 5, 6, 7].flatMap((d) => {
+          const set = closed.filter((c) => weekdayOf(c) === d)
+          if (!set.length) return []
+          const s = summarize(set)
+          return [{ key: String(d), label: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][d - 1], tradeCount: s.tradeCount, winRate: s.winRate, netPnl: s.netPnl, avgNetPnl: s.avgNetPnl, expectancyR: s.expectancyR }]
+        })
+        return { content: { window, currency: dash.report.currency, by: 'weekday', segments }, isError: false }
+      }
+      case 'recurring_mistakes': {
+        const m = behavior.mockMistakes(behaviorInput(ids), q)
+        const keep = (x: (typeof m.byCost)[number]) => ({ source: x.source, label: x.label, tradeCount: x.tradeCount, share: x.share, netPnl: x.netPnl, cost: x.cost, expectancyR: x.expectancyR })
+        return { content: { window, tradeCount: m.tradeCount, tradesWithMistake: m.tradesWithMistake, byCost: m.byCost.slice(0, 10).map(keep), byCount: m.byCount.slice(0, 10).map(keep) }, isError: false }
+      }
+      case 'discipline': {
+        const d = behavior.mockDiscipline(behaviorInput(ids), q)
+        return { content: { window, score: d.score, scoredTradeCount: d.scoredTradeCount, sampleTooSmall: d.sampleTooSmall, components: d.components, quadrants: d.quadrants }, isError: false }
+      }
+      default:
+        return coachError(`Outil non simulé dans le navigateur : ${name}.`)
+    }
+  } catch {
+    return coachError('Les comptes de la portée ont des devises différentes : précisez accountId (un compte).')
+  }
+}
+
+import { dayKey } from './mockStats'
+export const mockCoach = createCoachMock({
+  aiStatus: () => mockAi.getAiStatus(),
+  scope: (ids) => (ids.length ? ids.filter((id) => accounts.some((a) => a.id === id)) : accounts.filter((a) => !a.archived).map((a) => a.id)),
+  runTool: coachTool,
+  tools: () => COACH_TOOLS,
+  now: () => Date.now(),
+})
+
+// --- Lot 23 : export PDF (SIMULATION, aucun fichier) ---
+import { createPdfMock } from './mockPdf'
+export const mockPdf = createPdfMock({
+  accounts: () => accounts,
+  closedTradeCount: (accountId, from, to) =>
+    [...trades.values()].filter(
+      (t) => t.accountId === accountId && t.exitPrice != null && t.exitTime != null && (from === null || t.exitTime >= from) && (to === null || t.exitTime < to),
+    ).length,
+})
+
+import { createTradeCardMock } from './mockTradeCard'
+// Lot 24 : carte de trade (3.7.7)
+export const mockTradeCard = createTradeCardMock({
+  getTrade: (id) => mock.getTrade(id),
+  balanceAtEntry: (t) => behavior.mockRisk(behaviorInput([t.accountId]), { accountIds: [t.accountId] }).trades.find((r) => r.tradeId === t.id)?.balanceAtEntry ?? null,
+})
+// --- Lot 27 : calculateur de taille de position (miroir de pulse-core/src/sizing.rs, voir mockSizing.ts) ---
+import { balanceOf, mockSize, toMockInput } from './mockSizing'
+import type { SizingOutcome, SizingRequest } from '../types/sizing'
+export const mockSizing = {
+  calculatePositionSize: async (req: SizingRequest): Promise<SizingOutcome> => {
+    const account = accounts.find((a) => a.id === req.accountId)
+    if (!account) throw new Error(`not found: account ${req.accountId}`)
+    const instrument = instruments.find((i) => i.id === req.instrumentId)
+    if (!instrument) throw new Error(`not found: instrument ${req.instrumentId}`)
+    const input = toMockInput(req, {
+      balance: balanceOf(ledgerOf([account.id])),
+      defaultMultiplier: instrument.defaultMultiplier,
+      assetClass: instrument.assetClass,
+      maxRiskPercent: behaviorSettings.maxRiskPercent,
+    })
+    return mockSize(input, account.currency)
+  },
+}
+// --- Lot 25 : calendrier économique (simulation, aucun réseau) ---
+import { createNewsMock } from './mockNews'
+export const mockNews = createNewsMock()
+// --- Lot 31 : analyse avant trading, idées à surveiller, revue du lendemain (miroir de pulse-core/analysis) ---
+import { createAnalysisMock, dayOf as analysisDayOf, noAnalysisAlerts } from './mockAnalysis'
+export const mockAnalysis = createAnalysisMock({
+  instruments: () => instruments,
+  tags: () => tags,
+  tradeExists: (tid) => trades.has(tid),
+  news: { enabled: () => mockNews.isEnabled(), eventsOfDay: (day) => mockNews.eventsOfDay(day) },
+  comparison: (q, linked) => behavior.mockLinkedComparison(behaviorInput(q.accountIds), q, linked),
+  now: () => Date.now(),
+})
+// --- Lot 32 : sauvegarde automatique planifiée (simulation, aucun fichier ; voir mockBackupAuto.ts) ---
+import { createBackupAutoMock } from './mockBackupAuto'
+export const mockBackupAuto = createBackupAutoMock({
+  hasTrades: () => trades.size > 0,
+  encrypted: () => mockLock.currentSeal() !== null,
+  snapshot: (path) => {
+    const s = snapshot()
+    backups.set(path, s)
+    const seal = mockLock.currentSeal()
+    if (seal) backupSeals.set(path, seal)
+    return infoOf(path, s)
+  },
+})
+
+// --- Lot 33 : suivi d'un compte prop firm (miroir de pulse-core/src/prop/, voir mockProp.ts) ---
+import { createPropMock } from './mockProp'
+/** Trades du compte tels qu'à `now` : entrés après `now` = inexistants, sortis après `now` = encore ouverts. */
+const propTradesAt = (accountId: number, now: number) =>
+  [...trades.values()].filter((t) => t.accountId === accountId && t.entryTime <= now).map(view)
+export const mockProp = createPropMock({
+  accounts: () => accounts,
+  closed: (accountId, now) =>
+    propTradesAt(accountId, now).flatMap((v) =>
+      v.figures && v.exitTime != null && v.exitTime <= now ? [{ id: v.id, exitTime: v.exitTime, netPnl: v.figures.netPnl }] : [],
+    ),
+  openCount: (accountId, now) => propTradesAt(accountId, now).filter((v) => v.exitTime == null || v.exitTime > now).length,
+  cashFlowCount: (accountId, now) => cashFlows.filter((f) => f.accountId === accountId && f.occurredAt <= now).length,
+  now: () => Date.now(),
+})
+
+// --- Lot 35 : pause volontaire (un rappel, jamais un blocage) ---
+import { createPauseMock } from './mockPause'
+
+export const mockPause = createPauseMock({
+  input: behaviorInput,
+  entryTimes: (accountIds) =>
+    [...trades.values()]
+      .filter((t) => (accountIds.length ? accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
+      .map((t) => t.entryTime),
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+})
+
+// --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ---
+import { createProcessGoalsMock } from './mockProcessGoals'
+export const mockProcessGoals = createProcessGoalsMock({
+  // Comme pulse-core : liste vide = comptes actifs ; devises mélangées refusées par behaviorInput.
+  input: (accountIds) => {
+    const ids = accountIds.length ? accountIds : accounts.filter((a) => !a.archived).map((a) => a.id)
+    const input = behaviorInput(ids)
+    return { ...input, currency: input.accounts[0]?.currency ?? null }
+  },
+  journal: () => [...journalEntries.values()],
+})
+
+// --- Lot 37 : accès MCP local (SIMULATION : aucune écoute, aucun port, aucun fichier ; voir mockMcp.ts) ---
+import { createMcpMock } from './mockMcp'
+export const mockMcp = createMcpMock({
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+  runTool: (accountIds, name, input) => coachTool({ accountIds, nowMs: Date.now(), tzOffsetMin: -new Date().getTimezoneOffset() }, name, input),
+  now: () => Date.now(),
+  tzOffsetMin: () => -new Date().getTimezoneOffset(),
+})
+
+// --- Lot 36 : bilan hebdomadaire (miroir de pulse-core/src/weekly_review.rs, voir mockReview.ts) ---
+import { createReviewMock } from './mockReview'
+export const mockReview = createReviewMock({
+  summary: (q) => behavior.mockPeriodSummary(behaviorInput(q.accountIds), q),
+  discipline: (q) => behavior.mockDiscipline(behaviorInput(q.accountIds), q),
+  mistakes: (q) => behavior.mockMistakes(behaviorInput(q.accountIds), q),
+  pauses: (q) => behavior.mockPauseReport(behaviorInput(q.accountIds), q, mockPause.all()),
+  goals: (q) => mockProcessGoals.getProcessGoalProgress(q),
+  ideas: (status, tz, now) => mockAnalysis.listIdeas(status, null, tz, now),
+  journal: () => [...journalEntries.values()],
+  currency: (accountIds) => behaviorInput(accountIds).accounts[0]?.currency ?? null,
+  // Comme le rappel de pulse-core : comptes actifs, sans contrôle de devise (rien n'est additionné).
+  closedCount: (from, to) =>
+    [...trades.values()].filter(
+      (t) => !accounts.find((a) => a.id === t.accountId)?.archived && t.exitTime != null && t.exitTime >= from && t.exitTime < to,
+    ).length,
+  now: () => Date.now(),
+})

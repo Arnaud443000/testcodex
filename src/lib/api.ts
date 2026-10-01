@@ -6,6 +6,8 @@ import type {
   Preview,
   Rule,
   Tag,
+  EmotionCatalogGroup,
+  EmotionUsage,
   TagKind,
   TradeData,
   TradeFilter,
@@ -25,6 +27,8 @@ import type {
   StatsQuery,
 } from '../types/stats'
 import type { AssetRow, ExecutionReport, FeeGranularity, FeeReport, StrategyRow } from '../types/stats'
+import type { AccountComparison, ExposureReport, RiskBenchmark } from '../types/stats'
+import { mockComparisons } from './mockBackend'
 import type {
   BehaviorSettings,
   DisciplineReport,
@@ -55,19 +59,31 @@ import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
 import { mockAnalyses, mockBehaviorExtra } from './mockBackend'
 import { createDashboardsMock } from './mockDashboards'
-import type { DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
+import type { DashboardLayout, DashboardScope, DashboardSummary, ImportResult, ResolvedDashboard, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
 /**
  * Thin wrapper over the Tauri commands defined in src-tauri/src/lib.rs.
  * Outside Tauri (plain `npm run dev` in a browser) it falls back to an
  * in-memory mock (mockBackend.ts) so the UI can be developed and screenshotted without Rust.
  */
-const mockDashboards = createDashboardsMock(async () => (await mock.listAccounts()).map((a) => a.id))
+const mockDashboards = createDashboardsMock(() => mock.listAccounts())
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
+/** Lot 22 : appelés quand une commande répond `lock:locked` (Pulse s'est verrouillé entre-temps). */
+const lockedListeners = new Set<() => void>()
+export function onLockedError(listener: () => void): () => void {
+  lockedListeners.add(listener)
+  return () => lockedListeners.delete(listener)
+}
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke<T>(cmd, args)
+  try {
+    return await invoke<T>(cmd, args)
+  } catch (e) {
+    if (isLockedError(e)) lockedListeners.forEach((f) => f())
+    throw e
+  }
 }
 
 export const api = {
@@ -86,6 +102,15 @@ export const api = {
     inTauri ? invoke('list_tags', { kind: kind ?? null, includeArchived }) : mock.listTags(kind, includeArchived),
   createTag: (kind: TagKind, name: string): Promise<Tag> =>
     inTauri ? invoke('create_tag', { kind, name }) : mock.createTag(kind, name),
+  /** « Ma liste » d'émotions (lot 30) : retirer = archiver, supprimer seulement si jamais utilisée. */
+  getEmotionCatalog: (): Promise<EmotionCatalogGroup[]> => (inTauri ? invoke('get_emotion_catalog') : mock.getEmotionCatalog()),
+  getEmotionUsage: (): Promise<EmotionUsage[]> => (inTauri ? invoke('get_emotion_usage') : mock.getEmotionUsage()),
+  addEmotionToList: (name: string): Promise<Tag> =>
+    inTauri ? invoke('add_emotion_to_list', { name }) : mock.addEmotionToList(name),
+  removeEmotionFromList: (tagId: number): Promise<Tag> =>
+    inTauri ? invoke('remove_emotion_from_list', { tagId }) : mock.removeEmotionFromList(tagId),
+  deleteUnusedEmotion: (tagId: number): Promise<void> =>
+    inTauri ? invoke('delete_unused_emotion', { tagId }) : mock.deleteUnusedEmotion(tagId),
 
   listRules: (includeArchived = false): Promise<Rule[]> =>
     inTauri ? invoke('list_rules', { includeArchived }) : mock.listRules(includeArchived),
@@ -192,10 +217,11 @@ export const api = {
     inTauri ? invoke('export_trades_csv', { accountIds, path }) : mock.exportTradesCsv(path),
   createBackup: (destDir: string): Promise<BackupInfo> =>
     inTauri ? invoke('create_backup', { destDir }) : mock.createBackup(destDir),
-  inspectBackup: (folder: string): Promise<BackupInfo> =>
-    inTauri ? invoke('inspect_backup', { folder }) : mock.inspectBackup(folder),
-  restoreBackup: (folder: string, confirmed: boolean): Promise<RestoreResult> =>
-    inTauri ? invoke('restore_backup', { folder, confirmed }) : mock.restoreBackup(folder, confirmed),
+  /** `password` : seulement pour une sauvegarde chiffrée (lot 22), celui du moment où elle a été faite. */
+  inspectBackup: (folder: string, password?: string): Promise<BackupInfo> =>
+    inTauri ? invoke('inspect_backup', { folder, password: password ?? null }) : mock.inspectBackup(folder, password),
+  restoreBackup: (folder: string, confirmed: boolean, password?: string): Promise<RestoreResult> =>
+    inTauri ? invoke('restore_backup', { folder, confirmed, password: password ?? null }) : mock.restoreBackup(folder, confirmed, password),
   updateAccount: (id: number, account: AccountUpdate): Promise<Account> =>
     inTauri ? invoke('update_account', { id, account }) : mock.updateAccount(id, account),
   setAccountArchived: (id: number, archived: boolean): Promise<Account> =>
@@ -301,16 +327,462 @@ export const api = {
   /** Le dashboard affiché au démarrage : « Essentiel » tant qu'aucun autre n'est choisi par défaut. */
   getStartupDashboard: (): Promise<DashboardLayout> => (inTauri ? invoke('get_startup_dashboard') : mockDashboards.getStartupDashboard()),
   /** `key` `null` ou d'un preset : crée un dashboard de l'utilisateur ; sinon remplace le sien. */
-  saveDashboardLayout: (key: string | null, name: string, widgets: WidgetInstance[]): Promise<DashboardLayout> =>
-    inTauri ? invoke('save_dashboard_layout', { key, name, widgets }) : mockDashboards.saveDashboardLayout(key, name, widgets),
+  saveDashboardLayout: (key: string | null, name: string, widgets: WidgetInstance[], scope: DashboardScope | null = null): Promise<DashboardLayout> =>
+    inTauri ? invoke('save_dashboard_layout', { key, name, widgets, scope }) : mockDashboards.saveDashboardLayout(key, name, widgets, scope),
   renameDashboardLayout: (key: string, name: string): Promise<DashboardLayout> =>
     inTauri ? invoke('rename_dashboard_layout', { key, name }) : mockDashboards.renameDashboardLayout(key, name),
   deleteDashboardLayout: (key: string): Promise<void> =>
     inTauri ? invoke('delete_dashboard_layout', { key }) : mockDashboards.deleteDashboardLayout(key),
   setDefaultDashboardLayout: (key: string): Promise<DashboardLayout> =>
     inTauri ? invoke('set_default_dashboard_layout', { key }) : mockDashboards.setDefaultDashboardLayout(key),
+
+  // --- Lot 16 : analyses complémentaires ---
+  /** Coût d'opportunité : gains laissés sur la table d'après le TP prévu et le prix après sortie saisi (3.3.18). */
+  getOpportunityReport: (query: StatsQuery): Promise<OpportunityReport> =>
+    inTauri ? invoke('get_opportunity_report', { query }) : mockAnalysesMore.getOpportunityReport(query),
+  /** Même période un an plus tôt, avec les écarts du tableau de bord (3.3.19). */
+  getYearComparison: (query: YearComparisonQuery): Promise<YearComparison> =>
+    inTauri ? invoke('get_year_comparison', { query }) : mockAnalysesMore.getYearComparison(query),
+  /** Durée moyenne et médiane des gagnants contre les perdants (3.3.20). */
+  getDurationReport: (query: StatsQuery): Promise<DurationReport> =>
+    inTauri ? invoke('get_duration_report', { query }) : mockAnalysesMore.getDurationReport(query),
+  /** Le risque pris suit-il le capital ? Risque en % du solde, moitié ancienne contre moitié récente (3.3.21). */
+  getScalingReport: (query: StatsQuery): Promise<ScalingReport> =>
+    inTauri ? invoke('get_scaling_report', { query }) : mockAnalysesMore.getScalingReport(query),
+  // (fin lot 16)
+  // --- Lot 17 : comparaisons et exposition ---
+  /** Comptes côte à côte (3.7.6) ; chaque compte est calculé seul, les devises peuvent différer. */
+  getAccountComparison: (query: StatsQuery): Promise<AccountComparison> =>
+    inTauri ? invoke('get_account_comparison', { query }) : mockComparisons.getAccountComparison(query),
+  /** Risque pris trade par trade contre la limite « risque max » (3.4.11). */
+  getRiskBenchmark: (query: StatsQuery): Promise<RiskBenchmark> =>
+    inTauri ? invoke('get_risk_benchmark', { query }) : mockComparisons.getRiskBenchmark(query),
+  /** Répartition du risque pris par catégorie d'actif (3.7.9). */
+  getExposureReport: (query: StatsQuery): Promise<ExposureReport> =>
+    inTauri ? invoke('get_exposure_report', { query }) : mockComparisons.getExposureReport(query),
+  // --- Lot 18 : portée d'un dashboard (3.8.9) ---
+  /** Change ce que lit un dashboard de l'utilisateur : barre du haut, un compte, ou tous les comptes. */
+  setDashboardScope: (key: string, scope: DashboardScope): Promise<DashboardLayout> =>
+    inTauri ? invoke('set_dashboard_scope', { key, scope }) : mockDashboards.setDashboardScope(key, scope),
+  /** Comptes réellement lus par le dashboard et par chaque widget (`widgets` peut être un brouillon). */
+  resolveDashboardScope: (scope: DashboardScope, widgets: WidgetInstance[], selectedAccountId: number | null): Promise<ResolvedDashboard> =>
+    inTauri
+      ? invoke('resolve_dashboard_scope', { scope, widgets, selectedAccountId })
+      : mockDashboards.resolveDashboardScope(scope, widgets, selectedAccountId),
+
+  // --- Lot 18 : duplication, export et import de configuration (3.8.7) ---
+  /** Copie un dashboard (livré ou à soi) comme point de départ ; sans nom : « <nom> (copie) ». */
+  duplicateDashboardLayout: (key: string, name: string | null = null): Promise<DashboardLayout> =>
+    inTauri ? invoke('duplicate_dashboard_layout', { key, name }) : mockDashboards.duplicateDashboardLayout(key, name),
+  /** Écrit la configuration d'un dashboard (JSON versionné) au chemin choisi. */
+  exportDashboardConfig: (key: string, path: string): Promise<void> =>
+    inTauri ? invoke('export_dashboard_config', { key, path }) : mockDashboards.exportDashboardConfig(key, path),
+  /** Importe une configuration : tout ou rien, jamais d'écrasement. Les erreurs portent un code `dashboard_import:…`. */
+  importDashboardConfig: (path: string): Promise<ImportResult> =>
+    inTauri ? invoke('import_dashboard_config', { path }) : mockDashboards.importDashboardConfig(path),
+  /** Boîte de dialogue « enregistrer sous » d'un fichier de configuration (`null` si annulée). */
+  pickConfigSavePath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return mockDashboards.pickExportPath(defaultName)
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'Configuration Pulse (JSON)', extensions: ['json'] }] })
+  },
+  /** Boîte de dialogue « ouvrir » d'un fichier de configuration (`null` si annulée). */
+  pickConfigOpenPath: async (title: string): Promise<string | null> => {
+    if (!inTauri) return mockDashboards.pickImportPath()
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const picked = await open({ title, multiple: false, directory: false, filters: [{ name: 'Configuration Pulse (JSON)', extensions: ['json'] }] })
+    return typeof picked === 'string' ? picked : null
+  },
+  // --- Lot 19 : insights automatiques (déterministes, calculés localement, sans IA) ---
+  /** Insights de maintenant (comptes actifs si la liste est vide), chaque compte seul ; masqués omis sauf `includeDismissed`. */
+  getInsights: (accountIds: number[], tzOffsetMin: number, includeDismissed = false): Promise<Insight[]> =>
+    inTauri ? invoke('get_insights', { accountIds, tzOffsetMin, includeDismissed }) : mockInsights.getInsights(accountIds, tzOffsetMin, includeDismissed),
+  /** Masque un insight : il ne revient que si la situation s'aggrave ou dans un nouvel épisode. */
+  dismissInsight: (insightId: string): Promise<void> => (inTauri ? invoke('dismiss_insight', { insightId }) : mockInsights.dismissInsight(insightId)),
+  getInsightHistory: (accountIds: number[], limit?: number): Promise<InsightRecord[]> =>
+    inTauri ? invoke('get_insight_history', { accountIds, limit: limit ?? null }) : mockInsights.getInsightHistory(accountIds, limit),
+
+  // --- Lot 20 : IA optionnelle (réseau seulement dans pulse-ai, à la demande ; simulation dans le navigateur) ---
+  /** Réglages de l'IA et état du coffre : l'interface sait seulement si une clé est enregistrée, jamais laquelle. */
+  getAiStatus: (): Promise<AiStatus> => (inTauri ? invoke('get_ai_status') : mockAi.getAiStatus()),
+  /** Éteindre l'IA oublie le consentement de première utilisation. */
+  setAiSettings: (settings: AiSettingsUpdate): Promise<AiStatus> =>
+    inTauri ? invoke('set_ai_settings', { settings }) : mockAi.setAiSettings(settings),
+  recordAiConsent: (): Promise<AiStatus> => (inTauri ? invoke('record_ai_consent') : mockAi.recordAiConsent()),
+  /** Enregistre ou remplace la clé dans le coffre Windows ; l'erreur ne répète jamais la clé. */
+  saveAiKey: (key: string): Promise<AiStatus> => (inTauri ? invoke('save_ai_key', { key }) : mockAi.saveAiKey(key)),
+  deleteAiKey: (): Promise<AiStatus> => (inTauri ? invoke('delete_ai_key') : mockAi.deleteAiKey()),
+  /** Vérifie la clé et le modèle ; n'envoie aucune donnée de trading. */
+  testAiConnection: (): Promise<void> => (inTauri ? invoke('test_ai_connection') : mockAi.testAiConnection()),
+  /** Ce qui partirait pour ce trade, calculé par pulse-core et montré tel quel avant l'envoi. */
+  previewScreenshotAnalysis: (tradeId: number): Promise<AiSendPreview> =>
+    inTauri ? invoke('preview_screenshot_analysis', { tradeId }) : mockAi.previewScreenshotAnalysis(tradeId),
+  /** À la demande, après confirmation. Erreurs : codes `ai:…` (voir `aiErrorMessage`). */
+  analyzeScreenshot: (tradeId: number, confirmed: boolean): Promise<ScreenshotNote> =>
+    inTauri ? invoke('analyze_screenshot', { tradeId, confirmed }) : mockAi.analyzeScreenshot(tradeId, confirmed),
+  listScreenshotNotes: (tradeId: number): Promise<ScreenshotNote[]> =>
+    inTauri ? invoke('list_screenshot_notes', { tradeId }) : mockAi.listScreenshotNotes(tradeId),
+  deleteScreenshotNote: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_screenshot_note', { id }) : mockAi.deleteScreenshotNote(id),
+
+  // --- Lot 21 : coach IA (outils locaux en lecture seule ; réseau seulement dans pulse-ai ; simulation dans le navigateur) ---
+  getCoachStatus: (): Promise<CoachStatus> => (inTauri ? invoke('get_coach_status') : mockCoach.getCoachStatus()),
+  /** Consentement propre au coach (distinct de celui de l'analyse de screenshot). */
+  recordCoachConsent: (): Promise<CoachStatus> => (inTauri ? invoke('record_coach_consent') : mockCoach.recordCoachConsent()),
+  /** À la demande, après le clic sur « Envoyer ». Erreurs : codes `ai:…` (voir `aiErrorMessage`). */
+  askCoach: (r: AskCoachRequest): Promise<CoachTurn> => (inTauri ? invoke('ask_coach', { ...r }) : mockCoach.askCoach(r)),
+  listCoachConversations: (): Promise<ConversationSummary[]> =>
+    inTauri ? invoke('list_coach_conversations') : mockCoach.listCoachConversations(),
+  getCoachConversation: (id: number): Promise<Conversation> =>
+    inTauri ? invoke('get_coach_conversation', { id }) : mockCoach.getCoachConversation(id),
+  renameCoachConversation: (id: number, title: string): Promise<ConversationSummary> =>
+    inTauri ? invoke('rename_coach_conversation', { id, title }) : mockCoach.renameCoachConversation(id, title),
+  deleteCoachConversation: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_coach_conversation', { id }) : mockCoach.deleteCoachConversation(id),
+  deleteAllCoachConversations: (): Promise<number> =>
+    inTauri ? invoke('delete_all_coach_conversations') : mockCoach.deleteAllCoachConversations(),
+
+  // --- Lot 22 : verrouillage par mot de passe (simulation sans chiffrement dans le navigateur) ---
+  // Les mots de passe ne font que passer : jamais gardés dans un état global ni dans localStorage.
+  /** Disponible même verrouillé (écran de déverrouillage). */
+  getLockStatus: (): Promise<LockStatus> => (inTauri ? invoke('get_lock_status') : mockLock.status()),
+  unlockDatabase: (password: string): Promise<LockStatus> => (inTauri ? invoke('unlock_database', { password }) : mockLock.unlock(password)),
+  /** `confirmed` : case « J'ai compris » (mot de passe perdu = données irrécupérables), vérifiée aussi par pulse-core. */
+  enableLock: (password: string, confirmed: boolean, encryptCopies: boolean): Promise<LockStatus> =>
+    inTauri ? invoke('enable_lock', { password, confirmed, encryptCopies }) : mockLock.enable(password, confirmed, encryptCopies),
+  disableLock: (password: string): Promise<LockStatus> => (inTauri ? invoke('disable_lock', { password }) : mockLock.disable(password)),
+  changeLockPassword: (oldPassword: string, newPassword: string): Promise<LockStatus> =>
+    inTauri ? invoke('change_lock_password', { oldPassword, newPassword }) : mockLock.changePassword(oldPassword, newPassword),
+  lockNow: (): Promise<LockStatus> => (inTauri ? invoke('lock_now') : (mockMcp.lock(), mockLock.lockNow())),
+  /** `null` = jamais (défaut). */
+  setLockIdle: (minutes: number | null): Promise<LockStatus> => (inTauri ? invoke('set_lock_idle', { minutes }) : mockLock.setIdle(minutes)),
+  /** Activité de l'utilisateur (clavier, souris), signalée au plus toutes les 30 s. */
+  lockTouch: (): Promise<void> => (inTauri ? invoke('lock_touch') : mockLock.touch()),
+  retryPersist: (): Promise<LockStatus> => (inTauri ? invoke('retry_persist') : mockLock.retryPersist()),
+  quitDiscardingChanges: (): Promise<void> => (inTauri ? invoke('quit_discarding_changes') : Promise.resolve()),
+  /** Événements de la coque : verrouillage (manuel ou inactivité) et échec d'écriture. Rien dans le navigateur. */
+  onLockEvents: async (onLocked: () => void, onPersistFailed: () => void): Promise<() => void> => {
+    if (!inTauri) return () => {}
+    const { listen } = await import('@tauri-apps/api/event')
+    const offs = await Promise.all([listen('pulse://locked', onLocked), listen('pulse://persist-failed', onPersistFailed)])
+    return () => offs.forEach((off) => off())
+  },
+  // --- Lot 32 : sauvegarde automatique planifiée (simulation dans le navigateur : aucun fichier écrit) ---
+  getAutoBackupStatus: (tzOffsetMin: number): Promise<AutoBackupStatus> =>
+    inTauri ? invoke('get_auto_backup_status', { tzOffsetMin }) : mockBackupAuto.getStatus(tzOffsetMin),
+  /** Activer exige un dossier valide (`backup:noFolder`, `backup:insideDataFolder`…), vérifié par pulse-core. */
+  setAutoBackupSettings: (settings: AutoBackupSettings, tzOffsetMin: number): Promise<AutoBackupSaved> =>
+    inTauri ? invoke('set_auto_backup_settings', { settings, tzOffsetMin }) : mockBackupAuto.setSettings(settings, tzOffsetMin),
+  checkAutoBackupFolder: (folder: string): Promise<FolderCheck> =>
+    inTauri ? invoke('check_auto_backup_folder', { folder }) : mockBackupAuto.checkFolder(folder),
+  /** « Sauvegarder maintenant » : même chemin atomique, sans attendre la fréquence. */
+  runAutoBackupNow: (tzOffsetMin: number): Promise<AutoBackupDone> =>
+    inTauri ? invoke('run_auto_backup_now') : mockBackupAuto.runNow(tzOffsetMin),
+  listAutoBackups: (): Promise<AutoBackupEntry[]> => (inTauri ? invoke('list_auto_backups') : mockBackupAuto.list()),
+  /** `accept` : « Activer » (n'active rien : l'interface ouvre les réglages) ; sinon « Plus tard ». */
+  answerAutoBackupInvite: (accept: boolean): Promise<void> =>
+    inTauri ? invoke('answer_auto_backup_invite', { accept }) : mockBackupAuto.answerInvite(accept),
+  openAutoBackupFolder: (): Promise<void> => (inTauri ? invoke('open_auto_backup_folder') : mockBackupAuto.openFolder()),
+  /** Après chaque sauvegarde automatique de la coque (réussie ou non). Rien dans le navigateur. */
+  onAutoBackupEvent: async (listener: () => void): Promise<() => void> => {
+    if (!inTauri) return () => {}
+    const { listen } = await import('@tauri-apps/api/event')
+    return listen('pulse://auto-backup', listener)
+  },
+  // --- Lot 23 : export PDF d'un bilan de période (simulation dans le navigateur : aucun fichier) ---
+  /** Boîte de dialogue « enregistrer sous » pour un fichier PDF. */
+  pickPdfPath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return `(dossier de démonstration)/${defaultName}`
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+  },
+  /** `overwrite = false` : un fichier existant est refusé (`pdf:fileExists`), l'interface demande alors confirmation. */
+  exportPeriodPdf: (req: PdfExportRequest, path: string, overwrite = false): Promise<PdfExport> =>
+    inTauri
+      ? invoke('export_period_pdf', {
+          accountIds: [req.accountId],
+          from: req.from,
+          to: req.to,
+          includeAccountName: req.includeAccountName,
+          tzOffsetMin: req.tzOffsetMin,
+          path,
+          overwrite,
+        })
+      : mockPdf.exportPeriodPdf(req, path, overwrite),
+  // --- Lot 27 : calculateur de taille de position (un refus est une donnée : `status: 'refused'` + code traduisible) ---
+  calculatePositionSize: (request: SizingRequest): Promise<SizingOutcome> =>
+    inTauri ? invoke('calculate_position_size', { request }) : mockSizing.calculatePositionSize(request),
+
+  // --- Lot 25 : calendrier économique (réseau seulement dans pulse-news ; simulation dans le navigateur) ---
+  getNewsStatus: (): Promise<NewsStatus> => (inTauri ? invoke('get_news_status') : mockNews.getNewsStatus()),
+  setNewsSettings: (settings: NewsSettings): Promise<NewsStatus> =>
+    inTauri ? invoke('set_news_settings', { settings }) : mockNews.setNewsSettings(settings),
+  /** Fichier local ICS ou CSV (aucun réseau). */
+  importNewsFile: (format: NewsFileFormat, path: string, defaults: NewsDefaults): Promise<ImportSummary> =>
+    inTauri ? invoke('import_news_file', { format, path, defaults }) : mockNews.importNewsFile(format, path, defaults),
+  /** `manual` : bouton « Actualiser » (au plus toutes les 5 min) ; sinon l'appel de l'ouverture (au plus une fois par jour). Erreurs : `news:…`. */
+  refreshNews: (manual: boolean): Promise<NewsRefresh> => (inTauri ? invoke('refresh_news', { manual }) : mockNews.refreshNews(manual)),
+  getNewsCalendar: (view: CalendarView, filter: NewsFilter): Promise<NewsCalendar> =>
+    inTauri ? invoke('get_news_calendar', { view, filter }) : mockNews.getNewsCalendar(view, filter),
+  getUpcomingNews: (limit: number, importances: Importance[]): Promise<EconomicEvent[]> =>
+    inTauri ? invoke('get_upcoming_news', { limit, importances }) : mockNews.getUpcomingNews(limit, importances),
+  clearNewsEvents: (): Promise<number> => (inTauri ? invoke('clear_news_events') : mockNews.clearNewsEvents()),
+  /** Lot 28 : interroge la source saisie (non enregistrée) sans rien stocker ; compte dans le délai de 5 min. */
+  testNewsSource: (settings: NewsSettings): Promise<NewsPreview> =>
+    inTauri ? invoke('test_news_source', { settings }) : mockNews.testNewsSource(settings),
+  /** Enregistre les événements du dernier test, une fois ses réglages enregistrés (`news:previewOutdated` sinon). */
+  keepTestedNews: (): Promise<NewsRefresh> => (inTauri ? invoke('keep_tested_news') : mockNews.keepTestedNews()),
+  // --- Lot 33 : suivi d'un compte prop firm (trades clôturés seulement ; refus codés `prop:<code>[:<champ>]`) ---
+  /** Règles d'un compte prop (`null` = aucune) ; refusé pour un compte qui n'est pas de type prop. */
+  getPropRules: (accountId: number): Promise<PropRules | null> =>
+    inTauri ? invoke('get_prop_rules', { accountId }) : mockProp.getPropRules(accountId),
+  setPropRules: (accountId: number, rules: PropRulesInput): Promise<PropRules> =>
+    inTauri ? invoke('set_prop_rules', { accountId, rules }) : mockProp.setPropRules(accountId, rules),
+  deletePropRules: (accountId: number): Promise<void> =>
+    inTauri ? invoke('delete_prop_rules', { accountId }) : mockProp.deletePropRules(accountId),
+  /** État à l'instant lu par la coque (`null` = aucune règle). Le jour de trading vient des règles de la firme, pas du PC. */
+  getPropStatus: (accountId: number): Promise<PropStatus | null> =>
+    inTauri ? invoke('get_prop_status', { accountId, tzOffsetMin: -new Date().getTimezoneOffset() }) : mockProp.getPropStatus(accountId),
+  /** Réglage `alerts.prop` (activé par défaut). */
+  setPropAlerts: (enabled: boolean): Promise<boolean> => (inTauri ? invoke('set_prop_alerts', { enabled }) : mockProp.setPropAlerts(enabled)),
+  /** Boîte de dialogue « ouvrir » d'un calendrier (`null` si annulée). */
+  pickNewsFile: async (title: string, format: NewsFileFormat): Promise<string | null> => {
+    if (!inTauri) return `simulation.${format}`
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const filter = format === 'ics' ? { name: 'Calendrier (ICS)', extensions: ['ics', 'ical'] } : { name: 'CSV', extensions: ['csv', 'txt'] }
+    const picked = await open({ title, multiple: false, directory: false, filters: [filter] })
+    return typeof picked === 'string' ? picked : null
+  },
+  isBrowserPreview: !inTauri,
+
+  // --- Lot 34 : objectifs de comportement (processus), par semaine et par mois ; valeurs et statuts calculés par pulse-core ---
+  setProcessGoal: (goal: NewProcessGoal): Promise<ProcessGoal> =>
+    inTauri ? invoke('set_process_goal', { goal }) : mockProcessGoals.setProcessGoal(goal),
+  listProcessGoals: (periodKind: ProcessPeriodKind, periodKey: string): Promise<ProcessGoal[]> =>
+    inTauri ? invoke('list_process_goals', { periodKind, periodKey }) : mockProcessGoals.listProcessGoals(periodKind, periodKey),
+  deleteProcessGoal: (id: number): Promise<void> => (inTauri ? invoke('delete_process_goal', { id }) : mockProcessGoals.deleteProcessGoal(id)),
+  /** Reprend les objectifs de la période précédente de même type, sans écraser ceux qui existent. */
+  copyProcessGoals: (periodKind: ProcessPeriodKind, periodKey: string): Promise<ProcessGoal[]> =>
+    inTauri ? invoke('copy_process_goals', { periodKind, periodKey }) : mockProcessGoals.copyProcessGoals(periodKind, periodKey),
+  getProcessGoalProgress: (query: ProcessProgressQuery): Promise<ProcessProgress> =>
+    inTauri ? invoke('get_process_goal_progress', { query }) : mockProcessGoals.getProcessGoalProgress(query),
+
+  // --- Lot 36 : bilan hebdomadaire (faits calculés par pulse-core ; le texte libre ne va nulle part ailleurs ; verrouillé : `lock:locked`) ---
+  getWeeklyReview: (query: ReviewQuery): Promise<WeeklyReviewView> =>
+    inTauri ? invoke('get_weekly_review', { query }) : mockReview.getWeeklyReview(query),
+  /** Enregistre en brouillon. Un bilan entièrement vide est refusé (`review:empty`) et ne laisse rien. */
+  saveWeeklyReview: (input: ReviewInput, tzOffsetMin: number): Promise<WeeklyReview> =>
+    inTauri ? invoke('save_weekly_review', { input, tzOffsetMin }) : mockReview.saveWeeklyReview(input, tzOffsetMin),
+  completeWeeklyReview: (periodKey: string): Promise<WeeklyReview> =>
+    inTauri ? invoke('complete_weekly_review', { periodKey }) : mockReview.completeWeeklyReview(periodKey),
+  deleteWeeklyReview: (periodKey: string): Promise<boolean> =>
+    inTauri ? invoke('delete_weekly_review', { periodKey }) : mockReview.deleteWeeklyReview(periodKey),
+  listWeeklyReviews: (limit?: number): Promise<WeeklyReview[]> =>
+    inTauri ? invoke('list_weekly_reviews', { limit: limit ?? null }) : mockReview.listWeeklyReviews(limit),
+  /** « Tenue » / « En partie » / « Pas tenue » ; `null` = « Je ne sais pas » (non évaluée). */
+  setIntentionOutcome: (intentionId: number, outcome: IntentionOutcome | null): Promise<ReviewIntention> =>
+    inTauri ? invoke('set_intention_outcome', { intentionId, outcome }) : mockReview.setIntentionOutcome(intentionId, outcome),
+  /** Où en est la semaine en cours (widget) : aucun fait n'est calculé. */
+  getWeeklyReviewStatus: (tzOffsetMin: number): Promise<WeekStatus> =>
+    inTauri ? invoke('get_weekly_review_status', { tzOffsetMin }) : mockReview.getWeeklyReviewStatus(tzOffsetMin),
+  getReviewReminder: (): Promise<ReviewReminderSettings> => (inTauri ? invoke('get_review_reminder') : mockReview.getReviewReminder()),
+  setReviewReminder: (settings: ReviewReminderSettings): Promise<ReviewReminderSettings> =>
+    inTauri ? invoke('set_review_reminder', { settings }) : mockReview.setReviewReminder(settings),
+  /** Bannière du dimanche : armée cette semaine, pas repoussée, bilan non terminé. */
+  getReviewReminderPending: (tzOffsetMin: number): Promise<ReviewDue | null> =>
+    inTauri ? invoke('get_review_reminder_pending', { tzOffsetMin }) : mockReview.getReviewReminderPending(tzOffsetMin),
+  /** « Plus tard » : la bannière se tait pour le reste de la semaine. */
+  dismissReviewReminder: (tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('dismiss_review_reminder', { tzOffsetMin }) : mockReview.dismissReviewReminder(tzOffsetMin),
+
+  // --- Lot 24 : carte de trade (3.7.7) ---
+  /** R, rendement en % et P&L net d'un trade (jamais un solde), calculés par pulse-core. */
+  getTradeCardFigures: (tradeId: number): Promise<TradeCardFigures> =>
+    inTauri ? invoke('get_trade_card_figures', { tradeId }) : mockTradeCard.getTradeCardFigures(tradeId),
+  /** Boîte de dialogue « enregistrer sous » d'une image PNG (`null` si annulée). Elle demande elle-même avant de remplacer un fichier. */
+  pickPngPath: async (title: string, defaultName: string): Promise<string | null> => {
+    if (!inTauri) return mockTradeCard.pickPngPath(defaultName)
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    return save({ title, defaultPath: defaultName, filters: [{ name: 'PNG', extensions: ['png'] }] })
+  },
+  /** Écrit l'image (PNG en base64) à `path` ; renvoie la taille écrite en octets. */
+  saveTradeCardImage: (path: string, image: string): Promise<number> =>
+    inTauri ? invoke('save_trade_card_image', { path, image }) : mockTradeCard.saveTradeCardImage(path, image),
+
+  // --- Lot 31 : analyse avant trading, idées à surveiller, revue du lendemain (aucun réseau, aucune IA) ---
+  // `tzOffsetMin` = décalage du PC : c'est lui qui définit « aujourd'hui » et « le lendemain ».
+  getAnalysisQuestions: (includeArchived: boolean): Promise<Question[]> =>
+    inTauri ? invoke('get_analysis_questions', { includeArchived }) : mockAnalysis.getAnalysisQuestions(includeArchived),
+  addAnalysisQuestion: (label: string, kind: QuestionKind, options: Question['options']): Promise<Question> =>
+    inTauri ? invoke('add_analysis_question', { label, kind, options }) : mockAnalysis.addAnalysisQuestion(label, kind, options),
+  /** `label = null` remet le libellé d'origine (questions d'origine) ; `options = null` les garde. */
+  updateAnalysisQuestion: (id: number, label: string | null, options: Question['options'] | null): Promise<Question> =>
+    inTauri ? invoke('update_analysis_question', { id, label, options }) : mockAnalysis.updateAnalysisQuestion(id, label, options),
+  moveAnalysisQuestion: (id: number, delta: number): Promise<Question[]> =>
+    inTauri ? invoke('move_analysis_question', { id, delta }) : mockAnalysis.moveAnalysisQuestion(id, delta),
+  /** Archiver, jamais supprimer : les réponses passées restent lisibles. */
+  setAnalysisQuestionArchived: (id: number, archived: boolean): Promise<Question> =>
+    inTauri ? invoke('set_analysis_question_archived', { id, archived }) : mockAnalysis.setAnalysisQuestionArchived(id, archived),
+  createAnalysis: (input: AnalysisInput): Promise<Analysis> =>
+    inTauri ? invoke('create_analysis', { input }) : mockAnalysis.createAnalysis(input),
+  updateAnalysis: (id: number, input: AnalysisInput): Promise<Analysis> =>
+    inTauri ? invoke('update_analysis', { id, input }) : mockAnalysis.updateAnalysis(id, input),
+  deleteAnalysis: (id: number): Promise<void> => (inTauri ? invoke('delete_analysis', { id }) : mockAnalysis.deleteAnalysis(id)),
+  listAnalysesOfDay: (day: string): Promise<Analysis[]> =>
+    inTauri ? invoke('list_analyses_of_day', { day }) : mockAnalysis.listAnalysesOfDay(day),
+  /** Analyses des jours strictement avant `day`, les plus récentes d'abord. */
+  listAnalysesBefore: (day: string, limit: number): Promise<Analysis[]> =>
+    inTauri ? invoke('list_analyses_before', { day, limit }) : mockAnalysis.listAnalysesBefore(day, limit),
+  /** Annonces fortes du jour de Paris, lues dans le calendrier déjà stocké (`day = null` : aujourd'hui). */
+  getNewsBlock: (day: string | null): Promise<NewsBlock> => (inTauri ? invoke('get_news_block', { day }) : mockAnalysis.getNewsBlock(day)),
+  createIdea: (input: IdeaInput): Promise<Idea> => (inTauri ? invoke('create_idea', { input }) : mockAnalysis.createIdea(input)),
+  updateIdea: (id: number, input: IdeaInput): Promise<Idea> =>
+    inTauri ? invoke('update_idea', { id, input }) : mockAnalysis.updateIdea(id, input),
+  listIdeas: (status: IdeaStatus, instrumentId: number | null, tzOffsetMin: number): Promise<IdeaView[]> =>
+    inTauri ? invoke('list_ideas', { status, instrumentId, tzOffsetMin }) : mockAnalysis.listIdeas(status, instrumentId, tzOffsetMin),
+  getReviewQueue: (tzOffsetMin: number): Promise<ReviewQueue> =>
+    inTauri ? invoke('get_review_queue', { tzOffsetMin }) : mockAnalysis.getReviewQueue(tzOffsetMin),
+  /** `null` = pas de bannière (même jour que la dernière revue, ou aucune idée à revoir). Lecture seule. */
+  getReviewBanner: (tzOffsetMin: number): Promise<ReviewBanner | null> =>
+    inTauri ? invoke('get_review_banner', { tzOffsetMin }) : mockAnalysis.getReviewBanner(tzOffsetMin),
+  dismissReviewBanner: (tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('dismiss_review_banner', { tzOffsetMin }) : mockAnalysis.dismissReviewBanner(tzOffsetMin),
+  ideaKeep: (id: number, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_keep', { id, tzOffsetMin }) : mockAnalysis.ideaKeep(id, tzOffsetMin),
+  ideaComplete: (id: number, body: string, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_complete', { id, body, tzOffsetMin }) : mockAnalysis.ideaComplete(id, body, tzOffsetMin),
+  /** « Redemander dans X jours » : 1 à 30. */
+  ideaSnooze: (id: number, days: number, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_snooze', { id, days, tzOffsetMin }) : mockAnalysis.ideaSnooze(id, days, tzOffsetMin),
+  ideaClose: (id: number, outcome: IdeaOutcome, reason: string | null, tzOffsetMin: number): Promise<IdeaView> =>
+    inTauri ? invoke('idea_close', { id, outcome, reason, tzOffsetMin }) : mockAnalysis.ideaClose(id, outcome, reason, tzOffsetMin),
+  /** Suppression définitive (l'interface demande confirmation). */
+  ideaDelete: (id: number, tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('idea_delete', { id, tzOffsetMin }) : mockAnalysis.ideaDelete(id, tzOffsetMin),
+  getAnalysisSettings: (): Promise<AnalysisSettings> => (inTauri ? invoke('get_analysis_settings') : mockAnalysis.getAnalysisSettings()),
+  setAnalysisSettings: (settings: AnalysisSettings): Promise<AnalysisSettings> =>
+    inTauri ? invoke('set_analysis_settings', { settings }) : mockAnalysis.setAnalysisSettings(settings),
+  getTradeLinks: (tradeId: number): Promise<TradeLinks> =>
+    inTauri ? invoke('get_trade_links', { tradeId }) : mockAnalysis.getTradeLinks(tradeId),
+  /** Remplace les liens du trade par ceux donnés (la liste complète). */
+  setTradeLinks: (tradeId: number, ideaIds: number[], analysisIds: number[]): Promise<TradeLinks> =>
+    inTauri ? invoke('set_trade_links', { tradeId, ideaIds, analysisIds }) : mockAnalysis.setTradeLinks(tradeId, ideaIds, analysisIds),
+  getAnalysisReport: (query: StatsQuery): Promise<AnalysisReport> =>
+    inTauri ? invoke('get_analysis_report', { query }) : mockAnalysis.getAnalysisReport(query),
+  // --- Lot 35 : pause volontaire (un rappel, jamais un blocage ; lit et écrit la base : verrouillé, `lock:locked`) ---
+  startPause: (pause: NewPause): Promise<Pause> => (inTauri ? invoke('start_pause', { pause }) : mockPause.startPause(pause)),
+  endPause: (): Promise<Pause | null> => (inTauri ? invoke('end_pause') : mockPause.endPause()),
+  getCurrentPause: (): Promise<CurrentPause | null> => (inTauri ? invoke('get_current_pause') : mockPause.getCurrentPause()),
+  listPauses: (accountIds: number[], limit?: number): Promise<PauseRow[]> =>
+    inTauri ? invoke('list_pauses', { accountIds, limit: limit ?? null }) : mockPause.listPauses(accountIds, limit),
+  getPauseReport: (query: StatsQuery): Promise<PauseReport> => (inTauri ? invoke('get_pause_report', { query }) : mockPause.getPauseReport(query)),
+  getPauseSuggestion: (accountIds: number[], tzOffsetMin: number): Promise<PauseSuggestion | null> =>
+    inTauri ? invoke('get_pause_suggestion', { accountIds, tzOffsetMin }) : mockPause.getPauseSuggestion(accountIds, tzOffsetMin),
+  getPauseSettings: (): Promise<PauseSettings> => (inTauri ? invoke('get_pause_settings') : mockPause.getPauseSettings()),
+  setPauseSettings: (settings: PauseSettings): Promise<PauseSettings> => (inTauri ? invoke('set_pause_settings', { settings }) : mockPause.setPauseSettings(settings)),
+  // --- Lot 37 : accès MCP local pour Claude Code (lecture seule ; simulation dans le navigateur : aucune écoute) ---
+  /** État (jamais le port ni le jeton). Erreurs : `mcp:…`, `lock:locked`. */
+  getMcpStatus: (): Promise<McpStatus> => (inTauri ? invoke('get_mcp_status') : mockMcp.getStatus()),
+  /** Comptes cochés, durée, « prochain démarrage » ; plus aucun compte coché = accès coupé. */
+  setMcpSettings: (settings: McpSettingsUpdate): Promise<McpStatus> =>
+    inTauri ? invoke('set_mcp_settings', { settings }) : mockMcp.setSettings(settings),
+  /** `confirmed` = case de consentement cochée (enregistrée la première fois). Nouveau jeton à chaque activation. */
+  enableMcp: (confirmed: boolean): Promise<McpStatus> => (inTauri ? invoke('enable_mcp', { confirmed }) : mockMcp.enable(confirmed)),
+  /** « Couper l'accès maintenant » ; `withdrawConsent` retire aussi le consentement. */
+  disableMcp: (withdrawConsent: boolean): Promise<McpStatus> =>
+    inTauri ? invoke('disable_mcp', { withdrawConsent }) : mockMcp.disable(withdrawConsent),
+  listMcpCalls: (limit?: number): Promise<McpCall[]> => (inTauri ? invoke('list_mcp_calls', { limit: limit ?? null }) : mockMcp.listCalls(limit)),
+  clearMcpCalls: (): Promise<number> => (inTauri ? invoke('clear_mcp_calls') : mockMcp.clearCalls()),
+  getMcpInstallCommand: (): Promise<McpInstallCommand> => (inTauri ? invoke('get_mcp_install_command') : mockMcp.installCommand()),
+  /** Navigateur seulement : simule un appel de Claude Code (outil du faux coach, journalisé). */
+  simulateMcpCall: (tool: string, input: Record<string, unknown>): Promise<McpCall> =>
+    inTauri ? Promise.reject(new Error('mcp:simulationOnly')) : mockMcp.simulateCall(tool, input),
+  /** L'accès s'est coupé tout seul (échéance, verrouillage) : la barre du haut se met à jour. */
+  onMcpChanged: async (listener: () => void): Promise<() => void> => {
+    if (!inTauri) {
+      window.addEventListener(MCP_CHANGED, listener)
+      return () => window.removeEventListener(MCP_CHANGED, listener)
+    }
+    const { listen } = await import('@tauri-apps/api/event')
+    const off = await listen('pulse://mcp-changed', listener)
+    window.addEventListener(MCP_CHANGED, listener)
+    return () => {
+      off()
+      window.removeEventListener(MCP_CHANGED, listener)
+    }
+  },
+}
+
+/** Événement de fenêtre envoyé par le panneau MCP après un changement (la puce de la barre du haut suit). */
+export const MCP_CHANGED = 'pulse:mcp-changed'
+export function notifyMcpChanged() {
+  window.dispatchEvent(new Event(MCP_CHANGED))
 }
 
 
 import type { Alert, AlertRecord, AlertSettings } from '../types/alerts'
 import { mockAlerts } from './mockBackend'
+import type { DurationReport, OpportunityReport, ScalingReport, YearComparison, YearComparisonQuery } from '../types/stats'
+import { mockAnalysesMore } from './mockBackend'
+import type { Insight, InsightRecord } from '../types/insights'
+import { mockInsights } from './mockBackend'
+import type { AiSendPreview, AiSettingsUpdate, AiStatus, ScreenshotNote } from '../types/ai'
+import { mockAi } from './mockBackend'
+import type { AskCoachRequest, CoachStatus, CoachTurn, Conversation, ConversationSummary } from '../types/coach'
+import { mockCoach } from './mockBackend'
+import type { LockStatus } from '../types/lock'
+import { mockLock } from './mockBackend'
+import { isLockedError } from './lockView'
+
+import type { PdfExport, PdfExportRequest } from '../types/pdf'
+import { mockPdf } from './mockBackend'
+import type { TradeCardFigures } from '../types/tradeCard'
+import { mockTradeCard } from './mockBackend'
+import type { SizingOutcome, SizingRequest } from '../types/sizing'
+import { mockSizing } from './mockBackend'
+import type {
+  CalendarView,
+  EconomicEvent,
+  ImportSummary,
+  Importance,
+  NewsCalendar,
+  NewsDefaults,
+  NewsFileFormat,
+  NewsFilter,
+  NewsPreview,
+  NewsRefresh,
+  NewsSettings,
+  NewsStatus,
+} from '../types/news'
+import { mockNews } from './mockBackend'
+import type {
+  Analysis,
+  AnalysisInput,
+  AnalysisReport,
+  AnalysisSettings,
+  Idea,
+  IdeaInput,
+  IdeaOutcome,
+  IdeaStatus,
+  IdeaView,
+  NewsBlock,
+  Question,
+  QuestionKind,
+  ReviewBanner,
+  ReviewQueue,
+  TradeLinks,
+} from '../types/analysis'
+import { mockAnalysis } from './mockBackend'
+import type { AutoBackupDone, AutoBackupEntry, AutoBackupSaved, AutoBackupSettings, AutoBackupStatus, FolderCheck } from '../types/backupAuto'
+import { mockBackupAuto } from './mockBackend'
+import type { PropRules, PropRulesInput, PropStatus } from '../types/prop'
+import { mockProp } from './mockBackend'
+
+import type { CurrentPause, NewPause, Pause, PauseReport, PauseRow, PauseSettings, PauseSuggestion } from '../types/pause'
+import { mockPause } from './mockBackend'
+import type { NewProcessGoal, ProcessGoal, ProcessPeriodKind, ProcessProgress, ProcessProgressQuery } from '../types/processGoals'
+import { mockProcessGoals } from './mockBackend'
+import type { IntentionOutcome, ReviewDue, ReviewInput, ReviewIntention, ReviewQuery, ReviewReminderSettings, WeekStatus, WeeklyReview, WeeklyReviewView } from '../types/review'
+import { mockReview } from './mockBackend'
+import type { McpCall, McpInstallCommand, McpSettingsUpdate, McpStatus } from '../types/mcp'
+import { mockMcp } from './mockBackend'

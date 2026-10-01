@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { Tooltip } from './ui/Tooltip'
+import { Select } from './ui/Select'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
@@ -64,11 +66,11 @@ function AccountEditForm({ account: a, onDone }: { account: Account; onDone: () 
         </label>
         <label className={field}>
           <span className="caption">{t.settings.type}</span>
-          <select className="control h-[42px] px-3.5" value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
-            {Object.entries(t.settings.kinds).map(([k, l]) => (
-              <option key={k} value={k} className="bg-bg">{l}</option>
-            ))}
-          </select>
+          <Select
+            value={kind}
+            onChange={(v) => setKind(v as AccountKind)}
+            options={Object.entries(t.settings.kinds).map(([k, l]) => ({ value: k, label: l }))}
+          />
         </label>
         <label className={field}>
           <span className="caption">{t.settings.broker}</span>
@@ -116,7 +118,7 @@ function AccountEditForm({ account: a, onDone }: { account: Account; onDone: () 
   )
 }
 
-const link = 'text-[13px] font-medium text-tx-accent hover:underline'
+const link = 'btn-link !text-[13px]'
 
 /** Ligne d'un compte actif : modifier, archiver, supprimer (seulement s'il est vide). */
 export function AccountRow({ account: a }: { account: Account }) {
@@ -172,7 +174,9 @@ export function AccountRow({ account: a }: { account: Account }) {
           ) : (
             <>
               <button className={link} onClick={() => setEditing((v) => !v)}>{t.accountAdmin.edit}</button>
-              <button className={link} onClick={doArchive} title={t.accountAdmin.archiveHelp}>{t.accountAdmin.archive}</button>
+              <Tooltip content={t.accountAdmin.archiveHelp}>
+                <button className={link} onClick={doArchive}>{t.accountAdmin.archive}</button>
+              </Tooltip>
               {!a.hasHistory && (
                 <button className={link} onClick={() => setConfirming(true)}>{t.settings.delete}</button>
               )}

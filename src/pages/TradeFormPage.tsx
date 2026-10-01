@@ -1,22 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Tooltip } from '../components/ui/Tooltip'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { AssetPicker } from '../components/AssetPicker'
-import { Icon } from '../components/Icon'
+import { Select } from '../components/ui/Select'
 import { PageHeader } from '../components/PageHeader'
 import { PreviewPanel } from '../components/PreviewPanel'
 import { RulesPanel } from '../components/RulesPanel'
 import { ScreenshotDrop } from '../components/ScreenshotDrop'
+import { EmotionListPanel } from '../components/EmotionListPanel'
 import { TagChips } from '../components/TagChips'
-import { Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
+import { TradeAnalysisSection, type TradeLinksDraft } from '../components/analysis/TradeAnalysisSection'
+import { PauseFormPanel } from '../components/pause/PauseFormPanel'
+import { ChipButton, Field, InputWithSuffix, Notice, QualityBar, Segmented, StarRating, StepCard } from '../components/ui'
 import { useT } from '../i18n'
 import { useAccounts } from '../lib/accounts'
 import { api } from '../lib/api'
 import { isPositiveDecimal } from '../lib/decimal'
 import { formatDecimal } from '../lib/format'
 import { useReferenceData } from '../lib/referenceData'
+import { formEmotions } from '../lib/emotionList'
 import { buildTradeData, emptyForm, formFromTrade, toggleEmotion, type FormErrorCode, type TradeForm } from '../lib/tradeForm'
 import type { AssetClass, EmotionMoment, Instrument, Preview, TagKind } from '../types/trade'
+import { applyTradePrefill, type SizingSeed, type TradePrefill } from '../lib/sizingForm'
 
 const ASSET_CLASSES: AssetClass[] = ['forex', 'index', 'crypto', 'stock', 'commodity', 'future', 'other']
 const MOMENTS: EmotionMoment[] = ['before', 'during', 'after']
@@ -27,6 +33,8 @@ export function TradeFormPage() {
   const params = useParams()
   const editId = params.id ? Number(params.id) : null
   const [search, setSearch] = useSearchParams()
+  const location = useLocation()
+  const [prefilled, setPrefilled] = useState(false)
   const quick = search.get('mode') === 'quick'
   const { accounts, allAccounts, loading: accountsLoading, selectedId } = useAccounts()
   const ref = useReferenceData()
@@ -41,7 +49,10 @@ export function TradeFormPage() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewPending, setPreviewPending] = useState(false)
   const [newAsset, setNewAsset] = useState(false)
+  const [emotionPanelOpen, setEmotionPanelOpen] = useState(false)
   const slRef = useRef<HTMLInputElement>(null)
+  // Lot 31 : idées / analyses que ce trade suit (facultatif ; `null` = pas encore lus, rien n'est écrit).
+  const [links, setLinks] = useState<TradeLinksDraft | null>(null)
 
   const set = <K extends keyof TradeForm>(key: K, value: TradeForm[K]) => setForm((f) => (f ? { ...f, [key]: value } : f))
 
@@ -49,7 +60,12 @@ export function TradeFormPage() {
   useEffect(() => {
     if (ref.loading || accountsLoading || form) return
     if (editId === null) {
-      setForm(emptyForm(accounts.find((a) => a.id === selectedId)?.id ?? accounts[0]?.id ?? null, Date.now()))
+      const blank = emptyForm(accounts.find((a) => a.id === selectedId)?.id ?? accounts[0]?.id ?? null, Date.now())
+      // Lot 27 : « Utiliser dans un nouveau trade » depuis le calculateur de position (rien n'est enregistré).
+      const prefill = (location.state as { tradePrefill?: TradePrefill } | null)?.tradePrefill
+      const usable = prefill && accounts.some((a) => a.id === prefill.accountId) && ref.instruments.some((i) => i.id === prefill.instrumentId)
+      setPrefilled(!!usable)
+      setForm(usable ? applyTradePrefill(blank, prefill) : blank)
       return
     }
     api
@@ -150,6 +166,8 @@ export function TradeFormPage() {
     setSaving(true)
     try {
       const saved = editId === null ? await api.createTrade(built.data) : await api.updateTrade(editId, built.data)
+      // Lot 31 : le lien est enregistré avec le trade ; une erreur ici ne perd jamais le trade déjà enregistré.
+      if (links) await api.setTradeLinks(saved.id, links.ideaIds, links.analysisIds).catch(() => undefined)
       navigate(`/trades/${saved.id}`)
     } catch (e) {
       setSaveError(String(e).replace(/^Error: /, ''))
@@ -169,6 +187,8 @@ export function TradeFormPage() {
     onToggle: (id: number) => set(key, form[key] === id ? null : id),
   })
   const create = (kind: TagKind, name: string) => ref.addTag(kind, name)
+  // Ma liste + les émotions déjà cochées sur ce trade et retirées depuis (elles restent visibles).
+  const emotionChoices = formEmotions(ref.allTags, form.emotions.map((e) => e.tagId))
   const sessions = ref.tags.filter((g) => g.kind === 'session')
   const timeframes = ref.tags.filter((g) => g.kind === 'timeframe')
   const autoSession = !form.sessionManual && form.sessionTagId !== null
@@ -199,43 +219,41 @@ export function TradeFormPage() {
           />
         </Field>
         <Field label={t.form.fields.account} htmlFor="f-account" error={errorText('account')}>
-          <SelectBox id="f-account" value={form.accountId ?? ''} onChange={(v) => set('accountId', v === '' ? null : Number(v))}>
-            {(account?.archived ? [...accounts, account] : accounts).map((a) => (
-              <option key={a.id} value={a.id} className="bg-bg">{a.archived ? t.accountAdmin.archivedOption(a.name) : a.name}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="f-account"
+            value={form.accountId === null ? '' : String(form.accountId)}
+            onChange={(v) => set('accountId', v === '' ? null : Number(v))}
+            options={(account?.archived ? [...accounts, account] : accounts).map((a) => ({ value: String(a.id), label: a.archived ? t.accountAdmin.archivedOption(a.name) : a.name }))}
+          />
         </Field>
         <Field label={t.form.fields.entryTime} htmlFor="f-entry-time" error={errorText('entryTime')}>
           <input id="f-entry-time" type="datetime-local" className={`input !px-2 text-[12.5px] ${errorText('entryTime') ? 'input-error' : ''}`} value={form.entryTime} onChange={(e) => set('entryTime', e.target.value)} />
         </Field>
         <Field label={t.form.fields.session} htmlFor="f-session">
-          <div className="relative" title={t.form.autoHint}>
-            <select
-              id="f-session"
-              className={`input ${autoSession ? 'input-auto' : ''}`}
-              value={form.sessionTagId ?? ''}
-              onChange={(e) => setForm({ ...form, sessionTagId: e.target.value === '' ? null : Number(e.target.value), sessionManual: e.target.value !== '' })}
-            >
-              <option value="" className="bg-bg">{t.form.placeholders.select}</option>
-              {sessions.map((g) => (
-                <option key={g.id} value={g.id} className="bg-bg">{g.name}</option>
-              ))}
-            </select>
-            {autoSession && (
-              <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
-                {t.form.auto}
-              </span>
-            )}
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-          </div>
+          <Tooltip content={t.form.autoHint}>
+            <div className="relative">
+              <Select
+                id="f-session"
+                className={autoSession ? 'input-auto !pr-16' : ''}
+                value={form.sessionTagId === null ? '' : String(form.sessionTagId)}
+                onChange={(v) => setForm({ ...form, sessionTagId: v === '' ? null : Number(v), sessionManual: v !== '' })}
+                options={[{ value: '', label: t.form.placeholders.select }, ...sessions.map((g) => ({ value: String(g.id), label: g.name }))]}
+              />
+              {autoSession && (
+                <span className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded-full bg-violet/20 px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-tx-accent">
+                  {t.form.auto}
+                </span>
+              )}
+            </div>
+          </Tooltip>
         </Field>
         <Field label={t.form.fields.timeframe} htmlFor="f-timeframe">
-          <SelectBox id="f-timeframe" value={form.timeframeTagId ?? ''} onChange={(v) => set('timeframeTagId', v === '' ? null : Number(v))}>
-            <option value="" className="bg-bg">{t.form.placeholders.select}</option>
-            {timeframes.map((g) => (
-              <option key={g.id} value={g.id} className="bg-bg">{g.name}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="f-timeframe"
+            value={form.timeframeTagId === null ? '' : String(form.timeframeTagId)}
+            onChange={(v) => set('timeframeTagId', v === '' ? null : Number(v))}
+            options={[{ value: '', label: t.form.placeholders.select }, ...timeframes.map((g) => ({ value: String(g.id), label: g.name }))]}
+          />
         </Field>
       </div>
       {newAsset && (
@@ -276,6 +294,18 @@ export function TradeFormPage() {
           />
         </Field>
         <p className="text-xs text-tx3 sm:col-span-2 sm:self-end sm:pb-3">{t.form.multiplierHelp}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Tooltip content={t.sizing.linkHint}>
+          <Link
+            to="/sizing"
+            state={{ sizingSeed: { accountId: form.accountId, instrumentId: form.instrumentId, direction: form.direction, entry: form.entryPrice, stop: form.plannedSl, takeProfit: form.plannedTp, multiplier: form.multiplier } satisfies SizingSeed }}
+            className="btn-link"
+          >
+            {t.sizing.link}
+          </Link>
+        </Tooltip>
+        {prefilled && <span className="text-xs text-tx-accent">{t.sizing.prefilled}</span>}
       </div>
     </StepCard>
   )
@@ -331,16 +361,37 @@ export function TradeFormPage() {
       </Field>
       {MOMENTS.map((m) => (
         <Field key={m} label={t.form.fields[m === 'before' ? 'emotionBefore' : m === 'during' ? 'emotionDuring' : 'emotionAfter']}>
-          <TagChips
-            kind="emotion"
-            label={t.common.moments[m]}
-            tags={ref.tags}
-            onCreate={create}
-            isOn={(id) => form.emotions.some((e) => e.moment === m && e.tagId === id)}
-            onToggle={(id) => set('emotions', toggleEmotion(form.emotions, m, id))}
-          />
+          <div role="group" aria-label={t.common.moments[m]} className="flex flex-wrap gap-2">
+            {emotionChoices.map(({ tag, removed }) => (
+              <ChipButton
+                key={tag.id}
+                on={form.emotions.some((e) => e.moment === m && e.tagId === tag.id)}
+                onClick={() => set('emotions', toggleEmotion(form.emotions, m, tag.id))}
+              >
+                {tag.name}
+                {removed && (
+                  <Tooltip content={t.emotions.removedHint} focusable>
+                    <span className="ml-1.5 text-[11px] text-tx3">({t.emotions.removedFromList})</span>
+                  </Tooltip>
+                )}
+              </ChipButton>
+            ))}
+            {emotionChoices.length === 0 && <span className="text-[13px] text-tx3">{t.emotions.empty}</span>}
+          </div>
         </Field>
       ))}
+      <div className="flex flex-col gap-3">
+        <div>
+          <button type="button" className="btn btn-secondary btn-sm" aria-expanded={emotionPanelOpen} onClick={() => setEmotionPanelOpen((o) => !o)}>
+            {emotionPanelOpen ? t.emotions.hideManage : t.emotions.addButton}
+          </button>
+        </div>
+        {emotionPanelOpen && (
+          <div className="rounded-inner border p-4" style={{ borderColor: 'var(--glass-border)' }}>
+            <EmotionListPanel tags={ref.allTags} onAdd={ref.addEmotion} onRemove={ref.removeEmotion} onDelete={ref.deleteEmotion} catalogOpenAtStart />
+          </div>
+        )}
+      </div>
       <Field label={t.form.fields.planFollowed}>
         <div className="max-w-[420px]">
           <Segmented
@@ -418,6 +469,8 @@ export function TradeFormPage() {
         }
       />
 
+      <TradeAnalysisSection instrumentId={form.instrumentId} editingTradeId={editId} links={links} onLinks={setLinks} />
+
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid items-start gap-5">
           <div className="flex flex-col gap-5">
@@ -434,6 +487,7 @@ export function TradeFormPage() {
         </div>
 
         <aside className="flex flex-col gap-4">
+          {editId === null && <PauseFormPanel />}
           <PreviewPanel preview={preview} currency={currency} pending={previewPending} error={previewError} />
 
           {preview?.stopLoss === 'invalid' && <Notice level="bad">{t.form.notices.badStop}</Notice>}
@@ -482,29 +536,6 @@ export function TradeFormPage() {
         </aside>
       </div>
     </form>
-  )
-}
-
-function SelectBox({
-  id,
-  value,
-  onChange,
-  children,
-  error = false,
-}: {
-  id: string
-  value: string | number
-  onChange: (v: string) => void
-  children: React.ReactNode
-  error?: boolean
-}) {
-  return (
-    <div className="relative">
-      <select id={id} className={`input ${error ? 'input-error' : ''}`} value={value} onChange={(e) => onChange(e.target.value)}>
-        {children}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-tx3"><Icon name="chevron" size={16} /></span>
-    </div>
   )
 }
 
@@ -582,11 +613,12 @@ function NewInstrumentForm({
           <input id="ni-name" className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t.form.instrumentClass} htmlFor="ni-class">
-          <SelectBox id="ni-class" value={assetClass} onChange={(v) => setAssetClass(v as AssetClass)}>
-            {ASSET_CLASSES.map((c) => (
-              <option key={c} value={c} className="bg-bg">{t.common.assetClasses[c]}</option>
-            ))}
-          </SelectBox>
+          <Select
+            id="ni-class"
+            value={assetClass}
+            onChange={(v) => setAssetClass(v as AssetClass)}
+            options={ASSET_CLASSES.map((c) => ({ value: c, label: t.common.assetClasses[c] }))}
+          />
         </Field>
         <Field label={t.form.instrumentMultiplier} htmlFor="ni-mult">
           <input id="ni-mult" className="input" inputMode="decimal" value={multiplier} onChange={(e) => setMultiplier(e.target.value)} />

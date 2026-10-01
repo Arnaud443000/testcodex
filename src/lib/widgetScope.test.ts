@@ -47,3 +47,26 @@ describe('resolveScope', () => {
     expect(week.to! - week.from!).toBe(7 * 86_400_000)
   })
 })
+
+describe('resolveScope avec la portée du dashboard (calculée par pulse-core)', () => {
+  const ws = (over: Partial<import('../types/dashboardLayout').WidgetScope>): import('../types/dashboardLayout').WidgetScope => ({
+    uid: 'w', source: 'dashboard', accountIds: [2], accounts: [{ id: 2, name: 'Compte 2', currency: 'USD', archived: false }], currency: 'USD', mixedCurrency: false, accountMissing: false, ...over,
+  })
+
+  it('reprend les comptes calculés, sans toucher à la période', () => {
+    const s = resolveScope({ uid: 'w', period: '1W', accountId: null }, env({ selectedId: 1, resolved: { w: ws({}) } }))
+    expect(s).toMatchObject({ accountIds: [2], period: '1W', source: 'dashboard', ownAccountName: null, mixed: false })
+    expect(s.chosen.map((a) => a.id)).toEqual([2])
+  })
+
+  it('nomme le compte seulement quand il est propre au widget, et relaie devises mélangées / compte absent', () => {
+    expect(resolveScope({ uid: 'w', period: null, accountId: 2 }, env({ resolved: { w: ws({ source: 'widget' }) } })).ownAccountName).toBe('Compte 2')
+    const mixed = resolveScope({ uid: 'w', period: null, accountId: null }, env({ resolved: { w: ws({ accountIds: [], accounts: [], mixedCurrency: true }) } }))
+    expect(mixed.mixed).toBe(true)
+    expect(resolveScope({ uid: 'w', period: null, accountId: 9 }, env({ resolved: { w: ws({ source: 'widget', accountMissing: true, accounts: [] }) } })).accountMissing).toBe(true)
+  })
+
+  it('sans entrée pour ce widget : comportement d’avant (le widget, puis la barre du haut)', () => {
+    expect(resolveScope({ uid: 'x', period: null, accountId: null }, env({ selectedId: 2, resolved: {} })).source).toBe('topBar')
+  })
+})

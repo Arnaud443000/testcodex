@@ -1,0 +1,10 @@
+[package]
+name = "pulse-news"
+version = "0.1.0"
+edition = "2024"
+description = "Pulse: optional economic calendar fetch (lot 25), the only network code besides the AI"
+
+[dependencies]
+pulse-core = { path = "../pulse-core" }
+# Same HTTPS stack as pulse-ai (rustls with ring and the bundled Mozilla roots): no OpenSSL, nothing new to compile.
+ureq = { version = "3", default-features = false, features = ["rustls"] }
