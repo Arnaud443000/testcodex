@@ -660,6 +660,7 @@ pub fn run() {
             mcp_cmds::maybe_autostart(app.handle());
             mcp_cmds::spawn_expiry_loop(app.handle().clone());
             spawn_reminder_loop(app.handle().clone());
+            spawn_review_reminder_loop(app.handle().clone());
             lock_cmds::spawn_idle_loop(app.handle().clone());
             // Lot 32: scheduled automatic backup (checks at startup, then every 30 minutes).
             app.manage(AutoBackupState::default());
@@ -885,6 +886,17 @@ pub fn run() {
             delete_process_goal,
             copy_process_goals,
             get_process_goal_progress,
+            get_weekly_review,
+            save_weekly_review,
+            complete_weekly_review,
+            delete_weekly_review,
+            list_weekly_reviews,
+            set_intention_outcome,
+            get_weekly_review_status,
+            get_review_reminder,
+            set_review_reminder,
+            get_review_reminder_pending,
+            dismiss_review_reminder,
             mcp_cmds::get_mcp_status,
             mcp_cmds::set_mcp_settings,
             mcp_cmds::enable_mcp,
@@ -2158,4 +2170,119 @@ fn copy_process_goals(state: State<AppState>, period_kind: PeriodKind, period_ke
 fn get_process_goal_progress(state: State<AppState>, query: process_goals::ProgressQuery) -> Result<ProcessProgress, String> {
     let conn = state.conn()?;
     process_goals::progress(&conn, &query).map_err(err)
+}
+
+// --- Lot 36 : bilan hebdomadaire (faits de la semaine, trois questions, intentions, rappel du dimanche) ---
+
+use pulse_core::weekly_review::{self, Intention, IntentionOutcome, ReviewInput, ReviewQuery, WeekStatus, WeeklyReview, WeeklyReviewView};
+use std::collections::BTreeMap;
+
+/// Offset of the system time zone at local midnight of the two days that bound a week (its first day and
+/// the day after its last), for the weeks that cross a daylight-saving change; pulse-core has no zone
+/// database, so the shell reads them here. A midnight that does not exist (a gap) is left out.
+fn week_boundary_offsets(period_key: &str) -> BTreeMap<String, i32> {
+    use chrono::{Local, NaiveDate, Offset, TimeZone};
+    let mut offsets = BTreeMap::new();
+    let Ok((first, after)) = weekly_review::bound_days(period_key) else { return offsets };
+    for day in [first, after] {
+        let Ok(date) = NaiveDate::parse_from_str(&day, "%Y-%m-%d") else { continue };
+        let Some(midnight) = date.and_hms_opt(0, 0, 0).and_then(|t| Local.from_local_datetime(&t).earliest()) else { continue };
+        offsets.insert(day, midnight.offset().fix().local_minus_utc() / 60);
+    }
+    offsets
+}
+
+/// The facts of a week, the saved review, last week's intentions and the streak.
+#[tauri::command]
+fn get_weekly_review(state: State<AppState>, query: ReviewQuery) -> Result<WeeklyReviewView, String> {
+    let conn = state.conn()?;
+    weekly_review::get(&conn, &query).map_err(err)
+}
+
+/// Saves the review as a draft. An entirely empty review is refused (`review:empty`) and writes nothing.
+#[tauri::command]
+fn save_weekly_review(state: State<AppState>, input: ReviewInput, tz_offset_min: i32) -> Result<WeeklyReview, String> {
+    let conn = state.conn()?;
+    weekly_review::save(&conn, &input, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn complete_weekly_review(state: State<AppState>, period_key: String) -> Result<WeeklyReview, String> {
+    let conn = state.conn()?;
+    weekly_review::complete(&conn, &period_key, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn delete_weekly_review(state: State<AppState>, period_key: String) -> Result<bool, String> {
+    let conn = state.conn()?;
+    weekly_review::delete(&conn, &period_key).map_err(err)
+}
+
+#[tauri::command]
+fn list_weekly_reviews(state: State<AppState>, limit: Option<u32>) -> Result<Vec<WeeklyReview>, String> {
+    let conn = state.conn()?;
+    weekly_review::list(&conn, limit.unwrap_or(weekly_review::MAX_LIST)).map_err(err)
+}
+
+/// « Tenue » / « En partie » / « Pas tenue » ; `null` = « Je ne sais pas » (not evaluated).
+#[tauri::command]
+fn set_intention_outcome(state: State<AppState>, intention_id: i64, outcome: Option<IntentionOutcome>) -> Result<Intention, String> {
+    let conn = state.conn()?;
+    weekly_review::set_intention_outcome(&conn, intention_id, outcome, now_ms()).map_err(err)
+}
+
+/// Where the running week stands (widget): no fact is computed.
+#[tauri::command]
+fn get_weekly_review_status(state: State<AppState>, tz_offset_min: i32) -> Result<WeekStatus, String> {
+    let conn = state.conn()?;
+    weekly_review::status(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn get_review_reminder(state: State<AppState>) -> Result<weekly_review::ReminderSettings, String> {
+    let conn = state.conn()?;
+    weekly_review::reminder_settings(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_review_reminder(state: State<AppState>, settings: weekly_review::ReminderSettings) -> Result<weekly_review::ReminderSettings, String> {
+    let conn = state.conn()?;
+    weekly_review::set_reminder_settings(&conn, &settings).map_err(err)
+}
+
+/// For the in-app banner: the Sunday reminder was armed this week, was not put off, and the review is not done.
+#[tauri::command]
+fn get_review_reminder_pending(state: State<AppState>, tz_offset_min: i32) -> Result<Option<weekly_review::Due>, String> {
+    let conn = state.conn()?;
+    let offsets = week_boundary_offsets(&weekly_review::current_week_key(now_ms(), tz_offset_min));
+    weekly_review::reminder_pending(&conn, now_ms(), tz_offset_min, &offsets).map_err(err)
+}
+
+/// « Plus tard » : the banner is silent for the rest of the week.
+#[tauri::command]
+fn dismiss_review_reminder(state: State<AppState>, tz_offset_min: i32) -> Result<(), String> {
+    let conn = state.conn()?;
+    weekly_review::reminder_dismiss(&conn, now_ms(), tz_offset_min).map_err(err)
+}
+
+/// Every minute, asks pulse-core whether the Sunday reminder is due and arms the in-app banner. There is no
+/// system notification: the banner is the reminder. Locked: nothing is read, it waits for the password.
+fn spawn_review_reminder_loop(app: tauri::AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        let tz = local_tz_offset_min();
+        let state = app.state::<AppState>();
+        let Ok(conn) = state.conn() else { continue };
+        let now = now_ms();
+        let offsets = week_boundary_offsets(&weekly_review::current_week_key(now, tz));
+        match weekly_review::reminder_check(&conn, now, tz, &offsets) {
+            Ok(Some(due)) => {
+                if let Err(e) = weekly_review::reminder_mark_sent(&conn, &due.period_key) {
+                    eprintln!("Pulse: could not arm the weekly review reminder: {e}");
+                }
+            }
+            Ok(None) => {}
+            Err(e) => eprintln!("Pulse: weekly review reminder check failed: {e}"),
+        }
+    });
 }

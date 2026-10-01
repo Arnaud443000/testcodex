@@ -34,6 +34,9 @@ import type { ProcessPeriodKind } from '../../types/processGoals'
 import { ProcessStatusBadge } from '../goals/ProcessGoals'
 import { goalSentence, valueText } from '../../lib/processGoalsView'
 import { boundaryOffsets, currentPeriodKey } from '../../lib/processPeriods'
+import { shortDate, stateLook, weekNumber } from '../../lib/reviewView'
+import { IntentionBadge } from '../review/LastWeekCard'
+import { Icon } from '../Icon'
 
 /**
  * La bibliothèque de widgets (cahier 3.8.3). Un widget ne calcule rien : il choisit une commande qui existe déjà
@@ -419,6 +422,52 @@ function ProcessGoalsWidget({ scope, instance }: WidgetProps) {
   )
 }
 
+/**
+ * Bilan hebdomadaire (lot 36) : où en est le bilan de la semaine en cours (à faire / brouillon / fait) et les intentions
+ * en cours, avec un lien vers la page. Aucun fait n'est calculé ici (la commande ne lit que le bilan), donc ni compte ni
+ * période propres : les devises mélangées ne le concernent pas.
+ */
+function WeeklyReviewWidget({ scope }: WidgetProps) {
+  const t = useT()
+  const r = t.review
+  const title = useTitle('weekly_review')
+  const { data, error } = useCached(`weekly-review-status|${scope.tzOffsetMin}|${Math.floor(scope.nowMs / 60_000)}`, () => api.getWeeklyReviewStatus(scope.tzOffsetMin))
+  if (error) return <Failed title={title} detail={error} />
+  if (!data) return <Pending title={title} />
+  const look = stateLook(data.state)
+  return (
+    <FitCard>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="min-w-0">
+          <h3 className="whitespace-nowrap text-base font-semibold">{title}</h3>
+          <p className="fit-optional text-xs text-tx3">{r.widget.subtitle(shortDate(data.firstDay), shortDate(data.lastDay))}</p>
+        </div>
+        <span className={`badge badge-icon whitespace-nowrap ${look.badge}`} data-review-state={data.state} aria-label={`${r.widget.statusLabel} : ${r.states[data.state]}`}>
+          <Icon name={look.icon} size={13} />
+          {r.states[data.state]}
+        </span>
+      </div>
+      <div className="mb-2">
+        <p className="caption">{r.widget.intentionsTitle}</p>
+        {data.intentionsFrom && <p className="fit-optional text-xs text-tx3">{r.widget.intentionsFrom(weekNumber(data.intentionsFrom))}</p>}
+      </div>
+      {data.intentions.length === 0 ? (
+        <p className="text-sm text-tx2">{r.widget.noIntentions}</p>
+      ) : (
+        <FitList moreTo="/review" className="flex flex-col gap-2">
+          {data.intentions.map((i) => (
+            <li key={i.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
+              <span className="min-w-0 flex-1 basis-[140px]">{i.text}</span>
+              {i.outcome !== null && <IntentionBadge outcome={i.outcome} />}
+            </li>
+          ))}
+        </FitList>
+      )}
+      <Link to="/review" className="btn btn-secondary btn-sm mt-3 self-start whitespace-nowrap">{r.widget.open[data.state]}</Link>
+    </FitCard>
+  )
+}
+
 /** Correspondance `kind` → composant. La bibliothèque de pulse-core décide de ce qui peut être enregistré. */
 export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   net_pnl_equity: NetPnlEquity,
@@ -446,6 +495,7 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   ideas: IdeasWidget,
   prop_firm: PropFirmWidget,
   process_goals: ProcessGoalsWidget,
+  weekly_review: WeeklyReviewWidget,
 }
 
 /**

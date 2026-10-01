@@ -47,6 +47,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/behavior', key: 'behavior', icon: 'behavior' },
       { to: '/discipline', key: 'discipline', icon: 'discipline' },
       { to: '/insights', key: 'insights', icon: 'insights' },
+      // Lot 36 : bilan hebdomadaire.
+      { to: '/review', key: 'review', icon: 'review' },
       { to: '/coach', key: 'coach', icon: 'coach' },
     ],
   },

@@ -567,6 +567,34 @@ export const api = {
   getProcessGoalProgress: (query: ProcessProgressQuery): Promise<ProcessProgress> =>
     inTauri ? invoke('get_process_goal_progress', { query }) : mockProcessGoals.getProcessGoalProgress(query),
 
+  // --- Lot 36 : bilan hebdomadaire (faits calculés par pulse-core ; le texte libre ne va nulle part ailleurs ; verrouillé : `lock:locked`) ---
+  getWeeklyReview: (query: ReviewQuery): Promise<WeeklyReviewView> =>
+    inTauri ? invoke('get_weekly_review', { query }) : mockReview.getWeeklyReview(query),
+  /** Enregistre en brouillon. Un bilan entièrement vide est refusé (`review:empty`) et ne laisse rien. */
+  saveWeeklyReview: (input: ReviewInput, tzOffsetMin: number): Promise<WeeklyReview> =>
+    inTauri ? invoke('save_weekly_review', { input, tzOffsetMin }) : mockReview.saveWeeklyReview(input, tzOffsetMin),
+  completeWeeklyReview: (periodKey: string): Promise<WeeklyReview> =>
+    inTauri ? invoke('complete_weekly_review', { periodKey }) : mockReview.completeWeeklyReview(periodKey),
+  deleteWeeklyReview: (periodKey: string): Promise<boolean> =>
+    inTauri ? invoke('delete_weekly_review', { periodKey }) : mockReview.deleteWeeklyReview(periodKey),
+  listWeeklyReviews: (limit?: number): Promise<WeeklyReview[]> =>
+    inTauri ? invoke('list_weekly_reviews', { limit: limit ?? null }) : mockReview.listWeeklyReviews(limit),
+  /** « Tenue » / « En partie » / « Pas tenue » ; `null` = « Je ne sais pas » (non évaluée). */
+  setIntentionOutcome: (intentionId: number, outcome: IntentionOutcome | null): Promise<ReviewIntention> =>
+    inTauri ? invoke('set_intention_outcome', { intentionId, outcome }) : mockReview.setIntentionOutcome(intentionId, outcome),
+  /** Où en est la semaine en cours (widget) : aucun fait n'est calculé. */
+  getWeeklyReviewStatus: (tzOffsetMin: number): Promise<WeekStatus> =>
+    inTauri ? invoke('get_weekly_review_status', { tzOffsetMin }) : mockReview.getWeeklyReviewStatus(tzOffsetMin),
+  getReviewReminder: (): Promise<ReviewReminderSettings> => (inTauri ? invoke('get_review_reminder') : mockReview.getReviewReminder()),
+  setReviewReminder: (settings: ReviewReminderSettings): Promise<ReviewReminderSettings> =>
+    inTauri ? invoke('set_review_reminder', { settings }) : mockReview.setReviewReminder(settings),
+  /** Bannière du dimanche : armée cette semaine, pas repoussée, bilan non terminé. */
+  getReviewReminderPending: (tzOffsetMin: number): Promise<ReviewDue | null> =>
+    inTauri ? invoke('get_review_reminder_pending', { tzOffsetMin }) : mockReview.getReviewReminderPending(tzOffsetMin),
+  /** « Plus tard » : la bannière se tait pour le reste de la semaine. */
+  dismissReviewReminder: (tzOffsetMin: number): Promise<void> =>
+    inTauri ? invoke('dismiss_review_reminder', { tzOffsetMin }) : mockReview.dismissReviewReminder(tzOffsetMin),
+
   // --- Lot 24 : carte de trade (3.7.7) ---
   /** R, rendement en % et P&L net d'un trade (jamais un solde), calculés par pulse-core. */
   getTradeCardFigures: (tradeId: number): Promise<TradeCardFigures> =>
@@ -754,5 +782,7 @@ import type { CurrentPause, NewPause, Pause, PauseReport, PauseRow, PauseSetting
 import { mockPause } from './mockBackend'
 import type { NewProcessGoal, ProcessGoal, ProcessPeriodKind, ProcessProgress, ProcessProgressQuery } from '../types/processGoals'
 import { mockProcessGoals } from './mockBackend'
+import type { IntentionOutcome, ReviewDue, ReviewInput, ReviewIntention, ReviewQuery, ReviewReminderSettings, WeekStatus, WeeklyReview, WeeklyReviewView } from '../types/review'
+import { mockReview } from './mockBackend'
 import type { McpCall, McpInstallCommand, McpSettingsUpdate, McpStatus } from '../types/mcp'
 import { mockMcp } from './mockBackend'

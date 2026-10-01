@@ -730,3 +730,8 @@ export function mockPauseReport(input: BehaviorInput, q: StatsQuery, pauses: Pau
     discipline: compare(during.disciplineScore, others.disciplineScore, enough, 10),
   }
 }
+
+/** Résumé des trades clôturés de la période (lot 36, bilan hebdomadaire) : le même `summarize` que les autres rapports. */
+export function mockPeriodSummary(input: BehaviorInput, q: StatsQuery): Summary {
+  return summarize(selected(input, q).map(asMock))
+}

@@ -30,6 +30,16 @@ for (const [w, h] of [[1280, 720], [1440, 900], [1920, 1080]]) {
   await installSeed(page)
   await page.goto(`${url}/#/`)
   await page.waitForTimeout(2500)
+  // Lot 36 : le widget « Bilan hebdomadaire » est mesuré avec trois intentions en cours (le cas le plus chargé).
+  await page.evaluate(async () => {
+    const { mockReview } = await import('/src/lib/mockBackend.ts')
+    const { currentPeriodKey, shiftPeriod } = await import('/src/lib/processPeriods.ts')
+    const key = shiftPeriod('week', currentPeriodKey('week', Date.now(), -new Date().getTimezoneOffset()), -1)
+    const answers = { wentWell: 'Mes stops.', doDifferently: '', nextPriority: '' }
+    mockReview.seed({ periodKey: key, createdAt: Date.now(), updatedAt: Date.now(), completedAt: null, answers, intentions: [
+      { text: 'Un stop sur chaque trade, sans exception', outcome: 'kept' }, { text: 'Pas de trade après deux pertes de suite', outcome: 'partly' }, { text: 'Écrire mon journal chaque soir', outcome: null },
+    ] })
+  })
   const keys = await page.evaluate(async (withMin) => {
     const { api } = await import('/src/lib/api.ts')
     const cat = await api.listWidgetCatalog()

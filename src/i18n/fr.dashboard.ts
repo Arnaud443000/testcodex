@@ -35,6 +35,7 @@ export const frDashboardBuilder = {
     insights: widget('Insights', 'Les tendances, points forts et suggestions à retenir (20 derniers trades, 90 derniers jours).'),
     ideas: widget('Idées à surveiller', 'Combien d’idées sont actives, combien attendent votre revue du matin, et les plus anciennes.'),
     process_goals: widget('Objectifs de comportement', 'Vos objectifs de processus de la semaine ou du mois : valeur, cible, statut et série.'),
+    weekly_review: widget('Bilan hebdomadaire', 'L’état du bilan de la semaine (à faire, brouillon, fait) et vos intentions en cours.'),
     upcoming_news: widget('Prochaines news', 'Les prochaines annonces du calendrier économique, en heure de Paris, avec le temps restant.'),
     prop_firm: widget('Prop firm', 'Ce qu’il reste avant la perte du jour, la perte maximale et l’objectif d’un compte prop (trades clôturés seulement).'),
   } as Record<string, { title: string; description: string }>,

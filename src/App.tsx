@@ -6,6 +6,8 @@ import { PeriodProvider } from './lib/period'
 import { ReminderBanner } from './components/ReminderBanner'
 import { AlertBanner } from './components/AlertBanner'
 import { ReviewBanner } from './components/ReviewBanner'
+import { WeeklyReviewBanner } from './components/WeeklyReviewBanner'
+import { ReviewPage } from './pages/ReviewPage'
 import { AnalysisPage } from './pages/AnalysisPage'
 import { AutoBackupBanner } from './components/AutoBackupBanner'
 import { InsightsProvider } from './lib/insights'
@@ -93,6 +95,7 @@ export default function App() {
               <PauseSuggestionBanner />
               <ReminderBanner />
               <ReviewBanner />
+              <WeeklyReviewBanner />
               <AutoBackupBanner />
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
@@ -116,6 +119,7 @@ export default function App() {
                 <Route path="/coach" element={<CoachPage />} />
                 <Route path="/sizing" element={<SizingPage />} />
                 <Route path="/prop" element={<PropPage />} />
+                <Route path="/review" element={<ReviewPage />} />
               </Routes>
               </div>
             </ScrollArea>

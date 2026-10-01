@@ -71,6 +71,8 @@ const LIBRARY: WidgetDefinition[] = [
   def('prop_firm', 'tracking', [10, 16], [8, 12], [], false, true),
   // Objectifs de comportement (lot 34) : le mode est la période des objectifs (semaine ou mois en cours).
   def('process_goals', 'tracking', [10, 14], [8, 10], ['week', 'month'], false, true),
+  // Bilan hebdomadaire (lot 36) : état du bilan de la semaine en cours et intentions en cours ; ni compte ni période.
+  def('weekly_review', 'tracking', [10, 12], [8, 9], [], false, false),
 ]
 
 const w = (uid: string, kind: string, x: number, y: number, wd: number, h: number, mode: string | null = null): WidgetInstance => ({

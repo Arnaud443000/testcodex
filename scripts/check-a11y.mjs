@@ -39,7 +39,7 @@ check((await page.locator('aside [aria-current="page"]').innerText()).includes('
 
 // Boutons-icônes nommés (toutes les pages principales)
 let unnamed = []
-for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar', '/prop', '/goals?type=process']) {
+for (const route of ['/', '/trades', '/settings', `/trades/${tradeId}`, '/journal', '/calendar', '/prop', '/goals?type=process', '/review']) {
   await page.evaluate((h) => { location.hash = h }, route)
   await page.waitForTimeout(500)
   unnamed.push(...(await page.evaluate(() => [...document.querySelectorAll('button, a[href]')].filter((el) => el.getBoundingClientRect().width > 0 && !(el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim())).map((el) => el.outerHTML.slice(0, 90)))))
@@ -111,6 +111,66 @@ check((await page.evaluate(() => document.activeElement?.id)) === 'process-goal-
 await page.keyboard.press('Escape')
 await page.waitForTimeout(300)
 check((await page.locator('[role=dialog]').count()) === 0, 'objectif de comportement : Échap ferme la boîte de modification')
+
+
+// Lot 36 : bilan hebdomadaire (aucune boîte de dialogue : une page, une bannière, une confirmation en ligne).
+await page.evaluate((h) => { location.hash = h }, '/review')
+await page.waitForTimeout(800)
+check((await page.locator('h1').count()) === 1, 'bilan : un seul titre de page (h1)')
+const unlabelled = await page.evaluate(() => [...document.querySelectorAll('[data-testid="review-page"] input, [data-testid="review-page"] textarea')].filter((el) => !(el.getAttribute('aria-label') || (el.id && document.querySelector(`label[for="${el.id}"]`)))).map((el) => el.outerHTML.slice(0, 80)))
+check(unlabelled.length === 0, `bilan : chaque champ de saisie a une étiquette${unlabelled.length ? ' : ' + unlabelled[0] : ''}`)
+check((await page.locator('[data-testid="review-page"] form form').count()) === 0 && (await page.locator('[data-testid="review-page"] form').count()) === 1, 'bilan : un seul <form>, aucun imbriqué')
+check((await page.locator('[data-testid="review-form"] button:not([type])').count()) === 0, 'bilan : tous les boutons du formulaire ont un type explicite')
+const submits = await page.locator('[data-testid="review-form"] button[type=submit]').count()
+check(submits === 1, 'bilan : un seul bouton d’envoi (« Enregistrer le brouillon »)')
+const stateBadge = await page.locator('[data-review-state]').first().evaluate((el) => ({ text: el.textContent.trim(), icon: !!el.querySelector('svg') }))
+check(stateBadge.text.length > 0 && stateBadge.icon, 'bilan : l’état (à faire / brouillon / fait) a un texte et une icône')
+// Un bilan vide n'est pas envoyable ; Entrée dans un champ d'intention enregistre le brouillon (c'est l'envoi voulu).
+check(await page.getByRole('button', { name: 'Terminer le bilan' }).isDisabled(), 'bilan : « Terminer le bilan » est grisé tant que rien n’est écrit')
+await page.getByLabel('Intention 1', { exact: true }).fill('Un stop sur chaque trade')
+await page.getByLabel('Intention 1', { exact: true }).press('Enter')
+await page.waitForTimeout(500)
+check((await page.getByRole('status').filter({ hasText: 'Brouillon enregistré.' }).count()) === 1, 'bilan : Entrée dans le champ d’intention enregistre le brouillon, annoncé dans une zone de statut')
+// Suivi des intentions de la semaine d'avant : groupes nommés, aria-pressed, texte + icône.
+await page.evaluate(async () => {
+  const { mockReview } = await import('/src/lib/mockBackend.ts')
+  const { currentPeriodKey, shiftPeriod } = await import('/src/lib/processPeriods.ts')
+  const key = shiftPeriod('week', currentPeriodKey('week', Date.now(), -new Date().getTimezoneOffset()), -1)
+  mockReview.seed({ periodKey: key, createdAt: Date.now(), updatedAt: Date.now(), completedAt: Date.now(), answers: { wentWell: 'x', doDifferently: '', nextPriority: '' }, intentions: [{ text: 'Un stop partout', outcome: null }] })
+})
+await page.evaluate((h) => { location.hash = h }, '/review?week=0000-W01')
+await page.evaluate((h) => { location.hash = h }, '/review')
+await page.waitForTimeout(800)
+const group = page.getByRole('group', { name: /Où en est l’intention/ })
+check((await group.count()) === 1 && (await group.getByRole('button').count()) === 3, 'bilan : le suivi d’une intention est un groupe nommé de trois boutons')
+await group.getByRole('button', { name: 'En partie' }).focus()
+await page.keyboard.press('Enter')
+await page.waitForTimeout(400)
+check((await group.getByRole('button', { name: 'En partie' }).getAttribute('aria-pressed')) === 'true', 'bilan : le choix du suivi se fait au clavier (aria-pressed)')
+const outcomes = await page.locator('[data-outcome]').evaluateAll((els) => els.map((e) => ({ text: e.textContent.trim(), icon: !!e.querySelector('svg') })))
+check(outcomes.length > 0 && outcomes.every((o) => o.text && o.icon), 'bilan : chaque suivi d’intention a un texte et une icône (jamais la couleur seule)')
+// Bannière du dimanche : dans le flux (jamais fixe), deux boutons nommés.
+await page.evaluate(async () => {
+  const { mockReview } = await import('/src/lib/mockBackend.ts')
+  const d = new Date()
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 1 + 0)
+  mockReview.setClock(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 18, 30).getTime())
+  mockReview.reset()
+  mockReview.setClock(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 18, 30).getTime())
+})
+await page.evaluate((h) => { location.hash = h }, '/journal')
+await page.waitForTimeout(900)
+const banner = page.getByTestId('weekly-review-banner')
+if ((await banner.count()) === 1) {
+  check((await banner.evaluate((el) => !['fixed', 'sticky'].includes(getComputedStyle(el).position) && !['fixed', 'sticky'].includes(getComputedStyle(el.firstElementChild).position))), 'bannière du bilan : dans le flux de la page (ni fixe ni collante)')
+  check((await banner.getByRole('link', { name: 'Faire le bilan' }).count()) === 1 && (await banner.getByRole('button', { name: 'Plus tard' }).count()) === 1, 'bannière du bilan : « Faire le bilan » et « Plus tard »')
+  await banner.getByRole('button', { name: 'Plus tard' }).click()
+  await page.waitForTimeout(400)
+  check((await page.getByTestId('weekly-review-banner').count()) === 0, 'bannière du bilan : « Plus tard » la fait disparaître')
+} else {
+  check(false, 'bannière du bilan : visible le dimanche à 18:30 (la semaine précédente a des trades clôturés)')
+}
+await page.evaluate(async () => (await import('/src/lib/mockBackend.ts')).mockReview.setClock(null))
 
 await browser.close()
 if (server) server.kill()

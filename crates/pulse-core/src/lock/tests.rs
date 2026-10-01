@@ -599,3 +599,37 @@ fn the_process_goals_migration_runs_on_an_encrypted_database_and_keeps_the_resul
     let kept = crate::process_goals::list(again.conn(), crate::process_goals::PeriodKind::Week, "2026-W38").unwrap();
     assert_eq!(kept.len(), 1, "written back encrypted");
 }
+
+#[test]
+fn the_weekly_review_migration_runs_on_an_encrypted_database_and_the_review_is_written_back_encrypted() {
+    // Lot 36: encrypted one version before `weekly_reviews`, with data in it; the free text is never
+    // readable in the file.
+    use crate::weekly_review::{self, Answers, ReviewInput};
+    let before = migrations::weekly_review_version() - 1;
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+    migrations::migrate_to(&mut conn, before).unwrap();
+    conn.execute("INSERT INTO accounts (name, kind, initial_capital) VALUES ('Ancien', 'personal', '12345.67')", []).unwrap();
+    conn.execute("INSERT INTO mcp_calls (at, tz_offset_min, tool, params, result, is_error, size, duration_ms) VALUES (1, 0, 'x', '{}', '{}', 0, 2, 1)", []).unwrap();
+    let image = conn.serialize(rusqlite::MAIN_DB).unwrap().to_vec();
+    let keys = pulse_lock::Unlocked::create(&pw("phrase de test jetable"), FAST).unwrap();
+    fs::write(dir.path().join(ENC_FILE), keys.seal(&image).unwrap()).unwrap();
+
+    let mut store = Store::unlock(dir.path(), &pw("phrase de test jetable"), NOW).unwrap();
+    assert_eq!(migrations::current_version(store.conn()).unwrap(), migrations::latest_version());
+    assert_eq!(accounts::list(store.conn()).unwrap()[0].name, "Ancien");
+    let input = ReviewInput {
+        period_key: "2026-W38".into(),
+        answers: Answers { went_well: "Bilan-CANARI mes stops".into(), ..Answers::default() },
+        intentions: vec!["Intention-CANARI".into()],
+    };
+    weekly_review::save(store.conn(), &input, 1_790_000_000_000, 0).unwrap();
+    store.flush().unwrap();
+    drop(store);
+    let again = Store::unlock(dir.path(), &pw("phrase de test jetable"), NOW).unwrap();
+    let kept = weekly_review::review_of(again.conn(), "2026-W38").unwrap().unwrap();
+    assert_eq!((kept.answers.went_well.as_str(), kept.intentions.len()), ("Bilan-CANARI mes stops", 1), "written back encrypted");
+    for f in all_files(dir.path()) {
+        assert!(!contains(&fs::read(&f).unwrap(), b"CANARI"), "{f:?}: the free text of the review is not readable");
+    }
+}

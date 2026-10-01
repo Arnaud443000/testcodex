@@ -157,6 +157,13 @@ const PATHS = {
       <path d="M8.5 7.5h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01" />
     </>
   ),
+  // Lot 36 : bilan hebdomadaire (calendrier coché).
+  review: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" />
+      <path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4" />
+    </>
+  ),
   // Lot 33 : suivi prop firm (bouclier) et « i » d'information.
   shield: <path d="M12 3l7 3v5.5c0 4.4-2.9 7.9-7 9.5-4.1-1.6-7-5.1-7-9.5V6zM9 12l2 2 4-4" />,
   info: (
