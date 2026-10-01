@@ -9,6 +9,8 @@ import { ReviewBanner } from './components/ReviewBanner'
 import { AnalysisPage } from './pages/AnalysisPage'
 import { AutoBackupBanner } from './components/AutoBackupBanner'
 import { InsightsProvider } from './lib/insights'
+import { PauseProvider } from './lib/pause'
+import { PauseSuggestionBanner } from './components/pause/PauseSuggestionBanner'
 import { InsightsPage } from './pages/InsightsPage'
 import { DisciplinePage } from './pages/DisciplinePage'
 import { BehaviorPage } from './pages/BehaviorPage'
@@ -76,6 +78,7 @@ export default function App() {
       <PeriodProvider>
       <HashRouter>
         <InsightsProvider>
+        <PauseProvider>
         <div className="app-shell flex h-full">
           <Sidebar />
           <main className="flex min-w-0 flex-1 flex-col">
@@ -87,6 +90,7 @@ export default function App() {
               <LockWarningBanner />
               <NewsAutoRefresh />
               <AlertBanner />
+              <PauseSuggestionBanner />
               <ReminderBanner />
               <ReviewBanner />
               <AutoBackupBanner />
@@ -117,6 +121,7 @@ export default function App() {
             </ScrollArea>
           </main>
         </div>
+        </PauseProvider>
         </InsightsProvider>
       </HashRouter>
       </PeriodProvider>

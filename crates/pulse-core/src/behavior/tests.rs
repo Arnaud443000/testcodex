@@ -17,7 +17,7 @@ use Direction::{Long, Short};
 /// A trade on account 1, instrument 1, multiplier 1, entered `day` days after
 /// 1 Sept at `entry` minutes after midnight UTC and closed at `exit` minutes.
 #[allow(clippy::too_many_arguments)] // one argument per column of the journal tables below
-pub(super) fn trade(id: i64, direction: Direction, entry_price: &str, exit_price: Option<&str>, size: &str, sl: Option<&str>, day: i64, entry: i64, exit: i64) -> TradeFacts {
+pub(crate) fn trade(id: i64, direction: Direction, entry_price: &str, exit_price: Option<&str>, size: &str, sl: Option<&str>, day: i64, entry: i64, exit: i64) -> TradeFacts {
     TradeFacts {
         id,
         account_id: 1,
@@ -43,7 +43,7 @@ pub(super) fn trade(id: i64, direction: Direction, entry_price: &str, exit_price
     }
 }
 
-pub(super) fn ledger(initial: &str, trades: Vec<TradeFacts>) -> Ledger {
+pub(crate) fn ledger(initial: &str, trades: Vec<TradeFacts>) -> Ledger {
     Ledger {
         currency: Some("USD".into()),
         initial_capital: dec(initial),
@@ -57,7 +57,7 @@ pub(super) fn rule(id: i64, respected: bool) -> RuleCheckFact {
     RuleCheckFact { rule_id: id, text: format!("Rule {id}"), respected }
 }
 
-pub(super) fn all() -> StatsQuery {
+pub(crate) fn all() -> StatsQuery {
     StatsQuery::default()
 }
 
@@ -67,7 +67,7 @@ pub(super) fn strict() -> BehaviorSettings {
 }
 
 #[track_caller]
-pub(super) fn approx(actual: Option<f64>, expected: f64) {
+pub(crate) fn approx(actual: Option<f64>, expected: f64) {
     let a = actual.unwrap_or_else(|| panic!("expected {expected}, got None"));
     assert!((a - expected).abs() < 1e-9, "expected {expected}, got {a}");
 }

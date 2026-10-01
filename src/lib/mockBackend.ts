@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 16, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 17, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -1014,4 +1014,16 @@ export const mockProp = createPropMock({
   openCount: (accountId, now) => propTradesAt(accountId, now).filter((v) => v.exitTime == null || v.exitTime > now).length,
   cashFlowCount: (accountId, now) => cashFlows.filter((f) => f.accountId === accountId && f.occurredAt <= now).length,
   now: () => Date.now(),
+})
+
+// --- Lot 35 : pause volontaire (un rappel, jamais un blocage) ---
+import { createPauseMock } from './mockPause'
+
+export const mockPause = createPauseMock({
+  input: behaviorInput,
+  entryTimes: (accountIds) =>
+    [...trades.values()]
+      .filter((t) => (accountIds.length ? accountIds.includes(t.accountId) : !accounts.find((a) => a.id === t.accountId)?.archived))
+      .map((t) => t.entryTime),
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
 })

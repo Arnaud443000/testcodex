@@ -15,6 +15,7 @@ import { AnalysisSettingsPanel } from '../components/AnalysisSettingsPanel'
 import { EditableList } from '../components/EditableList'
 import { PageHeader } from '../components/PageHeader'
 import { ReminderPanel } from '../components/ReminderPanel'
+import { PausePanel } from '../components/PausePanel'
 import { SecurityPanel } from '../components/SecurityPanel'
 import { useT, type Messages } from '../i18n'
 import { useReferenceData } from '../lib/referenceData'
@@ -163,7 +164,7 @@ function EmotionsSection() {
 
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
-  ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['analysis', 'analysis'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['cashflows', 'depots'],
+  ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['analysis', 'analysis'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['pause', 'pause'], ['cashflows', 'depots'],
   ['reminder', 'rappel'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
@@ -238,6 +239,7 @@ export function SettingsPage() {
       <div id="analysis" className="scroll-mt-4"><AnalysisSettingsPanel /></div>
       <div id="discipline" className="scroll-mt-4"><BehaviorSettingsPanel /></div>
       <div className="scroll-mt-4"><AlertSettingsPanel /></div>
+      <div id="pause" className="scroll-mt-4"><PausePanel /></div>
       <div id="depots" className="scroll-mt-4"><CashFlowsPanel /></div>
       <div id="rappel" className="scroll-mt-4"><ReminderPanel /></div>
       <DisplayPanel />

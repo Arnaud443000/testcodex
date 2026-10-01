@@ -862,7 +862,15 @@ pub fn run() {
             set_prop_rules,
             delete_prop_rules,
             get_prop_status,
-            set_prop_alerts
+            set_prop_alerts,
+            start_pause,
+            end_pause,
+            get_current_pause,
+            list_pauses,
+            get_pause_report,
+            get_pause_suggestion,
+            get_pause_settings,
+            set_pause_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running Pulse");
@@ -2036,4 +2044,56 @@ fn get_prop_status(state: State<AppState>, account_id: i64, tz_offset_min: i32) 
 fn set_prop_alerts(state: State<AppState>, enabled: bool) -> Result<bool, String> {
     let conn = state.conn()?;
     alerts::prop::set_enabled(&conn, enabled).map_err(err)
+}
+// --- Lot 35 : pause volontaire (un rappel, jamais un blocage : aucune autre commande n'en tient compte) ---
+// Toutes passent par `state.conn()` : verrouillé, elles répondent `lock:locked`.
+
+#[tauri::command]
+fn start_pause(state: State<AppState>, pause: pulse_core::pause::NewPause) -> Result<pulse_core::pause::Pause, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::start(&conn, &pause, now_ms()).map_err(err)
+}
+
+/// Ends the running pause now; `null` when none runs (it may have just ended by itself).
+#[tauri::command]
+fn end_pause(state: State<AppState>) -> Result<Option<pulse_core::pause::Pause>, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::end(&conn, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn get_current_pause(state: State<AppState>) -> Result<Option<pulse_core::pause::CurrentPause>, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::current(&conn, now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn list_pauses(state: State<AppState>, account_ids: Vec<i64>, limit: Option<u32>) -> Result<Vec<pulse_core::pause::PauseRow>, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::list(&conn, &account_ids, limit.unwrap_or(20), now_ms()).map_err(err)
+}
+
+#[tauri::command]
+fn get_pause_report(state: State<AppState>, query: StatsQuery) -> Result<pulse_core::pause::PauseReport, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::report(&conn, &query).map_err(err)
+}
+
+/// A proposal only (`null` when off, not reached, or a pause is running): it never starts a pause.
+#[tauri::command]
+fn get_pause_suggestion(state: State<AppState>, account_ids: Vec<i64>, tz_offset_min: i32) -> Result<Option<pulse_core::pause::Suggestion>, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::suggestion_report(&conn, &account_ids, now_ms(), tz_offset_min).map_err(err)
+}
+
+#[tauri::command]
+fn get_pause_settings(state: State<AppState>) -> Result<pulse_core::pause::Settings, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::settings(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn set_pause_settings(state: State<AppState>, settings: pulse_core::pause::Settings) -> Result<pulse_core::pause::Settings, String> {
+    let conn = state.conn()?;
+    pulse_core::pause::set_settings(&conn, &settings).map_err(err)
 }

@@ -629,6 +629,17 @@ export const api = {
     inTauri ? invoke('set_trade_links', { tradeId, ideaIds, analysisIds }) : mockAnalysis.setTradeLinks(tradeId, ideaIds, analysisIds),
   getAnalysisReport: (query: StatsQuery): Promise<AnalysisReport> =>
     inTauri ? invoke('get_analysis_report', { query }) : mockAnalysis.getAnalysisReport(query),
+  // --- Lot 35 : pause volontaire (un rappel, jamais un blocage ; lit et écrit la base : verrouillé, `lock:locked`) ---
+  startPause: (pause: NewPause): Promise<Pause> => (inTauri ? invoke('start_pause', { pause }) : mockPause.startPause(pause)),
+  endPause: (): Promise<Pause | null> => (inTauri ? invoke('end_pause') : mockPause.endPause()),
+  getCurrentPause: (): Promise<CurrentPause | null> => (inTauri ? invoke('get_current_pause') : mockPause.getCurrentPause()),
+  listPauses: (accountIds: number[], limit?: number): Promise<PauseRow[]> =>
+    inTauri ? invoke('list_pauses', { accountIds, limit: limit ?? null }) : mockPause.listPauses(accountIds, limit),
+  getPauseReport: (query: StatsQuery): Promise<PauseReport> => (inTauri ? invoke('get_pause_report', { query }) : mockPause.getPauseReport(query)),
+  getPauseSuggestion: (accountIds: number[], tzOffsetMin: number): Promise<PauseSuggestion | null> =>
+    inTauri ? invoke('get_pause_suggestion', { accountIds, tzOffsetMin }) : mockPause.getPauseSuggestion(accountIds, tzOffsetMin),
+  getPauseSettings: (): Promise<PauseSettings> => (inTauri ? invoke('get_pause_settings') : mockPause.getPauseSettings()),
+  setPauseSettings: (settings: PauseSettings): Promise<PauseSettings> => (inTauri ? invoke('set_pause_settings', { settings }) : mockPause.setPauseSettings(settings)),
 }
 
 
@@ -689,3 +700,6 @@ import type { AutoBackupDone, AutoBackupEntry, AutoBackupSaved, AutoBackupSettin
 import { mockBackupAuto } from './mockBackend'
 import type { PropRules, PropRulesInput, PropStatus } from '../types/prop'
 import { mockProp } from './mockBackend'
+
+import type { CurrentPause, NewPause, Pause, PauseReport, PauseRow, PauseSettings, PauseSuggestion } from '../types/pause'
+import { mockPause } from './mockBackend'

@@ -454,6 +454,7 @@ export const fr = {
       analysis: 'Analyse avant trading',
       discipline: 'Discipline',
       alerts: 'Alertes',
+      pause: 'Pause',
       cashflows: 'Dépôts et retraits',
       reminder: 'Rappel',
       display: 'Affichage',
@@ -1605,6 +1606,8 @@ export const fr = {
   backupAuto: frBackupAuto,
   // Lot 33 : suivi d'un compte prop firm
   prop: frProp,
+  // Lot 35 : pause volontaire
+  pause: frPause,
 }
 
 export type Messages = typeof fr
@@ -1620,3 +1623,4 @@ import { frEmotions } from './fr.emotions'
 import { frAnalysis } from './fr.analysis'
 import { frBackupAuto } from './fr.backupAuto'
 import { frProp } from './fr.prop'
+import { frPause } from './fr.pause'

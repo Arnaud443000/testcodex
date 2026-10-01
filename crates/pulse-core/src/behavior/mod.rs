@@ -38,6 +38,7 @@ pub use sequences::{
 };
 pub(crate) use discipline::{mean_score, of_closed};
 pub(crate) use factors::compare as compare_values;
+pub(crate) use factors::{comparable_r, compare};
 pub use simulation::{PlanSimulation, Scenario, SimulatedResult, plan_simulation, plan_simulation_report};
 
 use crate::error::Result;
@@ -157,7 +158,7 @@ pub(crate) fn exposures(t: &TradeFacts, p: &Closed) -> Result<Option<(ExposureBa
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 mod analysis_tests;

@@ -5,6 +5,7 @@ import { useAccounts } from '../lib/accounts'
 import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
 import { Select } from './ui/Select'
+import { PauseControl } from './pause/PauseControl'
 
 export function TopBar() {
   const { accounts, allAccounts, selectedId, select } = useAccounts()
@@ -15,7 +16,7 @@ export function TopBar() {
 
   return (
     <header
-      className="glass-bar flex h-[72px] shrink-0 items-center gap-3.5 border-b px-7"
+      className="glass-bar flex min-h-[72px] shrink-0 flex-wrap items-center gap-x-3.5 gap-y-2 border-b px-7 py-2"
     >
       <label className="control relative flex items-center gap-3 !rounded-full px-4 py-2 text-tx2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-violet">
         <Icon name="wallet" />
@@ -52,7 +53,9 @@ export function TopBar() {
         ))}
       </div>
 
-      <div className="flex-1" />
+      {/* Lot 35 : la grappe de droite passe entière sur une seconde ligne quand la puce de pause ne tient pas (jamais de défilement horizontal). */}
+      <div className="ml-auto flex items-center gap-3.5">
+      <PauseControl />
       {/* La cloche ouvre l'historique des alertes (avant le lot 26 : bouton sans action). */}
       <Tooltip content={t.topbar.notifications}>
         <Link to="/alerts" className="btn-icon !h-11 !w-11" aria-label={t.topbar.notifications}>
@@ -62,6 +65,7 @@ export function TopBar() {
       <button type="button" className="btn btn-primary" onClick={() => navigate('/trades/new')}>
         <Icon name="plus" size={18} /> {t.topbar.newTrade}
       </button>
+      </div>
     </header>
   )
 }

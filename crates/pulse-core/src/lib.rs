@@ -56,6 +56,8 @@ pub mod news;
 pub mod analysis;
 // Lot 33 (suivi d'un compte prop firm : règles, calculs sur les trades clôturés).
 pub mod prop;
+// Lot 35 (pause volontaire : un rappel, jamais un blocage).
+pub mod pause;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

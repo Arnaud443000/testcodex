@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Tooltip } from '../components/ui/Tooltip'
 import { Link } from 'react-router-dom'
 import { DayBars } from '../components/behavior/DayBars'
+import { PauseHint } from '../components/behavior/PausesCard'
 import { Card, EmptyLine, Note, toneOfDecimal } from '../components/behavior/parts'
 import { QuadrantsGrid, Ring } from '../components/behavior/ScoreRing'
 import { EmptyState } from '../components/EmptyState'
@@ -190,6 +191,7 @@ export function DisciplinePage() {
         <p className="mb-3 text-[13px] leading-relaxed text-tx2">{d.quadrantsIntro}</p>
         <QuadrantsGrid quadrants={report.quadrants} currency={currency} />
       </Card>
+      <PauseHint accountIds={accountIds} />
     </div>,
   )
 }
