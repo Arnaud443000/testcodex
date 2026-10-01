@@ -469,6 +469,7 @@ export const fr = {
       security: 'Sécurité',
       ai: 'IA',
       news: 'Actualités',
+      mcp: 'Accès MCP',
       about: 'À propos',
     },
     display: {
@@ -1616,6 +1617,8 @@ export const fr = {
   pause: frPause,
   // Lot 34 : objectifs de comportement (processus)
   processGoals: frProcessGoals,
+  // Lot 37 : accès MCP local (Claude Code)
+  mcp: frMcp,
 }
 
 export type Messages = typeof fr
@@ -1633,3 +1636,4 @@ import { frBackupAuto } from './fr.backupAuto'
 import { frProp } from './fr.prop'
 import { frPause } from './fr.pause'
 import { frProcessGoals } from './fr.processGoals'
+import { frMcp } from './fr.mcp'

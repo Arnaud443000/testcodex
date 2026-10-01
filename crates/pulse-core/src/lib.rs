@@ -60,6 +60,8 @@ pub mod prop;
 pub mod pause;
 // Lot 34 (objectifs de comportement, par semaine et par mois).
 pub mod process_goals;
+// Lot 37 (accès MCP local : pont sur 127.0.0.1 vers les outils du coach ; aucune connexion sortante).
+pub mod mcp;
 pub use rusqlite;
 
 pub use error::{CoreError, Result};

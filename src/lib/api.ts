@@ -453,7 +453,7 @@ export const api = {
   disableLock: (password: string): Promise<LockStatus> => (inTauri ? invoke('disable_lock', { password }) : mockLock.disable(password)),
   changeLockPassword: (oldPassword: string, newPassword: string): Promise<LockStatus> =>
     inTauri ? invoke('change_lock_password', { oldPassword, newPassword }) : mockLock.changePassword(oldPassword, newPassword),
-  lockNow: (): Promise<LockStatus> => (inTauri ? invoke('lock_now') : mockLock.lockNow()),
+  lockNow: (): Promise<LockStatus> => (inTauri ? invoke('lock_now') : (mockMcp.lock(), mockLock.lockNow())),
   /** `null` = jamais (défaut). */
   setLockIdle: (minutes: number | null): Promise<LockStatus> => (inTauri ? invoke('set_lock_idle', { minutes }) : mockLock.setIdle(minutes)),
   /** Activité de l'utilisateur (clavier, souris), signalée au plus toutes les 30 s. */
@@ -652,6 +652,43 @@ export const api = {
     inTauri ? invoke('get_pause_suggestion', { accountIds, tzOffsetMin }) : mockPause.getPauseSuggestion(accountIds, tzOffsetMin),
   getPauseSettings: (): Promise<PauseSettings> => (inTauri ? invoke('get_pause_settings') : mockPause.getPauseSettings()),
   setPauseSettings: (settings: PauseSettings): Promise<PauseSettings> => (inTauri ? invoke('set_pause_settings', { settings }) : mockPause.setPauseSettings(settings)),
+  // --- Lot 37 : accès MCP local pour Claude Code (lecture seule ; simulation dans le navigateur : aucune écoute) ---
+  /** État (jamais le port ni le jeton). Erreurs : `mcp:…`, `lock:locked`. */
+  getMcpStatus: (): Promise<McpStatus> => (inTauri ? invoke('get_mcp_status') : mockMcp.getStatus()),
+  /** Comptes cochés, durée, « prochain démarrage » ; plus aucun compte coché = accès coupé. */
+  setMcpSettings: (settings: McpSettingsUpdate): Promise<McpStatus> =>
+    inTauri ? invoke('set_mcp_settings', { settings }) : mockMcp.setSettings(settings),
+  /** `confirmed` = case de consentement cochée (enregistrée la première fois). Nouveau jeton à chaque activation. */
+  enableMcp: (confirmed: boolean): Promise<McpStatus> => (inTauri ? invoke('enable_mcp', { confirmed }) : mockMcp.enable(confirmed)),
+  /** « Couper l'accès maintenant » ; `withdrawConsent` retire aussi le consentement. */
+  disableMcp: (withdrawConsent: boolean): Promise<McpStatus> =>
+    inTauri ? invoke('disable_mcp', { withdrawConsent }) : mockMcp.disable(withdrawConsent),
+  listMcpCalls: (limit?: number): Promise<McpCall[]> => (inTauri ? invoke('list_mcp_calls', { limit: limit ?? null }) : mockMcp.listCalls(limit)),
+  clearMcpCalls: (): Promise<number> => (inTauri ? invoke('clear_mcp_calls') : mockMcp.clearCalls()),
+  getMcpInstallCommand: (): Promise<McpInstallCommand> => (inTauri ? invoke('get_mcp_install_command') : mockMcp.installCommand()),
+  /** Navigateur seulement : simule un appel de Claude Code (outil du faux coach, journalisé). */
+  simulateMcpCall: (tool: string, input: Record<string, unknown>): Promise<McpCall> =>
+    inTauri ? Promise.reject(new Error('mcp:simulationOnly')) : mockMcp.simulateCall(tool, input),
+  /** L'accès s'est coupé tout seul (échéance, verrouillage) : la barre du haut se met à jour. */
+  onMcpChanged: async (listener: () => void): Promise<() => void> => {
+    if (!inTauri) {
+      window.addEventListener(MCP_CHANGED, listener)
+      return () => window.removeEventListener(MCP_CHANGED, listener)
+    }
+    const { listen } = await import('@tauri-apps/api/event')
+    const off = await listen('pulse://mcp-changed', listener)
+    window.addEventListener(MCP_CHANGED, listener)
+    return () => {
+      off()
+      window.removeEventListener(MCP_CHANGED, listener)
+    }
+  },
+}
+
+/** Événement de fenêtre envoyé par le panneau MCP après un changement (la puce de la barre du haut suit). */
+export const MCP_CHANGED = 'pulse:mcp-changed'
+export function notifyMcpChanged() {
+  window.dispatchEvent(new Event(MCP_CHANGED))
 }
 
 
@@ -717,3 +754,5 @@ import type { CurrentPause, NewPause, Pause, PauseReport, PauseRow, PauseSetting
 import { mockPause } from './mockBackend'
 import type { NewProcessGoal, ProcessGoal, ProcessPeriodKind, ProcessProgress, ProcessProgressQuery } from '../types/processGoals'
 import { mockProcessGoals } from './mockBackend'
+import type { McpCall, McpInstallCommand, McpSettingsUpdate, McpStatus } from '../types/mcp'
+import { mockMcp } from './mockBackend'

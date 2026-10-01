@@ -261,7 +261,7 @@ const snapshot = () =>
     trades: [...trades.entries()], screenshots: [...screenshots.entries()], nextId, nextTradeId,
   })
 const infoOf = (path: string, s: Snapshot): BackupInfo => ({
-  path, schemaVersion: 18, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
+  path, schemaVersion: 19, accounts: s.accounts.length, trades: s.trades.length, screenshots: s.screenshots.length,
   encrypted: backupSeals.has(path),
 })
 /** Sauvegarde simulée « chiffrée » : son mot de passe (celui du moment) est demandé, sous le même compteur d'essais. */
@@ -1038,4 +1038,13 @@ export const mockProcessGoals = createProcessGoalsMock({
     return { ...input, currency: input.accounts[0]?.currency ?? null }
   },
   journal: () => [...journalEntries.values()],
+})
+
+// --- Lot 37 : accès MCP local (SIMULATION : aucune écoute, aucun port, aucun fichier ; voir mockMcp.ts) ---
+import { createMcpMock } from './mockMcp'
+export const mockMcp = createMcpMock({
+  activeAccountIds: () => accounts.filter((a) => !a.archived).map((a) => a.id),
+  runTool: (accountIds, name, input) => coachTool({ accountIds, nowMs: Date.now(), tzOffsetMin: -new Date().getTimezoneOffset() }, name, input),
+  now: () => Date.now(),
+  tzOffsetMin: () => -new Date().getTimezoneOffset(),
 })

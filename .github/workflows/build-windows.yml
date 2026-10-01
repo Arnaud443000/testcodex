@@ -23,9 +23,34 @@ jobs:
       - run: cargo test -p pulse-lock
       # Lot 25: the calendar fetch against a fake local server, on a real Windows runner.
       - run: cargo test -p pulse-news
+      # Lot 37: the local MCP server (stdio sessions, the bridge's fake listeners) on a real Windows runner.
+      - run: cargo test -p pulse-mcp
+      # Lot 37: pulse-mcp.exe is shipped next to Pulse.exe as a Tauri sidecar: `externalBin` in
+      # src-tauri/tauri.windows.conf.json (merged by Tauri only when building for Windows) expects
+      # src-tauri/binaries/pulse-mcp-<target triple>.exe before `tauri build`.
+      - name: Build pulse-mcp (sidecar)
+        shell: pwsh
+        run: |
+          cargo build --release -p pulse-mcp
+          New-Item -ItemType Directory -Force src-tauri/binaries | Out-Null
+          Copy-Item target/release/pulse-mcp.exe src-tauri/binaries/pulse-mcp-x86_64-pc-windows-msvc.exe
+      # Fallback, uploaded before the installer is built: pulse-mcp.exe on its own, to place next to Pulse.exe
+      # by hand if the installer ever lacks it (the settings page detects the missing file and says so).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pulse-mcp-windows
+          path: target/release/pulse-mcp.exe
+          if-no-files-found: error
       - run: npm run tauri build
       - uses: actions/upload-artifact@v4
         with:
           name: pulse-windows-installer
           path: target/release/bundle/nsis/*.exe
           if-no-files-found: error
+      # Lot 37: the installer must contain pulse-mcp.exe (7-Zip lists NSIS installers).
+      - name: Check that the installer contains pulse-mcp.exe
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem target/release/bundle/nsis/*.exe | Select-Object -First 1
+          $listing = & 7z l $installer.FullName
+          if (-not ($listing | Select-String -SimpleMatch 'pulse-mcp.exe')) { Write-Error 'pulse-mcp.exe is missing from the installer'; exit 1 }

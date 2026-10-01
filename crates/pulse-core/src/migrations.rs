@@ -582,9 +582,32 @@ pub const MIGRATIONS: &[&str] = &[
         created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
         UNIQUE (period_kind, period_key, metric)
     );",
+    // v19 (v20 in the lot's own numbering) — local MCP access (lot 37): log of every tool call answered to the user's MCP client, with the
+    // exact text sent. Capped at the 500 latest rows (pruned at each write). Nothing computes from it,
+    // no tool reads it, no export writes it; it is in the backup and encrypted with the lock (it lives
+    // in the database). `tool` is the name as asked; `params` the arguments as received (JSON).
+    "CREATE TABLE mcp_calls (
+        id            INTEGER PRIMARY KEY,
+        at            INTEGER NOT NULL,
+        tz_offset_min INTEGER NOT NULL,
+        tool          TEXT NOT NULL CHECK (length(tool) BETWEEN 1 AND 64),
+        params        TEXT NOT NULL,
+        result        TEXT NOT NULL,
+        is_error      INTEGER NOT NULL CHECK (is_error IN (0, 1)),
+        size          INTEGER NOT NULL CHECK (size >= 0),
+        duration_ms   INTEGER NOT NULL CHECK (duration_ms >= 0)
+    );
+    CREATE INDEX mcp_calls_by_time ON mcp_calls (at);",
 ];
 
 /// Position (= schema version on this branch) of the process-goals migration (lot 34).
+#[cfg(test)]
+/// Position (= schema version on this branch) of the MCP call log migration (lot 37).
+#[cfg(test)]
+pub(crate) fn mcp_version() -> u32 {
+    MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE mcp_calls")).expect("mcp migration") as u32 + 1
+}
+
 #[cfg(test)]
 pub(crate) fn process_goals_version() -> u32 {
     MIGRATIONS.iter().position(|m| m.contains("CREATE TABLE process_goals")).expect("process goals migration") as u32 + 1

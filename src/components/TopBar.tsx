@@ -6,6 +6,7 @@ import { PERIOD_KEYS, usePeriod } from '../lib/period'
 import { Icon } from './Icon'
 import { Select } from './ui/Select'
 import { PauseControl } from './pause/PauseControl'
+import { McpChip } from './McpChip'
 
 export function TopBar() {
   const { accounts, allAccounts, selectedId, select } = useAccounts()
@@ -55,6 +56,7 @@ export function TopBar() {
 
       {/* Lot 35 : la grappe de droite passe entière sur une seconde ligne quand la puce de pause ne tient pas (jamais de défilement horizontal). */}
       <div className="ml-auto flex items-center gap-3.5">
+      <McpChip />
       <PauseControl />
       {/* La cloche ouvre l'historique des alertes (avant le lot 26 : bouton sans action). */}
       <Tooltip content={t.topbar.notifications}>

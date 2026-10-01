@@ -48,6 +48,7 @@ fn the_prop_firm_widget_follows_an_account_without_a_period() {
     validate(&conn, &[widget("prop", "prop_firm", 0, 0, d.default_w, d.default_h)]).unwrap();
     assert!(is_invalid(validate(&conn, &[widget("prop", "prop_firm", 0, 0, d.min_w, d.min_h - 1)])));
 }
+#[test]
 fn the_process_goals_widget_is_in_the_library_with_a_week_or_month_mode() {
     // Lot 34: the widget shows the goals of the current week or month (its mode), for its account.
     let d = catalog().into_iter().find(|d| d.kind == "process_goals").expect("process goals widget");

@@ -1,0 +1,24 @@
+[package]
+name = "pulse-mcp"
+version = "0.1.0"
+edition = "2024"
+description = "Pulse local MCP server (lot 37): read-only tools for the user's own MCP client, over stdio, through a local authenticated bridge"
+
+[lib]
+name = "pulse_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pulse-mcp"
+path = "src/main.rs"
+
+# Pure Rust on purpose, and no network client (no HTTP, no TLS): the only socket is a connection to
+# 127.0.0.1. It must build for x86_64-pc-windows-msvc from any OS (checked in CI, like pulse-lock).
+[dependencies]
+serde_json = "1"
+hmac = "0.13"
+sha2 = "0.11"
+getrandom = "0.3"
+
+[dev-dependencies]
+tempfile = "3.27.0"

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Select } from '../components/ui/Select'
 import { useLocation } from 'react-router-dom'
 import { NewsSettingsPanel } from '../components/NewsSettingsPanel'
+import { McpSettingsPanel } from '../components/McpSettingsPanel'
 import { AiSettingsPanel } from '../components/AiSettingsPanel'
 import { AlertSettingsPanel } from '../components/AlertSettingsPanel'
 import { AccountRow, ArchivedAccountRow } from '../components/AccountRow'
@@ -165,7 +166,7 @@ function EmotionsSection() {
 /** Raccourcis vers les sections : la page est longue, on saute directement à la bonne (sans changer l'adresse). */
 const SECTION_IDS: [keyof Messages['settings']['sections'], string][] = [
   ['accounts', 'comptes'], ['rules', 'regles'], ['emotions', 'emotions'], ['analysis', 'analysis'], ['discipline', 'discipline'], ['alerts', 'alertes'], ['pause', 'pause'], ['cashflows', 'depots'],
-  ['reminder', 'rappel'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['about', 'apropos'],
+  ['reminder', 'rappel'], ['display', 'affichage'], ['autoBackup', 'sauvegarde'], ['data', 'donnees'], ['security', 'securite'], ['ai', 'ia'], ['news', 'news'], ['mcp', 'mcp'], ['about', 'apropos'],
 ]
 function SectionShortcuts() {
   const t = useT()
@@ -248,6 +249,7 @@ export function SettingsPage() {
       <SecurityPanel />
       <div className="scroll-mt-4"><AiSettingsPanel /></div>
       <div className="scroll-mt-4"><NewsSettingsPanel /></div>
+      <div className="scroll-mt-4"><McpSettingsPanel /></div>
 
       <section id="apropos" className="glass-card p-6">
         <h2 className="mb-3 text-base font-semibold">{t.settings.aboutTitle}</h2>

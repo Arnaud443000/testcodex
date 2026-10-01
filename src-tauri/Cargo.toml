@@ -25,3 +25,5 @@ pulse-vault = { path = "../crates/pulse-vault" }
 # Lot 25: optional economic calendar (network isolated in pulse-news, off by default).
 pulse-news = { path = "../crates/pulse-news" }
 zeroize = "1"
+# Lot 37: local MCP access (bridge protocol and tool reply; no network client).
+pulse-mcp = { path = "../crates/pulse-mcp" }
