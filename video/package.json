@@ -1,0 +1,28 @@
+{
+  "name": "pulse-video",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "audio": "node scripts/audio.mjs",
+    "still": "remotion still src/index.ts PulseFilm out/still.png",
+    "preview": "remotion render src/index.ts PulseFilm out/preview.mp4 --scale=0.5 --every-nth-frame=2 --crf=26",
+    "render": "remotion render src/index.ts PulseFilm out/pulse-16x9-4k.mp4 --codec=h264 --crf=16 --scale=2 --props='{\"blurSamples\":8}'",
+    "render:vertical": "remotion render src/index.ts PulseVertical out/pulse-9x16.mp4 --codec=h264 --crf=16 --props='{\"blurSamples\":8}'"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.250",
+    "@remotion/motion-blur": "4.0.250",
+    "@remotion/shapes": "4.0.250",
+    "@remotion/paths": "4.0.250",
+    "@remotion/noise": "4.0.250",
+    "remotion": "4.0.250",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  },
+  "type": "module"
+}
