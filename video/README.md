@@ -52,6 +52,11 @@ signe moins) ; couleurs de la charte uniquement ; gain/perte jamais portés par 
 (signe, libellé, lettres G / P) ; grille de 8 px ; un texte reste lisible au moins 1,2 s (hors
 fragments du chaos) ; aucune animation linéaire (courbes et ressorts de `src/lib/`).
 
+## Captures
+
+`captures/h-*.jpg` et `captures/v-*.jpg` : images tirées des MP4 finaux (environ toutes les 10 s,
+plus les temps forts), pour relire le film sans le rendre.
+
 ## Rendu sous Windows
 
 `remotion.config.ts` utilise le Chromium de l'environnement de développement s'il existe ;

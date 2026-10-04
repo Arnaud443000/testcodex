@@ -60,7 +60,7 @@ export function Feature({ id }: { id: FeatureId }) {
   const exitP = expoIn(prog(b, len - FEATURE_EXIT, FEATURE_EXIT))
   const cardZ = (id === 'f4' ? -220 : 0) + mix(-620, 0, sp) + 60 * exitP
   const card = {
-    x: base.x + (1 - sp) * 260,
+    x: base.x + (1 - sp) * (vertical ? 120 : 260),
     y: base.y,
     z: cardZ,
     ry: mix(-36, base.ry, sp),
@@ -73,8 +73,10 @@ export function Feature({ id }: { id: FeatureId }) {
   const outHead = mix(def.exit[0], def.exit[0] + 2600, exitP)
   const outTail = Math.max(def.exit[0], outHead - 900)
 
-  const cam = camera(id, clamp01(b / len), b)
-  const scale = vertical ? 1.08 : 1.1
+  const raw = camera(id, clamp01(b / len), b)
+  // En vertical, la carte occupe presque toute la largeur : mouvements latéraux réduits.
+  const cam = vertical ? { ...raw, x: (raw.x ?? 0) * 0.25, ry: (raw.ry ?? 0) * 0.4 } : raw
+  const scale = vertical ? 1 : 1.1
   const textLeft = vertical ? 96 : 160
   const textTop = vertical ? 176 : 336
 

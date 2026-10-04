@@ -19,6 +19,7 @@ Le cahier des charges est la source de vérité fonctionnelle. Toute formule (R-
 - `crates/pulse-core/` : cœur Rust **sans dépendance UI** (base, migrations, logique métier, stats). Tout ce qui peut y vivre doit y vivre, avec des tests.
 - `src-tauri/` : coque Tauri, commandes IPC fines qui appellent `pulse-core`.
 - `src/` : interface. `src/lib/api.ts` enveloppe les commandes Tauri et bascule sur un **mock en mémoire** dans un navigateur simple.
+- `video/` : film de présentation de 45 s (Remotion, projet npm séparé, hors de l'application) ; voir `video/README.md` et `video/ANIMATIC.md`. Sa timeline (`video/src/timeline.ts`) pilote l'image et le son.
 - Données : fichier `pulse.db` dans le dossier de données de l'application ; sauvegarde automatique avant migration.
 
 ## Commandes
