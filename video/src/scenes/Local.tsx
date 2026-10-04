@@ -1,6 +1,7 @@
 import { AbsoluteFill } from 'remotion'
 import { Aurora } from '../fx/Aurora'
 import { Bloom } from '../fx/Bloom'
+import { Flare, Halo } from '../fx/Flare'
 import { clamp01, expoIn, expoOut, signature } from '../lib/ease'
 import { hash } from '../lib/random'
 import { mix, prog, spring, useLayout, useLocalBeat } from '../lib/time'
@@ -34,7 +35,7 @@ export function Local() {
   const r = R.card
 
   // Trait d'entrée (raccord) puis contour du corps, puis anse.
-  const leadHead = mix(-200, bx, expoOut(prog(b, 0, 0.5)))
+  const leadHead = mix(bx - 560, bx, expoOut(prog(b, 0, 0.5)))
   const bodyPath = `M${bx} ${by + bh / 2}V${by + bh - r}Q${bx} ${by + bh} ${bx + r} ${by + bh}H${bx + bw - r}Q${bx + bw} ${by + bh} ${bx + bw} ${by + bh - r}V${by + r}Q${bx + bw} ${by} ${bx + bw - r} ${by}H${bx + r}Q${bx} ${by} ${bx} ${by + r}Z`
   const drawBody = prog(b, 0.45, 1, signature)
   const sw = 60 // demi-largeur de l'anse
@@ -73,6 +74,7 @@ export function Local() {
   return (
     <AbsoluteFill>
       <Aurora intensity={0.55 + 0.25 * glow} />
+      <Halo x={cx} y={cy} r={360} k={0.3 + 0.7 * glow} />
       <Bloom amount={0.35 + 0.9 * flash} radius={26}>
         <AbsoluteFill>
           <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
@@ -89,7 +91,7 @@ export function Local() {
             <path d={bodyPath} fill="url(#lockfill)" opacity={glow} />
             <path d={bodyPath} fill="rgba(13,17,44,.6)" opacity={drawBody * (1 - glow)} />
           </svg>
-          {b < 1 && <PulseLine d={`M${Math.max(-200, leadHead - 700)} ${by + bh / 2}L${leadHead} ${by + bh / 2}`} width={3} glow={1.2} head={[leadHead, by + bh / 2]} viewW={W} viewH={H} opacity={1 - prog(b, 0.5, 0.4)} gradX={[0, bx]} />}
+          {b < 1 && <PulseLine d={`M${Math.max(-200, leadHead - 1000)} ${by + bh / 2}L${leadHead} ${by + bh / 2}`} width={3} glow={1.2} head={[leadHead, by + bh / 2]} viewW={W} viewH={H} opacity={1 - prog(b, 0.5, 0.4)} gradX={[0, bx]} />}
           {drawBody > 0 && <PulseLine d={bodyPath} draw={drawBody} width={4} glow={1 + flash} viewW={W} viewH={H} gradX={[bx, bx + bw]} />}
           {drawShackle > 0 && <PulseLine d={shacklePath} draw={drawShackle} width={4} glow={1 + flash} viewW={W} viewH={H} gradX={[cx - sw, cx + sw]} />}
           {/* Serrure. */}
@@ -103,6 +105,7 @@ export function Local() {
           {exitP > 0 && <PulseLine d={`M${Math.max(bx + bw, exitHead - 900)} ${by + bh / 2}L${exitHead} ${by + bh / 2}`} width={3} glow={1.2} head={[exitHead, by + bh / 2]} viewW={W} viewH={H} gradX={[bx + bw, W]} />}
         </AbsoluteFill>
       </Bloom>
+      <Flare x={cx} y={by + bh / 2} k={flash} width={vertical ? 900 : 1300} />
       <MaskText
         text={vertical ? ['100 % sur', 'ton ordinateur.'] : '100 % sur ton ordinateur.'}
         b={b}

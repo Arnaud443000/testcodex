@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { AbsoluteFill } from 'remotion'
 import { Aurora } from '../fx/Aurora'
 import { Bloom } from '../fx/Bloom'
+import { Flare, Halo } from '../fx/Flare'
 import { clamp01, expoOut, quintOut, sineInOut } from '../lib/ease'
 import { mix, prog, useLayout, useLocalBeat } from '../lib/time'
 import { Logo } from '../ui/Logo'
@@ -66,6 +67,7 @@ export function Outro() {
   return (
     <AbsoluteFill>
       <Aurora intensity={0.85 + 0.15 * hit} />
+      <Halo x={logo.sx} y={logo.sy} r={logoSize * 2} k={0.7 + 0.5 * hit} />
       <Bloom amount={0.3 + 1.1 * hit} radius={30}>
         <AbsoluteFill>
           {/* Fils lumineux entre le logo et chaque écran. */}
@@ -116,6 +118,7 @@ export function Outro() {
           </div>
         </AbsoluteFill>
       </Bloom>
+      <Flare x={logo.sx} y={logo.sy} k={hit} width={vertical ? 1000 : 1600} />
       {/* Voile derrière le texte pour garder un seul point focal. */}
       <AbsoluteFill style={{ background: `radial-gradient(ellipse ${vertical ? '60% 22%' : '42% 34%'} at 50% ${((textTop + 60) / H) * 100}%, rgba(6,8,24,.78), transparent 70%)`, opacity: prog(b, L.title - 0.5, 1) }} />
       <MaskText

@@ -1,6 +1,7 @@
 import { AbsoluteFill } from 'remotion'
 import { Aurora } from '../fx/Aurora'
 import { Bloom } from '../fx/Bloom'
+import { Flare } from '../fx/Flare'
 import { Shake } from '../fx/Shake'
 import { expoOut, sineInOut } from '../lib/ease'
 import { noise1 } from '../lib/random'
@@ -69,6 +70,9 @@ export function Intro() {
             )}
           </AbsoluteFill>
         </Bloom>
+        <AbsoluteFill style={{ transform: `scale(${dolly})`, transformOrigin: `${(head[0] / W) * 100}% ${(y0 / H) * 100}%` }}>
+          <Flare x={drawing ? head[0] : x0} y={drawing ? head[1] : y0} k={flare * 0.9 + 0.35 * beatPulse} width={vertical ? 800 : 1200} />
+        </AbsoluteFill>
         <MaskText
           text={vertical ? ['Chaque trade', 'a un pouls.'] : 'Chaque trade a un pouls.'}
           b={b}

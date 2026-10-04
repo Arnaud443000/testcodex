@@ -160,7 +160,7 @@ function Notifs({ sb, shot, W, H, u, vertical }: ShotProps) {
   return (
     <AbsoluteFill>
       {items.map((it, i) => {
-        const s = fast ? 1 : spring(sb, i * 0.16, { freq: 2.2, damping: 0.55 })
+        const s = fast ? 1 : spring(sb, i * 0.16 - 0.14, { freq: 2.2, damping: 0.55 })
         const x = (1 - s) * 700
         const top = H * (vertical ? 0.3 : 0.2) + i * 132 * u
         const left = vertical ? (W - w) / 2 : W - w - 160

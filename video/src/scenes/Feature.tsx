@@ -58,7 +58,7 @@ export function Feature({ id }: { id: FeatureId }) {
   const base = vertical ? { x: 0, y: id === 'f4' ? 180 : 340, ry: 0, rx: 4 } : { x: id === 'f4' ? 330 : 296, y: id === 'f4' ? -64 : 8, ry: -11, rx: 2 }
   const sp = spring(b, 0, { freq: 1.15, damping: 0.66 })
   const exitP = expoIn(prog(b, len - FEATURE_EXIT, FEATURE_EXIT))
-  const cardZ = (id === 'f4' ? -220 : 0) + mix(-900, 0, sp) + 60 * exitP
+  const cardZ = (id === 'f4' ? -220 : 0) + mix(-620, 0, sp) + 60 * exitP
   const card = {
     x: base.x + (1 - sp) * 260,
     y: base.y,
@@ -68,8 +68,8 @@ export function Feature({ id }: { id: FeatureId }) {
   }
 
   // Trait d'entrée (raccord avec le plan précédent) et de sortie (vers le suivant), dans le plan de la carte.
-  const inHead = mix(-1700, def.entry[0], expoOut(prog(b, 0, DRAW_AT)))
-  const inTail = Math.max(-1700, inHead - 760 * (1 - prog(b, DRAW_AT, 0.35, expoOut)))
+  const inHead = mix(def.entry[0] - 420, def.entry[0], expoOut(prog(b, 0, DRAW_AT)))
+  const inTail = Math.max(-1700, inHead - 1100 * (1 - prog(b, DRAW_AT, 0.35, expoOut)))
   const outHead = mix(def.exit[0], def.exit[0] + 2600, exitP)
   const outTail = Math.max(def.exit[0], outHead - 900)
 
@@ -89,8 +89,22 @@ export function Feature({ id }: { id: FeatureId }) {
         <Layer3D w={420} h={280} x={vertical ? 460 : 1100} y={vertical ? -560 : -480} z={-1100} ry={-16} extraBlur={12} opacity={0.32}>
           <div style={{ width: '100%', height: '100%', borderRadius: 24, background: GLASS, border: `1px solid ${C.glassBorder}` }} />
         </Layer3D>
-        <Layer3D w={def.w} h={def.h} x={card.x} y={card.y} z={card.z} rx={card.rx} ry={card.ry} scale={scale} opacity={clamp01(b * 5)}>
+        <Layer3D w={def.w} h={def.h} x={card.x} y={card.y} z={card.z} rx={card.rx} ry={card.ry} scale={scale} opacity={0.45 + 0.55 * clamp01(b * 4)} dofScale={id === 'f4' ? 0.15 + 0.85 * prog(b, 1.8, 0.8) : 0.15}>
           <def.Card b={b} />
+          {/* Reflet qui balaie le verre quand la carte se pose. */}
+          <div style={{ position: 'absolute', inset: 0, borderRadius: 24, overflow: 'hidden', pointerEvents: 'none' }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: -def.h * 0.5,
+                bottom: -def.h * 0.5,
+                width: 220,
+                left: mix(-400, def.w + 200, prog(b, 0.7, 1.3, sineInOut)),
+                transform: 'rotate(18deg)',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent)',
+              }}
+            />
+          </div>
           <div style={{ position: 'absolute', left: 0, top: 0 }}>
             {b < DRAW_AT + 0.4 && (
               <PulseLine d={`M${inTail} ${def.entry[1]}L${inHead} ${def.entry[1]}`} width={3} glow={1.2} head={[inHead, def.entry[1]]} headSize={1} gradX={[inTail, inHead]} viewW={def.w} viewH={def.h} opacity={1 - prog(b, DRAW_AT + 0.1, 0.3)} />
@@ -117,6 +131,8 @@ export function Feature({ id }: { id: FeatureId }) {
         )}
       </Stage3D>
 
+      {/* Éclair d'exposition sur la coupe : la coupe frappe sur le temps. */}
+      <AbsoluteFill style={{ background: '#A79DF2', opacity: 0.1 * Math.exp(-b * 10), mixBlendMode: 'screen', pointerEvents: 'none' }} />
       {/* Texte sur le tiers gauche (au-dessus en vertical). */}
       <div style={{ position: 'absolute', left: textLeft, top: textTop, width: vertical ? W - 2 * textLeft : 560 }}>
         <MaskText

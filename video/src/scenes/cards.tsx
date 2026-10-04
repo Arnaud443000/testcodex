@@ -88,7 +88,7 @@ function F1({ b }: CardProps) {
           </text>
         ))}
       </svg>
-      {pts.length > 1 && (
+      {draw > 0 && pts.length > 1 && (
         <div style={{ position: 'absolute', left: -P.x, top: -P.y }}>
           <PulseLine d={smoothPath(pts)} width={2.4} glow={0.7} head={head} headSize={draw < 1 ? 0.9 : 0.55} gradX={[P.x, P.x + 832]} viewW={880} viewH={600} core={0.5} />
         </div>
@@ -317,7 +317,7 @@ function DrawdownCard({ b }: CardProps) {
         )}
       </svg>
       <div style={{ position: 'absolute', left: -P.x, top: -P.y }}>
-        {shown.length > 1 && <PulseLine d={smoothPath(shown)} width={2.4} glow={0.7} colors={['#8B7FE8', '#F0776B']} gradX={[DDW.x0, DDW.x1]} head={draw < 1 ? head : null} headSize={0.8} viewW={DDW.w} viewH={DDW.h} core={0.5} />}
+        {draw > 0 && shown.length > 1 && <PulseLine d={smoothPath(shown)} width={2.4} glow={0.7} colors={['#8B7FE8', '#F0776B']} gradX={[DDW.x0, DDW.x1]} head={draw < 1 ? head : null} headSize={0.8} viewW={DDW.w} viewH={DDW.h} core={0.5} />}
       </div>
       <div style={{ position: 'absolute', left: DDW.x0 - P.x + 8, top: danger - P.y + 14, fontSize: 13, fontWeight: 600, color: '#F0CE8E', opacity: prog(b, 1.5, 0.6) }}>Zone de danger · au-delà de −5 %</div>
       {reached && (
@@ -543,7 +543,7 @@ function F6({ b }: CardProps) {
         </span>
       </div>
       <div style={{ position: 'absolute', left: -P.x, top: -P.y }}>
-        {g.pts.length > 1 && <PulseLine d={smoothPath(g.pts)} width={2.4} glow={0.7} head={draw < 1 ? g.head : null} headSize={0.8} gradX={[F6C.x0, F6C.x1]} viewW={880} viewH={600} core={0.5} />}
+        {draw > 0 && g.pts.length > 1 && <PulseLine d={smoothPath(g.pts)} width={2.4} glow={0.7} head={draw < 1 ? g.head : null} headSize={0.8} gradX={[F6C.x0, F6C.x1]} viewW={880} viewH={600} core={0.5} />}
       </div>
       <div style={{ position: 'absolute', left: 0, right: 0, top: 384 }}>
         <Caption style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

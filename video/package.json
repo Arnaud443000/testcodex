@@ -10,10 +10,11 @@
     "prepare-assets": "npm run grain && npm run audio",
     "studio": "npm run prepare-assets && remotion studio",
     "stills": "tsx scripts/stills.ts",
-    "render": "npm run prepare-assets && remotion render Pulse out/pulse-1080p30.mp4",
-    "render:vertical": "npm run prepare-assets && remotion render PulseVertical out/pulse-vertical-1080x1920.mp4",
-    "render:4k60": "cross-env PULSE_FPS=60 npm run prepare-assets && cross-env PULSE_FPS=60 remotion render Pulse out/pulse-4k60.mp4 --scale=2",
-    "typecheck": "tsc --noEmit"
+    "render": "npm run prepare-assets && tsx scripts/render.ts Pulse out/pulse-1080p30.mp4",
+    "render:vertical": "npm run prepare-assets && tsx scripts/render.ts PulseVertical out/pulse-vertical-1080x1920.mp4",
+    "render:4k60": "npm run prepare-assets && tsx scripts/render.ts Pulse out/pulse-4k60.mp4 --scale=2 --fps=60",
+    "typecheck": "tsc --noEmit",
+    "render:cli": "npm run prepare-assets && remotion render Pulse out/pulse-1080p30.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.532",
@@ -29,7 +30,6 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "cross-env": "^10.1.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }

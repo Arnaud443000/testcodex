@@ -1,6 +1,7 @@
 import { AbsoluteFill } from 'remotion'
 import { Aurora } from '../fx/Aurora'
 import { Bloom } from '../fx/Bloom'
+import { Flare, Halo } from '../fx/Flare'
 import { clamp01, expoOut, quintInOut, sineInOut } from '../lib/ease'
 import { mix, prog, spring, useLayout, useLocalBeat } from '../lib/time'
 import { ecgShape, pathOf, smoothPath } from '../ui/ecg'
@@ -49,7 +50,7 @@ export function Reveal() {
     pts.push([mix(xFlat, xEq, morph), mix(yE, yQ, morph)])
   }
   const curveFade = 1 - prog(b, L.logo + 0.1, 0.7, sineInOut)
-  const lineOn = prog(b, 0, 0.15)
+  const lineOn = 1
 
   // 2. Les points de la courbe deviennent les barres du logo (ressort, du centre vers l'extérieur).
   const bars = (bar: (typeof LOGO_BARS)[number]) => {
@@ -73,11 +74,12 @@ export function Reveal() {
 
   // Caméra : léger travelling avant, puis défocalisation sur la montée vers le plan suivant.
   const push = 1 + 0.035 * sineInOut(clamp01(b / 5))
-  const defocus = prog(b, 4.72, 0.28, expoOut) * 4
+  const defocus = prog(b, 4.8, 0.2, expoOut) * 4
 
   return (
     <AbsoluteFill>
       <Aurora intensity={0.06 + 0.84 * prog(b, L.logo, 1.6, sineInOut)} />
+      <Halo x={cx} y={cy} r={logoSize * 2.2} k={prog(b, L.logo + 0.3, 1.2) * (0.8 + 0.4 * flash)} />
       <Bloom amount={0.25 + 0.75 * flash + 0.3 * spike} radius={26}>
         <AbsoluteFill style={{ transform: `scale(${push})`, filter: defocus > 0.2 ? `blur(${defocus}px)` : undefined }}>
           {curveFade > 0 && (
@@ -115,6 +117,7 @@ export function Reveal() {
           )}
         </AbsoluteFill>
       </Bloom>
+      <Flare x={cx} y={cy} k={flash * 0.8} width={vertical ? 900 : 1400} />
       <MaskText
         text="Pulse"
         b={b}
@@ -123,6 +126,31 @@ export function Reveal() {
         align="center"
         style={{ position: 'absolute', left: 0, right: 0, top: cy + logoSize / 2 + (vertical ? 40 : 24), fontSize: vertical ? 152 : 128, fontWeight: 300, letterSpacing: '-0.02em', lineHeight: 1, filter: defocus > 0.2 ? `blur(${defocus}px)` : undefined }}
       />
+      {/* Reflet qui balaie le mot-symbole. */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: cy + logoSize / 2 + (vertical ? 40 : 24),
+          textAlign: 'center',
+          fontSize: vertical ? 152 : 128,
+          fontWeight: 300,
+          letterSpacing: '-0.02em',
+          lineHeight: 1,
+          padding: '0.08em 0 0.14em',
+          marginTop: '-0.08em',
+          color: '#fff',
+          textShadow: '0 0 24px rgba(167,157,242,.9)',
+          WebkitMaskImage: 'linear-gradient(100deg, transparent 42%, #000 50%, transparent 58%)',
+          WebkitMaskSize: '300% 100%',
+          WebkitMaskPosition: `${mix(100, 0, prog(b, L.word + 1, 1.4, sineInOut))}% 0`,
+          opacity: b > L.word + 1 && b < L.word + 2.4 ? 0.9 : 0,
+          filter: defocus > 0.2 ? `blur(${defocus}px)` : undefined,
+        }}
+      >
+        Pulse
+      </div>
       <MaskText
         text={vertical ? ['Ton journal de trading,', 'enfin lucide.'] : 'Ton journal de trading, enfin lucide.'}
         b={b}

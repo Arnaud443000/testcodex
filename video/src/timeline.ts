@@ -105,7 +105,7 @@ export const CHAOS_BLACK = 19
 
 // ---------------------------------------------------------------- Révélation
 
-export const REVEAL = { heartbeat: 20, curveStart: 20.25, logoStart: 21.5, wordmark: 22.4, tagline: 22.6 } as const
+export const REVEAL = { heartbeat: 20, curveStart: 20.25, logoStart: 21.5, wordmark: 22.35, tagline: 22.5 } as const
 
 // ---------------------------------------------------------------- Super-pouvoirs
 
@@ -175,7 +175,8 @@ export type Cue =
 
 export const CUES: Cue[] = (() => {
   const c: Cue[] = []
-  // 1. Ouverture
+  // 1. Ouverture : un tintement très doux quand le point s'allume, puis le premier battement.
+  c.push({ type: 'chime', beat: INTRO.dotOn, gain: 0.22 })
   for (const b of INTRO_HEARTBEATS) c.push({ type: 'heart', beat: b, gain: b === 2 ? 1 : 0.85 })
   c.push({ type: 'riser', beat: 6, length: 2, gain: 0.5 })
   // 2. Chaos : coeur qui s'emballe, glitch à chaque coupe, montée continue
@@ -191,17 +192,18 @@ export const CUES: Cue[] = (() => {
   c.push({ type: 'heart', beat: REVEAL.heartbeat, gain: 1 })
   c.push({ type: 'shimmer', beat: 20.5, length: 4.5 })
   c.push({ type: 'chime', beat: REVEAL.logoStart + 0.75, gain: 0.8 })
+  c.push({ type: 'impact', beat: REVEAL.logoStart + 0.75, gain: 0.3 })
   c.push({ type: 'riser', beat: 24, length: 1, gain: 0.45 })
   // 4. Super-pouvoirs : whoosh à chaque coupe, battement toutes les 2 temps, clics de données
   for (const id of FEATURE_IDS) {
     const [s, e] = SCENES[id]
     c.push({ type: 'whoosh', beat: s, gain: 0.75, pan: 0.5 })
-    for (let b = s; b < e; b += 2) c.push({ type: 'heart', beat: b, gain: 0.55 })
+    for (let b = s; b < e; b += 2) c.push({ type: 'heart', beat: b, gain: 0.75 })
     FEATURE_CLICKS[id].forEach((o, i) => c.push({ type: 'click', beat: s + o, gain: 0.38, pitch: 1 + (i % 3) * 0.12 }))
     c.push({ type: 'riser', beat: e - 1, length: 1, gain: 0.35 })
   }
   // Pulsation douce en croches (charleston fermé) pour tenir le tempo pendant les super-pouvoirs.
-  for (let b = 25; b < 60; b += 0.5) c.push({ type: 'hat', beat: b, gain: b % 1 === 0 ? 0.22 : 0.34 })
+  for (let b = 25; b < 60; b += 0.5) c.push({ type: 'hat', beat: b, gain: b % 1 === 0 ? 0.3 : 0.45 })
   // 5. Local
   c.push({ type: 'whoosh', beat: 60, gain: 0.7, pan: -0.3 })
   c.push({ type: 'heart', beat: 60, gain: 0.6 })
@@ -216,7 +218,7 @@ export const CUES: Cue[] = (() => {
   c.push({ type: 'heart', beat: 68, gain: 0.6 })
   c.push({ type: 'heart', beat: 70, gain: 0.6 })
   c.push({ type: 'riser', beat: 69, length: 3, gain: 0.9 })
-  c.push({ type: 'impact', beat: OUTRO.lastBeat, gain: 0.7 })
+  c.push({ type: 'impact', beat: OUTRO.lastBeat, gain: 0.42 })
   c.push({ type: 'heart', beat: OUTRO.lastBeat, gain: 1 })
   for (const b of OUTRO.slogan.slice(1)) c.push({ type: 'click', beat: b, gain: 0.35, pitch: 0.9 })
   c.push({ type: 'heart', beat: 74, gain: 0.35 })
@@ -226,10 +228,10 @@ export const CUES: Cue[] = (() => {
 /** Accords de la nappe (temps de début, fondamentale en Hz, intervalles en demi-tons). */
 export const PAD: { beat: number; length: number; root: number; chord: number[]; gain: number }[] = [
   { beat: 20.25, length: 4.75, root: 73.42, chord: [0, 7, 12, 15, 19], gain: 0.5 }, // ré mineur
-  { beat: 25, length: 12, root: 58.27, chord: [0, 7, 11, 14, 16], gain: 0.42 }, // si♭ maj7(9)
-  { beat: 37, length: 12, root: 87.31, chord: [0, 7, 12, 16, 19], gain: 0.42 }, // fa
-  { beat: 49, length: 11, root: 65.41, chord: [0, 7, 10, 14, 17], gain: 0.42 }, // do sus
-  { beat: 60, length: 8, root: 73.42, chord: [0, 7, 12, 14, 15], gain: 0.36 }, // ré mineur (9)
+  { beat: 25, length: 12, root: 58.27, chord: [0, 7, 11, 14, 16], gain: 0.75 }, // si♭ maj7(9)
+  { beat: 37, length: 12, root: 87.31, chord: [0, 7, 12, 16, 19], gain: 0.75 }, // fa
+  { beat: 49, length: 11, root: 65.41, chord: [0, 7, 10, 14, 17], gain: 0.75 }, // do sus
+  { beat: 60, length: 8, root: 73.42, chord: [0, 7, 12, 14, 15], gain: 0.6 }, // ré mineur (9)
   { beat: 68, length: 4, root: 58.27, chord: [0, 7, 11, 14, 19], gain: 0.5 },
   { beat: 72, length: 3, root: 73.42, chord: [0, 7, 12, 16, 19, 24], gain: 0.6 }, // ré majeur (picardie)
 ]

@@ -41,6 +41,7 @@ export function Layer3D({
   h,
   opacity = 1,
   extraBlur = 0,
+  dofScale = 1,
   style,
   children,
 }: {
@@ -55,11 +56,13 @@ export function Layer3D({
   h: number
   opacity?: number
   extraBlur?: number
+  /** Part de la profondeur de champ appliquée (0 = toujours net). */
+  dofScale?: number
   style?: CSSProperties
   children: ReactNode
 }) {
   const cam = useContext(CamCtx)
-  const blur = Math.min(14, Math.abs(z - cam.focus) * cam.dof) + extraBlur
+  const blur = Math.min(14, Math.abs(z - cam.focus) * cam.dof) * dofScale + extraBlur
   return (
     <div
       style={{
