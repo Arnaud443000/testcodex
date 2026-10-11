@@ -1,3 +1,4 @@
+import { frBacktest } from './fr.backtest'
 import { frDashboardBuilder } from './fr.dashboard'
 /**
  * Textes de l'interface. Le français est la langue par défaut.
@@ -15,6 +16,7 @@ export const fr = {
     journal: 'Journal',
     goals: 'Objectifs',
     replay: 'Replay',
+    backtest: 'Backtest',
     settings: 'Paramètres',
   },
   sidebar: {
@@ -131,6 +133,7 @@ export const fr = {
     discipline: { title: 'Discipline', subtitle: 'Votre exécution, jour après jour' },
     journal: { title: 'Journal', subtitle: 'Votre réflexion quotidienne' },
     goals: { title: 'Objectifs', subtitle: 'Vos cibles mensuelles' },
+    backtest: { title: 'Backtest', subtitle: 'Testez vos stratégies, cas après cas' },
   },
   common: {
     save: 'Enregistrer',
@@ -1525,6 +1528,7 @@ export const fr = {
   },
   // Lot 13 : dashboard personnalisable
   dashboardBuilder: frDashboardBuilder,
+  backtest: frBacktest,
 }
 
 export type Messages = typeof fr

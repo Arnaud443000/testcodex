@@ -12,6 +12,7 @@ use pulse_core::journal::{self, DayOverview, JournalEntry};
 use pulse_core::missed_trades::{self, MissedTrade, MissedTradeData};
 use pulse_core::period::PeriodQuery;
 use pulse_core::reminder::{self, ReminderSettings};
+use pulse_core::backtests::{self, Backtest, BacktestCase, BacktestData, BacktestListItem, BacktestReport, CaseData, ReportOptions};
 use pulse_core::backup::{self, BackupInfo, RestoreResult};
 use pulse_core::checklist::{self, ChecklistItem};
 use pulse_core::export;
@@ -364,6 +365,62 @@ fn restore_backup(state: State<AppState>, folder: String, confirmed: bool) -> Re
     backup::restore(&mut conn, &state.data_dir, std::path::Path::new(&folder), confirmed, now_ms()).map_err(err)
 }
 
+// --- Lot 16: strategy backtests (hypotheses under test, never real trades) ---
+
+#[tauri::command]
+fn list_backtests(state: State<AppState>) -> Result<Vec<BacktestListItem>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::list(&conn).map_err(err)
+}
+
+#[tauri::command]
+fn create_backtest(state: State<AppState>, backtest: BacktestData) -> Result<Backtest, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::create(&conn, &backtest).map_err(err)
+}
+
+#[tauri::command]
+fn update_backtest(state: State<AppState>, id: i64, backtest: BacktestData) -> Result<Backtest, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::update(&conn, id, &backtest).map_err(err)
+}
+
+#[tauri::command]
+fn delete_backtest(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::delete(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn list_backtest_cases(state: State<AppState>, backtest_id: i64) -> Result<Vec<BacktestCase>, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::list_cases(&conn, backtest_id).map_err(err)
+}
+
+#[tauri::command]
+fn add_backtest_case(state: State<AppState>, backtest_id: i64, case: CaseData) -> Result<BacktestCase, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::add_case(&conn, backtest_id, &case).map_err(err)
+}
+
+#[tauri::command]
+fn update_backtest_case(state: State<AppState>, id: i64, case: CaseData) -> Result<BacktestCase, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::update_case(&conn, id, &case).map_err(err)
+}
+
+#[tauri::command]
+fn delete_backtest_case(state: State<AppState>, id: i64) -> Result<(), String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::delete_case(&conn, id).map_err(err)
+}
+
+#[tauri::command]
+fn get_backtest_report(state: State<AppState>, backtest_id: i64, options: Option<ReportOptions>) -> Result<BacktestReport, String> {
+    let conn = state.db.lock().map_err(err)?;
+    backtests::report(&conn, backtest_id, options.unwrap_or_default()).map_err(err)
+}
+
 // --- Lot 10: journal side (missed trades, daily journal, execution quality, confidence, reminder) ---
 
 #[tauri::command]
@@ -587,6 +644,15 @@ pub fn run() {
             read_screenshot,
             update_account,
             set_account_archived,
+            list_backtests,
+            create_backtest,
+            update_backtest,
+            delete_backtest,
+            list_backtest_cases,
+            add_backtest_case,
+            update_backtest_case,
+            delete_backtest_case,
+            get_backtest_report,
             list_missed_trades,
             create_missed_trade,
             update_missed_trade,

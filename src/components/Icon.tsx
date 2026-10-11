@@ -75,6 +75,13 @@ const PATHS = {
       <path d="M10 8.5l5 3.5-5 3.5z" />
     </>
   ),
+  // Lot 16 : backtest (flacon d'essai)
+  backtest: (
+    <>
+      <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3" />
+      <path d="M7.5 14h9" />
+    </>
+  ),
   // Lot 13 : dashboard personnalisable
   grip: (
     <>

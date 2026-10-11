@@ -13,6 +13,8 @@ import { GoalsPage } from './pages/GoalsPage'
 import { JournalPage } from './pages/JournalPage'
 import { AlertHistoryPage } from './pages/AlertHistoryPage'
 import { AnalysesPage } from './pages/AnalysesPage'
+import { BacktestDetailPage } from './pages/BacktestDetailPage'
+import { BacktestPage } from './pages/BacktestPage'
 import { ReplayPage } from './pages/ReplayPage'
 import { TradeDetailPage } from './pages/TradeDetailPage'
 import { TradeFormPage } from './pages/TradeFormPage'
@@ -46,6 +48,8 @@ export default function App() {
                 <Route path="/journal" element={<JournalPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/replay" element={<ReplayPage />} />
+                <Route path="/backtest" element={<BacktestPage />} />
+                <Route path="/backtest/:id" element={<BacktestDetailPage />} />
                 <Route path="/alerts" element={<AlertHistoryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>

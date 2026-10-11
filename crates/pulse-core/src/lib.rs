@@ -34,6 +34,9 @@ pub mod replay;
 // Lot 12.
 pub mod alerts;
 
+// Lot 16.
+pub mod backtests;
+
 // Lot 13.
 pub mod dashboards;
 pub use rusqlite;

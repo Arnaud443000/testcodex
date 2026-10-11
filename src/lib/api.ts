@@ -53,7 +53,16 @@ import type { Goal, GoalProgress, NewGoal, ProgressQuery } from '../types/goals'
 import type { ReplayCard, ReplayFilter, ReplayItem } from '../types/replay'
 import { mock, mockGoalsReplay, mockJournal } from './mockBackend'
 import type { AfterLossesReport, ExternalFactorReport, PlanSimulation, SizeChangeReport } from '../types/behavior'
-import { mockAnalyses, mockBehaviorExtra } from './mockBackend'
+import { mockAnalyses, mockBacktests, mockBehaviorExtra } from './mockBackend'
+import type {
+  Backtest,
+  BacktestCase,
+  BacktestData,
+  BacktestListItem,
+  BacktestReport,
+  CaseData,
+  ReportOptions,
+} from '../types/backtest'
 import { createDashboardsMock } from './mockDashboards'
 import type { DashboardLayout, DashboardSummary, WidgetDefinition, WidgetInstance } from '../types/dashboardLayout'
 
@@ -292,6 +301,26 @@ export const api = {
   /** Système contre discrétionnaire, d'après le type du trade (3.3.17). */
   getExecutionReport: (query: StatsQuery): Promise<ExecutionReport> =>
     inTauri ? invoke('get_execution_report', { query }) : mockAnalyses.getExecutionReport(query),
+
+  // --- Lot 16 : backtests de stratégie (des hypothèses testées : jamais un P&L réel, jamais dans les statistiques) ---
+  listBacktests: (): Promise<BacktestListItem[]> => (inTauri ? invoke('list_backtests') : mockBacktests.listBacktests()),
+  createBacktest: (backtest: BacktestData): Promise<Backtest> =>
+    inTauri ? invoke('create_backtest', { backtest }) : mockBacktests.createBacktest(backtest),
+  updateBacktest: (id: number, backtest: BacktestData): Promise<Backtest> =>
+    inTauri ? invoke('update_backtest', { id, backtest }) : mockBacktests.updateBacktest(id, backtest),
+  /** Supprime la session et tous ses cas. */
+  deleteBacktest: (id: number): Promise<void> => (inTauri ? invoke('delete_backtest', { id }) : mockBacktests.deleteBacktest(id)),
+  listBacktestCases: (backtestId: number): Promise<BacktestCase[]> =>
+    inTauri ? invoke('list_backtest_cases', { backtestId }) : mockBacktests.listBacktestCases(backtestId),
+  addBacktestCase: (backtestId: number, caseData: CaseData): Promise<BacktestCase> =>
+    inTauri ? invoke('add_backtest_case', { backtestId, case: caseData }) : mockBacktests.addBacktestCase(backtestId, caseData),
+  updateBacktestCase: (id: number, caseData: CaseData): Promise<BacktestCase> =>
+    inTauri ? invoke('update_backtest_case', { id, case: caseData }) : mockBacktests.updateBacktestCase(id, caseData),
+  deleteBacktestCase: (id: number): Promise<void> =>
+    inTauri ? invoke('delete_backtest_case', { id }) : mockBacktests.deleteBacktestCase(id),
+  /** Performance en R, validité, simulation du TP et comparaison avec les vrais trades du setup lié. */
+  getBacktestReport: (backtestId: number, options?: ReportOptions): Promise<BacktestReport> =>
+    inTauri ? invoke('get_backtest_report', { backtestId, options: options ?? null }) : mockBacktests.getBacktestReport(backtestId, options),
 
   // --- Lot 13 : dashboard personnalisable (disposition seulement ; les chiffres viennent des commandes ci-dessus) ---
   listWidgetCatalog: (): Promise<WidgetDefinition[]> => (inTauri ? invoke('list_widget_catalog') : mockDashboards.listWidgetCatalog()),

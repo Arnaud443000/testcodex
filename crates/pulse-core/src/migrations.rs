@@ -345,6 +345,38 @@ pub const MIGRATIONS: &[&str] = &[
         UNIQUE (dashboard_id, uid)
     );
     CREATE INDEX dashboard_widgets_dashboard ON dashboard_widgets (dashboard_id);",
+    // v10 — strategy backtests. A backtest is a hypothesis under test, NOT a trade: it never produces real
+    // PnL and never enters a performance statistic. Results are R-multiples typed by the trader (TEXT
+    // decimals, like every other value), so there is no account. `setup_tag_id` optionally links the
+    // backtest to a `setup` tag to compare it with the real trades; deleting the tag only unlinks it.
+    "CREATE TABLE backtests (
+        id               INTEGER PRIMARY KEY,
+        name             TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 80),
+        asset            TEXT NOT NULL DEFAULT '',
+        timeframe        TEXT NOT NULL DEFAULT '',
+        entry_conditions TEXT NOT NULL DEFAULT '',
+        exit_rules       TEXT NOT NULL DEFAULT '',
+        notes            TEXT NOT NULL DEFAULT '',
+        status           TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running','validated','rejected')),
+        setup_tag_id     INTEGER REFERENCES tags(id) ON DELETE SET NULL,
+        created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE UNIQUE INDEX backtests_name_key ON backtests (lower(trim(name)));
+    CREATE TABLE backtest_cases (
+        id             INTEGER PRIMARY KEY,
+        backtest_id    INTEGER NOT NULL REFERENCES backtests(id) ON DELETE CASCADE,
+        occurred_at    INTEGER NOT NULL,
+        tz_offset_min  INTEGER NOT NULL DEFAULT 0,
+        direction      TEXT CHECK (direction IS NULL OR direction IN ('long','short')),
+        observation    TEXT NOT NULL CHECK (observation IN ('past','live')),
+        setup_valid    TEXT NOT NULL CHECK (setup_valid IN ('yes','no','doubtful')),
+        outcome        TEXT NOT NULL CHECK (outcome IN ('tp','sl','manual','no_entry')),
+        planned_rr     TEXT,
+        result_r       TEXT,
+        max_r          TEXT,
+        notes          TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX backtest_cases_by_backtest ON backtest_cases (backtest_id, occurred_at);",
 ];
 
 pub fn latest_version() -> u32 {
@@ -762,5 +794,38 @@ mod tests {
         conn.execute("DELETE FROM dashboards WHERE id = 1", []).unwrap();
         let n: i64 = conn.query_row("SELECT COUNT(*) FROM dashboard_widgets", [], |r| r.get(0)).unwrap();
         assert_eq!(n, 0);
+    }
+
+    #[test]
+    fn v10_adds_backtests_and_keeps_existing_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate_to(&mut conn, 9).unwrap();
+        account_v2(&conn);
+        conn.execute("INSERT INTO settings (key, value) VALUES ('keep', 'me')", []).unwrap();
+        conn.execute("INSERT INTO goals (month, metric, target) VALUES ('2026-09', 'net_pnl', '500')", []).unwrap();
+        conn.execute("INSERT INTO dashboards (name) VALUES ('Mon dashboard')", []).unwrap();
+
+        migrate_to(&mut conn, 10).unwrap();
+        assert_eq!(current_version(&conn).unwrap(), 10);
+        let kept: String = conn.query_row("SELECT value FROM settings WHERE key = 'keep'", [], |r| r.get(0)).unwrap();
+        assert_eq!(kept, "me");
+        let count = |t: &str| -> i64 { conn.query_row(&format!("SELECT COUNT(*) FROM {t}"), [], |r| r.get(0)).unwrap() };
+        assert_eq!((count("goals"), count("dashboards"), count("accounts")), (1, 1, 1));
+        assert_eq!((count("backtests"), count("backtest_cases")), (0, 0));
+
+        // Guards written straight to the schema.
+        assert!(conn.execute("INSERT INTO backtests (name) VALUES ('Breakout NY')", []).is_ok());
+        assert!(conn.execute("INSERT INTO backtests (name) VALUES (' breakout ny ')", []).is_err(), "names are unique");
+        assert!(conn.execute("INSERT INTO backtests (name) VALUES ('   ')", []).is_err());
+        assert!(conn.execute("INSERT INTO backtests (name, status) VALUES ('X', 'done')", []).is_err());
+        let case = |extra: &str| format!("INSERT INTO backtest_cases (backtest_id, occurred_at, observation, setup_valid, outcome{extra}) ");
+        assert!(conn.execute(&(case("") + "VALUES (1, 0, 'past', 'yes', 'tp')"), []).is_ok());
+        assert!(conn.execute(&(case("") + "VALUES (1, 0, 'maybe', 'yes', 'tp')"), []).is_err());
+        assert!(conn.execute(&(case("") + "VALUES (1, 0, 'past', 'yes', 'won')"), []).is_err());
+        assert!(conn.execute(&(case("") + "VALUES (2, 0, 'past', 'yes', 'tp')"), []).is_err(), "backtest must exist");
+        assert!(conn.execute(&(case(", direction") + "VALUES (1, 0, 'live', 'no', 'no_entry', 'up')"), []).is_err());
+        conn.execute("DELETE FROM backtests WHERE id = 1", []).unwrap();
+        assert_eq!(count("backtest_cases"), 0, "cases leave with their backtest");
     }
 }

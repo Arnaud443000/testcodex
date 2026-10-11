@@ -20,6 +20,7 @@ import type { BehaviorSettings } from '../types/behavior'
 import { mockCalendar, mockDashboard, mockDayTrades, type MockLedger } from './mockStats'
 import * as behavior from './mockBehavior'
 import * as analyses from './mockAnalyses'
+import { createBacktestsMock } from './mockBacktests'
 import type { FeeGranularity } from '../types/stats'
 import { ASSET_CATALOG } from './assetCatalog'
 import { checkGoal, isMonth, mockLadder, mockProgress, replayItem, replayPasses } from './mockGoalsReplayLogic'
@@ -757,3 +758,6 @@ export const mockAnalyses = {
   getStrategyReport: async (q: StatsQuery) => analyses.mockStrategies(behaviorInput(q.accountIds), q),
   getExecutionReport: async (q: StatsQuery) => analyses.mockExecutions(behaviorInput(q.accountIds), q),
 }
+
+// --- Lot 16 : backtests de stratégie (jamais des trades réels) ---
+export const mockBacktests = createBacktestsMock()
